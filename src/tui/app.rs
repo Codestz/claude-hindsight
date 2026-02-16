@@ -2,7 +2,7 @@
 //!
 //! Manages the state of the interactive terminal UI.
 
-use crate::analyzer::{build_simple_tree, TreeNode};
+use crate::analyzer::{build_simple_tree, TreeNode, SessionAnalytics};
 use crate::error::Result;
 use crate::parser::Session;
 use crate::tui::search::SearchState;
@@ -86,12 +86,18 @@ pub struct App {
 
     /// Status message
     pub status_message: String,
+
+    /// Session-level analytics
+    pub analytics: SessionAnalytics,
 }
 
 impl App {
     /// Create a new app from a session
     pub fn new(session: Session) -> Self {
         let total_nodes = session.nodes.len();
+
+        // Calculate session analytics
+        let analytics = SessionAnalytics::from_session(&session);
 
         // Build simple hierarchical tree from parent_uuid relationships
         let tree_roots = build_simple_tree(session.nodes.clone());
@@ -122,6 +128,7 @@ impl App {
             input_mode: false,
             should_quit: false,
             status_message: String::new(),
+            analytics,
         }
     }
 
