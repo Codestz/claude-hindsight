@@ -56,6 +56,15 @@ codegen-units = 1
 [profile.dev]
 opt-level = 0
 
+[lib]
+name = "hindsight"
+path = "src/lib.rs"
+
+
 [[bin]]
 name = "hindsight"
 path = "src/main.rs"
+
+[[example]]
+name = "parse_session"
+path = "examples/parse_session.rs"
