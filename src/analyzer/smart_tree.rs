@@ -124,7 +124,7 @@ impl ConversationGroup {
         if !self.file_snapshots.is_empty() {
             let file_group_node = create_group_node(
                 format!("file-ops-{}", index),
-                "📁 File Operations".to_string(),
+                " File Operations".to_string(),
                 1,
             );
             let file_children: Vec<TreeNode> = self
@@ -165,7 +165,7 @@ impl ConversationGroup {
         if !self.progress_updates.is_empty() {
             let progress_group_node = create_group_node(
                 format!("progress-{}", index),
-                format!("📊 Progress ({} updates)", self.progress_updates.len()),
+                format!(" Progress ({} updates)", self.progress_updates.len()),
                 1,
             );
             let progress_children: Vec<TreeNode> = self
@@ -199,7 +199,7 @@ impl ConversationGroup {
         } else {
             create_group_node(
                 format!("orphan-{}", index),
-                "📦 Session Start".to_string(),
+                " Session Start".to_string(),
                 0,
             )
         };
@@ -231,9 +231,9 @@ impl ConversationGroup {
         let mut tool_children = Vec::new();
         for (tool_name, tools) in tools_by_type {
             let group_label = if tools.len() == 1 {
-                format!("🔧 {}", tool_name)
+                format!(" {}", tool_name)
             } else {
-                format!("🔧 {} ({}×)", tool_name, tools.len())
+                format!(" {} ({}×)", tool_name, tools.len())
             };
 
             let group_node = create_group_node(
