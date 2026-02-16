@@ -135,3 +135,101 @@ fn build_tree_node(
         depth,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::ExecutionNode;
+
+    fn create_test_node(uuid: &str, parent_uuid: Option<&str>, node_type: &str) -> ExecutionNode {
+        ExecutionNode {
+            uuid: Some(uuid.to_string()),
+            parent_uuid: parent_uuid.map(|s| s.to_string()),
+            timestamp: Some(1000),
+            node_type: node_type.to_string(),
+            message: None,
+            tool_use: None,
+            tool_result: None,
+            thinking: None,
+            progress: None,
+            token_usage: None,
+            extra: None,
+        }
+    }
+
+    #[test]
+    fn test_build_simple_tree_single_node() {
+        let nodes = vec![create_test_node("root", None, "user")];
+
+        let tree = build_simple_tree(nodes);
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].depth, 0);
+        assert_eq!(tree[0].children.len(), 0);
+        assert_eq!(tree[0].node.node_type, "user");
+    }
+
+    #[test]
+    fn test_build_simple_tree_with_children() {
+        let nodes = vec![
+            create_test_node("root", None, "user"),
+            create_test_node("child1", Some("root"), "assistant"),
+            create_test_node("child2", Some("root"), "tool_use"),
+        ];
+
+        let tree = build_simple_tree(nodes);
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].depth, 0);
+        assert_eq!(tree[0].children.len(), 2);
+        assert_eq!(tree[0].children[0].depth, 1);
+        assert_eq!(tree[0].children[1].depth, 1);
+    }
+
+    #[test]
+    fn test_build_simple_tree_deep_hierarchy() {
+        let nodes = vec![
+            create_test_node("root", None, "user"),
+            create_test_node("level1", Some("root"), "assistant"),
+            create_test_node("level2", Some("level1"), "thinking"),
+            create_test_node("level3", Some("level2"), "tool_use"),
+        ];
+
+        let tree = build_simple_tree(nodes);
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].depth, 0);
+        assert_eq!(tree[0].children[0].depth, 1);
+        assert_eq!(tree[0].children[0].children[0].depth, 2);
+        assert_eq!(tree[0].children[0].children[0].children[0].depth, 3);
+    }
+
+    #[test]
+    fn test_build_simple_tree_multiple_roots() {
+        let nodes = vec![
+            create_test_node("root1", None, "user"),
+            create_test_node("root2", None, "assistant"),
+        ];
+
+        let tree = build_simple_tree(nodes);
+
+        assert_eq!(tree.len(), 2);
+        assert_eq!(tree[0].depth, 0);
+        assert_eq!(tree[1].depth, 0);
+    }
+
+    #[test]
+    fn test_rc_sharing() {
+        // Test that Rc is properly used (nodes are shared, not cloned)
+        let nodes = vec![
+            create_test_node("root", None, "user"),
+            create_test_node("child", Some("root"), "assistant"),
+        ];
+
+        let tree = build_simple_tree(nodes);
+
+        // The Rc should have a strong count of 1 (only the TreeNode holds it)
+        assert_eq!(Rc::strong_count(&tree[0].node), 1);
+        assert_eq!(Rc::strong_count(&tree[0].children[0].node), 1);
+    }
+}
