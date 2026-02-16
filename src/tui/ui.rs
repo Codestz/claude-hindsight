@@ -171,7 +171,7 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
     // Apply scroll offset
     let content_widget = Paragraph::new(content)
         .block(Block::default().borders(Borders::ALL).title(title))
-        .wrap(Wrap { trim: true })
+        .wrap(Wrap { trim: false })  // Preserve indentation for code
         .scroll((app.details_scroll as u16, 0));
 
     f.render_widget(content_widget, content_area);
