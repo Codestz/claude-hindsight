@@ -81,32 +81,6 @@ enum Commands {
         port: u16,
     },
 
-    /// Show quick session statistics
-    Stats {
-        /// Session ID or partial ID
-        session_id: String,
-    },
-
-    /// Analyze session costs
-    Costs {
-        /// Session ID or partial ID
-        session_id: String,
-
-        /// Show cost breakdown by tool
-        #[arg(long)]
-        by_tool: bool,
-
-        /// Show cost breakdown by time period
-        #[arg(long)]
-        by_time: bool,
-    },
-
-    /// Debug session errors
-    Errors {
-        /// Session ID or partial ID
-        session_id: String,
-    },
-
     /// Search sessions
     Search {
         /// Search query
@@ -119,15 +93,6 @@ enum Commands {
         /// Show only sessions with errors
         #[arg(long)]
         errors: bool,
-    },
-
-    /// Compare two sessions
-    Compare {
-        /// First session ID
-        session_a: String,
-
-        /// Second session ID
-        session_b: String,
     },
 
     /// Export session to HTML report
@@ -225,31 +190,12 @@ fn run() -> Result<()> {
         } => {
             commands::show::run(session_id, dashboard, port)?;
         }
-        Commands::Stats { session_id } => {
-            commands::stats::run(session_id)?;
-        }
-        Commands::Costs {
-            session_id,
-            by_tool,
-            by_time,
-        } => {
-            commands::costs::run(session_id, by_tool, by_time)?;
-        }
-        Commands::Errors { session_id } => {
-            commands::errors::run(session_id)?;
-        }
         Commands::Search {
             query,
             tool,
             errors,
         } => {
             commands::search::run(query, tool, errors)?;
-        }
-        Commands::Compare {
-            session_a,
-            session_b,
-        } => {
-            commands::compare::run(session_a, session_b)?;
         }
         Commands::Export {
             session_id,
