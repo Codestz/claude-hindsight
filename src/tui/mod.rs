@@ -9,6 +9,7 @@ pub mod projects_view;
 pub mod render;
 pub mod router;
 pub mod search;
+pub mod search_modal;
 pub mod sessions_view;
 pub mod theme;
 pub mod ui;

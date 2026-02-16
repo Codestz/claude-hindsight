@@ -582,6 +582,59 @@ impl SessionIndex {
 
         Ok(top_tools)
     }
+
+    /// Check if a session used a specific tool
+    pub fn has_tool_usage(&self, session_id: &str, tool_name: &str) -> Result<bool> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM tool_usage WHERE session_id = ?1 AND tool_name = ?2",
+            params![session_id, tool_name],
+            |row| row.get(0),
+        )?;
+
+        Ok(count > 0)
+    }
+
+    /// Get sessions that used any of the specified tools
+    pub fn find_by_tools(&self, tool_names: &[String]) -> Result<Vec<SessionFile>> {
+        if tool_names.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Build SQL query with placeholders for tool names
+        let placeholders = tool_names.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+        let query = format!(
+            r#"
+            SELECT DISTINCT s.session_id, s.project_name, s.file_path, s.file_size, s.modified_at, s.has_subagents
+            FROM sessions s
+            JOIN tool_usage t ON s.session_id = t.session_id
+            WHERE t.tool_name IN ({})
+            ORDER BY s.modified_at DESC
+            "#,
+            placeholders
+        );
+
+        let mut stmt = self.conn.prepare(&query)?;
+
+        // Convert tool_names to rusqlite::ToSql trait objects
+        let params: Vec<&dyn rusqlite::ToSql> = tool_names
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
+
+        let sessions = stmt.query_map(params.as_slice(), |row| {
+            Ok(SessionFile {
+                session_id: row.get(0)?,
+                project_name: row.get(1)?,
+                path: PathBuf::from(row.get::<_, String>(2)?),
+                file_size: row.get::<_, i64>(3)? as u64,
+                modified_at: row.get(4)?,
+                has_subagents: row.get::<_, i64>(5)? != 0,
+            })
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(sessions)
+    }
 }
 
 /// Statistics for a project

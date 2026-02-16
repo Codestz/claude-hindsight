@@ -234,6 +234,18 @@ impl App {
         self.input_mode = false;
     }
 
+    /// Select a node by UUID (used when jumping from search results)
+    pub fn select_node_by_uuid(&mut self, uuid: &str) {
+        // Check if the UUID exists in our mapping
+        if self.uuid_to_node.contains_key(uuid) {
+            self.tree_state.select(vec![uuid.to_string()]);
+            self.details_scroll = 0;
+            self.status_message = format!("Jumped to node: {}", &uuid[..8.min(uuid.len())]);
+        } else {
+            self.status_message = format!("Node not found: {}", &uuid[..8.min(uuid.len())]);
+        }
+    }
+
     /// Process periodic updates (called on each event loop tick)
     ///
     /// Handles debounced search execution - waits 150ms after last keystroke
