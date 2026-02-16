@@ -273,9 +273,20 @@ impl TreeNode {
     /// Get a display-friendly label for this node
     pub fn label(&self) -> String {
         match self.node.node_type.as_str() {
+            "group" => {
+                // Synthetic group node - extract label from message content
+                if let Some(ref msg) = self.node.message {
+                    if let Some(ref content) = msg.content {
+                        if let Some(label) = content.as_str() {
+                            return label.to_string();
+                        }
+                    }
+                }
+                "📦 Group".to_string()
+            }
             "tool_use" => {
                 if let Some(ref tool_use) = self.node.tool_use {
-                    format!("🔧 Tool: {}", tool_use.name)
+                    format!("🔧 {}", tool_use.name)
                 } else {
                     "🔧 Tool".to_string()
                 }
@@ -305,6 +316,9 @@ impl TreeNode {
                     "💬 Message".to_string()
                 }
             }
+            "progress" => "📊 Progress".to_string(),
+            "system" => "⚙️ System".to_string(),
+            "file-history-snapshot" => "📁 File Snapshot".to_string(),
             _ => format!("📄 {}", self.node.node_type),
         }
     }
@@ -312,6 +326,28 @@ impl TreeNode {
     /// Get a one-line summary of this node
     pub fn summary(&self) -> String {
         let label = self.label();
+
+        // For user/assistant messages, show preview of content
+        if self.node.node_type == "user" || self.node.node_type == "assistant" {
+            if let Some(ref msg) = self.node.message {
+                if let Some(ref content) = msg.content {
+                    let preview = extract_text_preview(content, 60);
+                    if !preview.is_empty() {
+                        return format!("{}: {}", label, preview);
+                    }
+                }
+            }
+        }
+
+        // For group nodes, just return the label
+        if self.node.node_type == "group" {
+            return label;
+        }
+
+        // For tool uses, show the tool name with parameters
+        if let Some(ref tool_use) = self.node.tool_use {
+            return format!("🔧 {}", tool_use.name);
+        }
 
         // Add duration if available
         if let Some(ref result) = self.node.tool_result {
@@ -343,6 +379,35 @@ impl TreeNode {
     /// Get the timestamp of this node in milliseconds
     pub fn timestamp(&self) -> Option<i64> {
         self.node.timestamp
+    }
+}
+
+/// Extract text preview from message content (handles string or array format)
+fn extract_text_preview(content: &serde_json::Value, max_len: usize) -> String {
+    let text = match content {
+        serde_json::Value::String(s) => s.clone(),
+        serde_json::Value::Array(arr) => {
+            // Extract text from content blocks
+            arr.iter()
+                .filter_map(|block| {
+                    if let Some(text) = block.get("text") {
+                        text.as_str().map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        }
+        _ => String::new(),
+    };
+
+    // Truncate and clean
+    let cleaned = text.replace('\n', " ").trim().to_string();
+    if cleaned.len() > max_len {
+        format!("{}...", &cleaned[..max_len])
+    } else {
+        cleaned
     }
 }
 
