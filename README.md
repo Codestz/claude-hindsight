@@ -91,7 +91,7 @@ hindsight watch
 
 **Output:**
 ```
-📊 Watching: recurly-commerce/ce3c149... (live)
+📊 Watching: my-project/ce3c149... (live)
 
 Duration: 00:45:23
 Tools: 128 (+3 in last 10s)
