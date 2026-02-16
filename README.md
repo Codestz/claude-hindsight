@@ -61,6 +61,12 @@ cd hindsight
 cargo install --path .
 ```
 
+**📝 Requirements:**
+- **Nerd Font** - For proper icon display in the TUI. Install any Nerd Font:
+  - [FiraCode Nerd Font](https://github.com/ryanoasis/nerd-fonts#patched-fonts)
+  - [JetBrains Mono Nerd Font](https://github.com/ryanoasis/nerd-fonts#patched-fonts)
+  - Configure your terminal to use the Nerd Font
+
 ### First Run
 
 ```bash
