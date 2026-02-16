@@ -18,7 +18,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(3),  // Header
+            Constraint::Length(5),  // Header (increased for file path line)
             Constraint::Min(0),     // Main content
             Constraint::Length(3),  // Footer/status
         ])
