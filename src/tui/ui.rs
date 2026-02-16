@@ -32,18 +32,15 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
     let session_info = vec![
         Line::from(vec![
-            Span::styled("Session: ", Style::default().fg(Color::Cyan)),
+            Span::styled("Session: ".to_string(), Style::default().fg(Color::Cyan)),
             Span::raw(&app.session.session_id),
         ]),
         Line::from(vec![
-            Span::styled("Nodes: ", Style::default().fg(Color::Cyan)),
-            Span::raw(format!("{}", app.tree.stats.total_nodes)),
-            Span::raw(" | "),
-            Span::styled("Tools: ", Style::default().fg(Color::Cyan)),
-            Span::raw(format!("{}", app.tree.stats.tool_calls)),
-            Span::raw(" | "),
-            Span::styled("Errors: ", Style::default().fg(Color::Red)),
-            Span::raw(format!("{}", app.tree.stats.errors)),
+            Span::styled("Nodes: ".to_string(), Style::default().fg(Color::Cyan)),
+            Span::raw(format!("{}", app.total_nodes)),
+            Span::raw(" | ".to_string()),
+            Span::styled("Groups: ".to_string(), Style::default().fg(Color::Cyan)),
+            Span::raw(format!("{}", app.tree_roots.len())),
         ]),
     ];
 

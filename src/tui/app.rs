@@ -2,7 +2,7 @@
 //!
 //! Manages the state of the interactive terminal UI.
 
-use crate::analyzer::{ExecutionTree, TreeNode};
+use crate::analyzer::{build_conversation_tree, TreeNode};
 use crate::error::Result;
 use crate::parser::Session;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -24,8 +24,8 @@ pub struct App {
     /// The session being viewed
     pub session: Session,
 
-    /// The execution tree
-    pub tree: ExecutionTree,
+    /// Conversation-based tree (smart grouping)
+    pub tree_roots: Vec<TreeNode>,
 
     /// Tree widget state
     pub tree_state: tui_tree_widget::TreeState<String>,
@@ -38,6 +38,9 @@ pub struct App {
 
     /// All nodes in DFS order
     pub nodes: Vec<TreeNode>,
+
+    /// Total node count
+    pub total_nodes: usize,
 
     /// Current view mode
     pub view_mode: ViewMode,
@@ -52,26 +55,31 @@ pub struct App {
 impl App {
     /// Create a new app from a session
     pub fn new(session: Session) -> Self {
-        let tree = ExecutionTree::from_nodes(session.nodes.clone());
-        let nodes = tree
-            .depth_first_traversal()
-            .into_iter()
-            .cloned()
-            .collect();
+        let total_nodes = session.nodes.len();
+
+        // Build smart conversation tree
+        let tree_roots = build_conversation_tree(session.nodes.clone());
+
+        // Flatten tree to get all nodes in DFS order
+        let mut nodes = Vec::new();
+        for root in &tree_roots {
+            collect_nodes_dfs(root, &mut nodes);
+        }
 
         // Build tree items for tui-tree-widget
-        let tree_items = build_tree_items(&tree);
+        let tree_items = build_tree_items_from_roots(&tree_roots);
 
         let mut tree_state = tui_tree_widget::TreeState::default();
         tree_state.select_first();
 
         App {
             session,
-            tree,
+            tree_roots,
             tree_state,
             tree_items,
             selected_index: 0,
             nodes,
+            total_nodes,
             view_mode: ViewMode::Summary,
             should_quit: false,
             status_message: String::new(),
@@ -162,10 +170,18 @@ impl App {
     }
 }
 
-/// Build tree items for tui-tree-widget
-fn build_tree_items(tree: &ExecutionTree) -> Vec<TreeItem<'static, String>> {
+/// Collect all nodes in DFS order
+fn collect_nodes_dfs(node: &TreeNode, result: &mut Vec<TreeNode>) {
+    result.push(node.clone());
+    for child in &node.children {
+        collect_nodes_dfs(child, result);
+    }
+}
+
+/// Build tree items for tui-tree-widget from roots
+fn build_tree_items_from_roots(roots: &[TreeNode]) -> Vec<TreeItem<'static, String>> {
     let mut counter = 0;
-    tree.roots
+    roots
         .iter()
         .map(|root| build_tree_item(root, &mut counter))
         .collect()
