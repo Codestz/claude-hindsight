@@ -40,9 +40,14 @@ use std::path::Path;
 /// ```
 pub fn parse_session(path: &Path) -> Result<Session> {
     let file = File::open(path)?;
-    let reader = BufReader::new(file);
 
-    let mut nodes = Vec::new();
+    // Estimate initial capacity from file size to reduce reallocations
+    let file_metadata = file.metadata()?;
+    let file_size = file_metadata.len();
+    let estimated_lines = (file_size / 500).max(100) as usize; // ~500 bytes per line
+
+    let reader = BufReader::new(file);
+    let mut nodes = Vec::with_capacity(estimated_lines);
 
     // Parse JSONL line by line
     for (line_num, line_result) in reader.lines().enumerate() {

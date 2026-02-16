@@ -93,6 +93,16 @@ impl Router {
     }
 
     /// Handle keyboard input
+    /// Process periodic updates (debounced search, etc.)
+    pub fn tick(&mut self) {
+        // Call tick on session detail view to handle debounced search
+        if let ViewMode::SessionDetail(_) = &self.view_mode {
+            if let Some(ref mut view) = self.session_detail_view {
+                view.tick();
+            }
+        }
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
         match &self.view_mode {
             ViewMode::Projects => {

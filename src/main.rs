@@ -283,6 +283,9 @@ fn run_hub() -> Result<()> {
             router.handle_key(key)?;
         }
 
+        // Process periodic updates (debounced search, etc.)
+        router.tick();
+
         if router.should_quit {
             break;
         }
@@ -319,6 +322,9 @@ fn run_last_session() -> Result<()> {
                 if let tui::Event::Key(key) = event_handler.next()? {
                     router.handle_key(key)?;
                 }
+
+                // Process periodic updates (debounced search, etc.)
+                router.tick();
 
                 if router.should_quit {
                     break;

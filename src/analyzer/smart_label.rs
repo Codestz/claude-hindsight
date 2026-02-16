@@ -184,7 +184,7 @@ fn get_tool_details(tool_name: &str, tool_use: &serde_json::Value) -> String {
 
 /// Detect progress type
 fn detect_progress_type(node: &TreeNode) -> (String, String) {
-    if let Some(data) = node.node.extra.get("data") {
+    if let Some(data) = node.node.extra.as_ref().and_then(|e| e.get("data")) {
         if let Some(progress_type) = data.get("type").and_then(|t| t.as_str()) {
             match progress_type {
                 "bash_progress" => {
@@ -221,7 +221,7 @@ fn detect_progress_type(node: &TreeNode) -> (String, String) {
 
 /// Detect file snapshot details
 fn detect_snapshot_details(node: &TreeNode) -> String {
-    if let Some(snapshot) = node.node.extra.get("snapshot") {
+    if let Some(snapshot) = node.node.extra.as_ref().and_then(|e| e.get("snapshot")) {
         if let Some(tracked_files) = snapshot.get("trackedFileBackups") {
             if let Some(files_obj) = tracked_files.as_object() {
                 return format!("{} files", files_obj.len());
@@ -233,10 +233,10 @@ fn detect_snapshot_details(node: &TreeNode) -> String {
 
 /// Detect system event details
 fn detect_system_details(node: &TreeNode) -> String {
-    if let Some(subtype) = node.node.extra.get("subtype").and_then(|s| s.as_str()) {
+    if let Some(subtype) = node.node.extra.as_ref().and_then(|e| e.get("subtype")).and_then(|s| s.as_str()) {
         match subtype {
             "turn_duration" => {
-                if let Some(duration_ms) = node.node.extra.get("durationMs").and_then(|d| d.as_i64()) {
+                if let Some(duration_ms) = node.node.extra.as_ref().and_then(|e| e.get("durationMs")).and_then(|d| d.as_i64()) {
                     return format!("Turn {:.1}s", duration_ms as f64 / 1000.0);
                 }
                 "Turn duration".to_string()
