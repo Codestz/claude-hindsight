@@ -3,7 +3,7 @@
 //! Shows all discovered projects with statistics and allows drilling down into sessions.
 
 use crate::error::Result;
-use crate::storage::{ProjectStats, SessionIndex};
+use crate::storage::{ProjectStats, SessionIndex, GlobalAnalytics};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Layout, Rect},
@@ -29,6 +29,9 @@ pub struct ProjectsView {
 
     /// Status message
     pub status_message: String,
+
+    /// Global analytics across all sessions
+    pub analytics: GlobalAnalytics,
 }
 
 impl ProjectsView {
@@ -36,6 +39,7 @@ impl ProjectsView {
     pub fn new() -> Result<Self> {
         let index = SessionIndex::new()?;
         let projects = index.get_all_project_stats()?;
+        let analytics = index.get_global_analytics()?;
 
         let mut list_state = ListState::default();
         if !projects.is_empty() {
@@ -50,6 +54,7 @@ impl ProjectsView {
             filter_query: String::new(),
             filter_mode: false,
             status_message,
+            analytics,
         })
     }
 
@@ -57,6 +62,7 @@ impl ProjectsView {
     pub fn refresh(&mut self) -> Result<()> {
         let index = SessionIndex::new()?;
         self.projects = index.get_all_project_stats()?;
+        self.analytics = index.get_global_analytics()?;
 
         // Reset selection if empty
         if self.projects.is_empty() {
@@ -247,7 +253,7 @@ impl ProjectsView {
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
                 Constraint::Length(12),  // Welcome header (taller for new ASCII art)
-                Constraint::Min(0),      // Project list
+                Constraint::Min(0),      // Content area (projects + analytics)
                 Constraint::Length(3),   // Status bar
             ])
             .split(area);
@@ -255,8 +261,20 @@ impl ProjectsView {
         // Render welcome header
         self.render_header(f, chunks[0]);
 
+        // Split content area horizontally: projects list (left) and analytics panel (right)
+        let content_chunks = Layout::default()
+            .direction(ratatui::layout::Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(65),  // Projects list
+                Constraint::Percentage(35),  // Analytics panel
+            ])
+            .split(chunks[1]);
+
         // Render project list
-        self.render_list(f, chunks[1]);
+        self.render_list(f, content_chunks[0]);
+
+        // Render analytics panel
+        self.render_analytics_panel(f, content_chunks[1]);
 
         // Render status bar
         self.render_status(f, chunks[2]);
@@ -264,10 +282,6 @@ impl ProjectsView {
 
     /// Render the welcome header with ASCII art
     fn render_header(&self, f: &mut Frame, area: Rect) {
-        let total_sessions: usize = self.projects.iter().map(|p| p.session_count).sum();
-        let total_size: u64 = self.projects.iter().map(|p| p.total_size).sum();
-        let size_mb = total_size as f64 / 1_000_000.0;
-
         // Calculate horizontal padding for centering (assuming ~80 char width for content)
         let content_width = 85;
         let padding = (area.width.saturating_sub(content_width)) / 2;
@@ -393,6 +407,143 @@ impl ProjectsView {
             .highlight_symbol(" ▶ ");
 
         f.render_stateful_widget(list, area, &mut self.list_state);
+    }
+
+    /// Render analytics panel
+    fn render_analytics_panel(&self, f: &mut Frame, area: Rect) {
+        let size_mb = self.analytics.total_size as f64 / 1_000_000.0;
+        let avg_size_kb = self.analytics.avg_session_size / 1024;
+
+        let mut lines = vec![
+            Line::from(""),
+            // Overview section
+            Line::from(vec![
+                Span::styled(" Overview", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("  Total Sessions: "),
+                Span::styled(
+                    format!("{}", self.analytics.total_sessions),
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("  Total Projects: "),
+                Span::styled(
+                    format!("{}", self.analytics.total_projects),
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("  Total Size:     "),
+                Span::styled(
+                    format!("{:.1} MB", size_mb),
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("  Avg Size:       "),
+                Span::styled(
+                    format!("{} KB", avg_size_kb),
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            // Activity section
+            Line::from(vec![
+                Span::styled(" Activity", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("  This Week:      "),
+                Span::styled(
+                    format!("{}", self.analytics.sessions_this_week),
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" sessions"),
+            ]),
+            Line::from(vec![
+                Span::raw("  Today:          "),
+                Span::styled(
+                    format!("{}", self.analytics.sessions_today),
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" sessions"),
+            ]),
+            Line::from(""),
+            // Session Types section
+            Line::from(vec![
+                Span::styled(" Session Types", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("  With Subagents: "),
+                Span::styled(
+                    format!("{}", self.analytics.subagent_count),
+                    Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+        ];
+
+        // Most Active Project
+        if let Some(ref project) = self.analytics.most_active_project {
+            lines.push(Line::from(vec![
+                Span::styled(" Most Active", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]));
+            lines.push(Line::from(""));
+            lines.push(Line::from(vec![
+                Span::raw("  "),
+                Span::styled(
+                    project,
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+            ]));
+            lines.push(Line::from(""));
+        }
+
+        // Top Tools section
+        lines.push(Line::from(vec![
+            Span::styled(" Top Tools", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+        ]));
+        lines.push(Line::from(""));
+
+        if !self.analytics.top_tools.is_empty() {
+            for (tool, count) in &self.analytics.top_tools {
+                let tool_name = if tool.len() > 12 {
+                    format!("{}...", &tool[..9])
+                } else {
+                    tool.clone()
+                };
+
+                lines.push(Line::from(vec![
+                    Span::raw("  "),
+                    Span::styled(
+                        format!("{:12}", tool_name),
+                        Style::default().fg(Color::Blue),
+                    ),
+                    Span::styled(
+                        format!("{:>4}", count),
+                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    ),
+                ]));
+            }
+        } else {
+            lines.push(Line::from(vec![
+                Span::raw("  "),
+                Span::styled(
+                    "Analyzing...",
+                    Style::default().fg(Color::DarkGray),
+                ),
+            ]));
+        }
+
+        let paragraph = Paragraph::new(lines)
+            .block(Block::default().borders(Borders::ALL).title("Analytics"))
+            .alignment(ratatui::layout::Alignment::Left);
+
+        f.render_widget(paragraph, area);
     }
 
     /// Render status bar

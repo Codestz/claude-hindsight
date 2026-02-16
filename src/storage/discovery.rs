@@ -11,26 +11,26 @@ use std::path::{Path, PathBuf};
 pub struct SessionFile {
     /// Full path to the JSONL file
     pub path: PathBuf,
-    
+
     /// Session ID (extracted from filename)
     pub session_id: String,
-    
+
     /// Project name (decoded from directory name)
     pub project_name: String,
-    
+
     /// File size in bytes
     pub file_size: u64,
-    
+
     /// Last modified timestamp (seconds since epoch)
     pub modified_at: i64,
-    
+
     /// Whether this session has subagents (folder with subagents/ directory)
     pub has_subagents: bool,
 }
 
 /// Discover all Claude Code sessions in configured directories
 ///
-/// Scans `~/.claude/projects/` and `~/.claudep/projects/` for session JSONL files.
+/// Scans `~/.claude/projects/` for session JSONL files.
 ///
 /// # Returns
 ///
@@ -43,58 +43,56 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
     let home = dirs::home_dir().ok_or_else(|| {
         HindsightError::Config("Could not determine home directory".to_string())
     })?;
-    
-    // Check both .claude and .claudep directories
+
     let claude_dirs = vec![
         home.join(".claude/projects"),
-        home.join(".claudep/projects"),
     ];
-    
+
     let mut sessions = Vec::new();
-    
+
     for claude_dir in claude_dirs {
         if !claude_dir.exists() {
             continue;
         }
-        
+
         // Scan each project directory
         for project_entry in fs::read_dir(&claude_dir)? {
             let project_entry = project_entry?;
             let project_path = project_entry.path();
-            
+
             if !project_path.is_dir() {
                 continue;
             }
-            
+
             // Extract project name from directory name
             let project_name = decode_project_name(&project_path);
-            
+
             // Find all .jsonl files in this project
             for file_entry in fs::read_dir(&project_path)? {
                 let file_entry = file_entry?;
                 let file_path = file_entry.path();
-                
+
                 // Check if it's a .jsonl file (not a directory)
-                if file_path.is_file() && 
+                if file_path.is_file() &&
                    file_path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-                    
+
                     let metadata = fs::metadata(&file_path)?;
                     let session_id = file_path
                         .file_stem()
                         .and_then(|s| s.to_str())
                         .unwrap_or("unknown")
                         .to_string();
-                    
+
                     let modified_at = metadata
                         .modified()?
                         .duration_since(std::time::UNIX_EPOCH)
                         .map(|d| d.as_secs() as i64)
                         .unwrap_or(0);
-                    
+
                     // Check if there's a matching directory with subagents
                     let subagents_dir = project_path.join(&session_id).join("subagents");
                     let has_subagents = subagents_dir.exists() && subagents_dir.is_dir();
-                    
+
                     sessions.push(SessionFile {
                         path: file_path,
                         session_id,
@@ -107,14 +105,14 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
             }
         }
     }
-    
+
     if sessions.is_empty() {
         return Err(HindsightError::NoSessionsFound);
     }
-    
+
     // Sort by modification time (newest first)
     sessions.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
-    
+
     Ok(sessions)
 }
 
@@ -143,7 +141,7 @@ mod tests {
     fn test_decode_project_name() {
         let path = Path::new("-Users-ediazestrada-Documents-Projects-experiment");
         assert_eq!(decode_project_name(path), "experiment");
-        
+
         let path = Path::new("my-project");
         assert_eq!(decode_project_name(path), "my-project");
     }
