@@ -117,7 +117,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
     f.render_stateful_widget(tree_widget, area, &mut app.tree_state);
 }
 
-/// Draw the details panel (split into content 70% + metadata 30%)
+/// Draw the details panel (split into content 100% or content 70% + metadata 30%)
 fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
     use crate::tui::app::FocusMode;
 
@@ -134,14 +134,27 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
         format!("Details{}", scroll_text)
     };
 
-    // Split into content (70%) and metadata (30%)
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(70),  // Content
-            Constraint::Percentage(30),  // Metadata
-        ])
-        .split(area);
+    // Check if we have useful metadata to show
+    let has_useful_metadata = if let Some(node) = app.selected_node() {
+        has_valuable_metadata(node)
+    } else {
+        false
+    };
+
+    // Split layout based on whether we have useful metadata
+    let (content_area, metadata_area) = if has_useful_metadata {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(70),  // Content
+                Constraint::Percentage(30),  // Metadata
+            ])
+            .split(area);
+        (chunks[0], Some(chunks[1]))
+    } else {
+        // Use full area for content if no useful metadata
+        (area, None)
+    };
 
     // Render content
     let content = if let Some(node) = app.selected_node() {
@@ -152,7 +165,7 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
 
     // Update scroll info based on content
     let total_lines = content.lines.len();
-    let viewport_height = chunks[0].height.saturating_sub(2) as usize; // -2 for borders
+    let viewport_height = content_area.height.saturating_sub(2) as usize; // -2 for borders
     app.update_scroll_info(total_lines, viewport_height);
 
     // Apply scroll offset
@@ -161,16 +174,18 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
         .wrap(Wrap { trim: true })
         .scroll((app.details_scroll as u16, 0));
 
-    f.render_widget(content_widget, chunks[0]);
+    f.render_widget(content_widget, content_area);
 
-    // Render metadata
-    if let Some(node) = app.selected_node() {
-        let metadata = render_metadata(node);
-        let metadata_widget = Paragraph::new(metadata)
-            .block(Block::default().borders(Borders::ALL).title("Metadata"))
-            .wrap(Wrap { trim: true });
+    // Render metadata only if we have useful info
+    if let Some(metadata_rect) = metadata_area {
+        if let Some(node) = app.selected_node() {
+            let metadata = render_metadata(node);
+            let metadata_widget = Paragraph::new(metadata)
+                .block(Block::default().borders(Borders::ALL).title("Metadata"))
+                .wrap(Wrap { trim: true });
 
-        f.render_widget(metadata_widget, chunks[1]);
+            f.render_widget(metadata_widget, metadata_rect);
+        }
     }
 }
 
@@ -180,31 +195,43 @@ fn render_summary_content(node: &crate::analyzer::TreeNode) -> Text<'static> {
     Text::from(lines)
 }
 
+/// Check if node has valuable metadata worth displaying
+fn has_valuable_metadata(node: &crate::analyzer::TreeNode) -> bool {
+    // Show metadata if any of these are present:
+    // - Token usage
+    // - Duration (tool results)
+    // - Errors
+
+    // Has token usage?
+    if let Some(ref usage) = node.node.token_usage {
+        let input = usage.input_tokens.unwrap_or(0);
+        let output = usage.output_tokens.unwrap_or(0);
+        if input + output > 0 {
+            return true;
+        }
+    }
+
+    // Has duration (tool result)?
+    if let Some(ref result) = node.node.tool_result {
+        if result.duration_ms.is_some() {
+            return true;
+        }
+        // Has error in tool result?
+        if let Some(is_error) = result.is_error {
+            if is_error {
+                return true;
+            }
+        }
+    }
+
+    // No valuable metadata
+    false
+}
+
 fn render_metadata(node: &crate::analyzer::TreeNode) -> Text<'static> {
     let mut lines = vec![];
 
-    // Type
-    lines.push(Line::from(vec![
-        Span::styled("Type: ".to_string(), Style::default().fg(Color::DarkGray)),
-        Span::styled(node.node.node_type.clone(), Style::default().fg(Color::Gray)),
-    ]));
-
-    // Depth
-    lines.push(Line::from(vec![
-        Span::styled("Depth: ".to_string(), Style::default().fg(Color::DarkGray)),
-        Span::styled(format!("{}", node.depth), Style::default().fg(Color::Gray)),
-    ]));
-
-    // Timestamp
-    if let Some(timestamp) = node.timestamp() {
-        let dt = chrono::DateTime::from_timestamp_millis(timestamp);
-        if let Some(dt) = dt {
-            lines.push(Line::from(vec![
-                Span::styled("Time: ".to_string(), Style::default().fg(Color::DarkGray)),
-                Span::styled(dt.format("%Y-%m-%d %H:%M:%S").to_string(), Style::default().fg(Color::Gray)),
-            ]));
-        }
-    }
+    // Only show valuable metadata (no Type, Depth, or ID clutter)
 
     // Token usage
     if let Some(ref usage) = node.node.token_usage {
@@ -226,19 +253,6 @@ fn render_metadata(node: &crate::analyzer::TreeNode) -> Text<'static> {
                 Span::styled(format!("{}.{}s", duration_ms / 1000, duration_ms % 1000 / 100), Style::default().fg(Color::Gray)),
             ]));
         }
-    }
-
-    // UUID (truncated)
-    if let Some(ref uuid) = node.node.uuid {
-        let short_uuid = if uuid.len() > 16 {
-            format!("{}...", &uuid[..16])
-        } else {
-            uuid.clone()
-        };
-        lines.push(Line::from(vec![
-            Span::styled("ID: ".to_string(), Style::default().fg(Color::DarkGray)),
-            Span::styled(short_uuid, Style::default().fg(Color::DarkGray)),
-        ]));
     }
 
     Text::from(lines)

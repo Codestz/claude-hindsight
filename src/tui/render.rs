@@ -3,6 +3,7 @@
 //! Simple, maintainable rendering functions for each node type.
 
 use crate::analyzer::TreeNode;
+use crate::tui::code_render;
 use crate::tui::theme::{colors, icons};
 use ratatui::{
     style::{Color, Modifier, Style},
@@ -381,8 +382,14 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
             lines.push(Line::from(""));
 
             if let Some(ref content) = result.content {
-                for line in content.lines() {
-                    lines.push(Line::from(line.to_string()));
+                // Try smart rendering for Edit tool results (JSON with file_path, old_string, new_string)
+                if let Some(rendered) = code_render::render_edit_result(content) {
+                    lines.extend(rendered);
+                } else {
+                    // Fallback to plain text
+                    for line in content.lines() {
+                        lines.push(Line::from(line.to_string()));
+                    }
                 }
             }
         }
