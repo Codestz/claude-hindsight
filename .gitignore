@@ -13,8 +13,9 @@ Cargo.lock
 .DS_Store
 
 # Claude Code
-.claude/
+# Note: .claude/ and .agents/ are intentionally committed to share skills and configs
 claude-docs/
+.claude-docs/
 
 # Environment
 .env
