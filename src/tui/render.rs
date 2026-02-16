@@ -375,7 +375,7 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
                                         if let Some(obj) = input.as_object() {
                                             if let Some(file_path) = obj.get("file_path").and_then(|v| v.as_str()) {
                                                 lines.push(Line::from(vec![
-                                                    Span::styled("📄 Reading: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                                                    Span::styled(" Reading: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),  // nf-fa-file_code
                                                     Span::styled(file_path.to_string(), Style::default().fg(Color::Yellow)),
                                                 ]));
                                             }
