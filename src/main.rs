@@ -21,7 +21,7 @@ use error::Result;
 #[command(author = "Codestz <est.estrada@outlook.com>")]
 struct Cli {
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
@@ -150,7 +150,15 @@ fn main() {
 fn run() -> Result<()> {
     let cli = Cli::parse();
 
-    match cli.command {
+    // If no command provided, launch the main TUI hub
+    let command = match cli.command {
+        Some(cmd) => cmd,
+        None => {
+            return run_hub();
+        }
+    };
+
+    match command {
         Commands::Init { enable_otel } => {
             commands::init::run(enable_otel)?;
         }
@@ -210,5 +218,35 @@ fn run() -> Result<()> {
         }
     }
 
+    Ok(())
+}
+
+/// Run the main TUI hub
+fn run_hub() -> Result<()> {
+    use tui::router::Router;
+    use tui::EventHandler;
+
+    // Initialize router
+    let mut router = Router::new()?;
+
+    // Initialize terminal
+    let mut terminal = tui::init()?;
+    let mut event_handler = EventHandler::new(250);
+
+    // Main loop
+    loop {
+        terminal.draw(|f| router.render(f))?;
+
+        if let tui::Event::Key(key) = event_handler.next()? {
+            router.handle_key(key)?;
+        }
+
+        if router.should_quit {
+            break;
+        }
+    }
+
+    // Restore terminal
+    tui::restore()?;
     Ok(())
 }
