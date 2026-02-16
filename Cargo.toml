@@ -68,3 +68,7 @@ path = "src/main.rs"
 [[example]]
 name = "parse_session"
 path = "examples/parse_session.rs"
+
+[[example]]
+name = "analyze_tree"
+path = "examples/analyze_tree.rs"
