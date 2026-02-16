@@ -63,24 +63,37 @@ impl SessionAnalytics {
                 }
             }
 
-            // Count thinking blocks (both by field and by type)
-            if node.thinking.is_some() || node.node_type == "thinking" {
-                thinking_count += 1;
+            // Count thinking blocks (avoid double-counting)
+            let mut has_thinking = false;
+
+            // Check top-level thinking field
+            if node.thinking.is_some() {
+                has_thinking = true;
             }
 
-            // Also check message.content for thinking blocks
+            // Check node type
+            if node.node_type == "thinking" {
+                has_thinking = true;
+            }
+
+            // Check message.content for thinking blocks
             if let Some(ref message) = node.message {
                 if let Some(ref content) = message.content {
                     if let Some(content_array) = content.as_array() {
                         for content_item in content_array {
                             if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
                                 if content_type == "thinking" {
-                                    thinking_count += 1;
+                                    has_thinking = true;
+                                    break; // Found thinking, no need to continue
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            if has_thinking {
+                thinking_count += 1;
             }
 
             // Count tool usage (check both top-level and message.content)
@@ -161,19 +174,6 @@ impl SessionAnalytics {
         }
     }
 
-    /// Get total tokens (input + output)
-    pub fn total_tokens(&self) -> u64 {
-        self.input_tokens + self.output_tokens
-    }
-
-    /// Estimate cost in USD (using Claude Sonnet 4.5 pricing as baseline)
-    /// Input: $3 per million tokens, Output: $15 per million tokens
-    pub fn estimated_cost_usd(&self) -> f64 {
-        let input_cost = (self.input_tokens as f64 / 1_000_000.0) * 3.0;
-        let output_cost = (self.output_tokens as f64 / 1_000_000.0) * 15.0;
-        input_cost + output_cost
-    }
-
     /// Format duration as human-readable string
     pub fn duration_string(&self) -> String {
         match self.duration_seconds {
@@ -194,32 +194,35 @@ impl SessionAnalytics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::ExecutionNode;
 
     #[test]
     fn test_empty_session() {
-        let session = Session {
-            nodes: vec![],
-            metadata: Default::default(),
-        };
+        let session = Session::new("test-session".to_string(), vec![]);
 
         let analytics = SessionAnalytics::from_session(&session);
         assert_eq!(analytics.total_nodes, 0);
-        assert_eq!(analytics.total_tokens(), 0);
+        assert_eq!(analytics.input_tokens, 0);
+        assert_eq!(analytics.output_tokens, 0);
+        assert_eq!(analytics.thinking_count, 0);
+        assert_eq!(analytics.error_count, 0);
     }
 
     #[test]
-    fn test_cost_calculation() {
-        let session = Session {
-            nodes: vec![],
-            metadata: Default::default(),
-        };
-
+    fn test_duration_formatting() {
+        let session = Session::new("test-session".to_string(), vec![]);
         let mut analytics = SessionAnalytics::from_session(&session);
-        analytics.input_tokens = 1_000_000; // 1M tokens
-        analytics.output_tokens = 1_000_000; // 1M tokens
 
-        // Should be $3 + $15 = $18
-        assert_eq!(analytics.estimated_cost_usd(), 18.0);
+        // Test various durations
+        analytics.duration_seconds = Some(45);
+        assert_eq!(analytics.duration_string(), "45s");
+
+        analytics.duration_seconds = Some(90);
+        assert_eq!(analytics.duration_string(), "1m 30s");
+
+        analytics.duration_seconds = Some(3661);
+        assert_eq!(analytics.duration_string(), "1h 1m");
+
+        analytics.duration_seconds = None;
+        assert_eq!(analytics.duration_string(), "unknown");
     }
 }
