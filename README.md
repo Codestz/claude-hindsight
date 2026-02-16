@@ -1,4 +1,4 @@
-# 🔮 Claude Hindsight
+# Claude Hindsight
 
 > **20/20 hindsight for your Claude Code sessions**
 
@@ -6,63 +6,66 @@
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Claude Hindsight is a powerful observability tool for [Claude Code](https://claude.com/code) that transforms raw JSONL transcripts into beautiful, interactive visualizations. Debug sessions, optimize costs, and understand Claude's decision-making process—all from your terminal or browser.
+Claude Hindsight is a powerful observability tool for [Claude Code](https://claude.com/code) that transforms raw JSONL transcripts into beautiful, interactive visualizations. Debug sessions, analyze costs, and understand Claude's decision-making process—all from your terminal.
 
 ---
 
-## ✨ Features
+## Features
 
-### 🌲 **Execution Tree Visualization**
-See the complete hierarchy of your Claude Code session—user messages, thinking blocks, tool calls, and subagent spawns—rendered as a beautiful, navigable tree.
+### Execution Tree Visualization
+See the complete hierarchy of your Claude Code session—user messages, thinking blocks, tool calls, and results—rendered as a navigable tree with proper parent-child relationships.
 
 ```
-📨 User: "Fix the authentication bug"
-│
-├─ 🧠 Thinking (2.3s)
-│  │ I need to understand the current auth implementation...
-│
-├─ 🔍 Tool: Grep (*.ts) - 123ms ✓
-│  │ Found 3 files
-│
-├─ 📖 Tool: Read (src/auth.ts) - 45ms ✓
-│
-├─ 🧠 Thinking (1.8s)
-│  │ I see the issue - missing token validation...
-│
-└─ ✏️ Tool: Edit (src/auth.ts) - 89ms ✓
+▼ User: Fix the authentication bug
+  ▼ Assistant
+    ▶ Thinking (2.3s)
+    ▶ Tool: Grep
+    ▶ Tool: Read
+  ▼ User (Tool Result)
+    ▶ Success (45ms)
+  ▼ Assistant
+    ▶ Thinking (1.8s)
+    ▶ Tool: Edit
+  ▼ User (Tool Result)
+    ▶ Success (89ms)
 ```
 
-### ⚡ **Live Monitoring**
-Watch your Claude Code session in real-time as it executes. See tool calls, costs, and progress—all updating live in your terminal.
+### Interactive Terminal UI
+Fast, keyboard-driven interface with professional features:
+- Full content display (no truncation)
+- Node type filtering (show only specific node types)
+- Vim-like navigation shortcuts
+- Breadcrumb path display
+- Scroll position indicators
+- Split-pane view (tree + details + metadata)
 
-### 💰 **Cost Optimization**
-Identify expensive operations, detect repeated tool calls, and get AI-powered suggestions to reduce costs and improve performance.
+### Live Monitoring
+Watch your Claude Code session in real-time as it executes. See tool calls and progress—all updating live in your terminal.
 
-### 🐛 **Smart Debugging**
+### Cost Analysis
+Identify expensive operations and get detailed cost breakdowns by tool type.
+
+### Error Debugging
 Jump straight to errors with full context—see what happened before, during, and after failures.
 
-### 🎯 **Two Interfaces, One Tool**
-- **Terminal UI** (default) - Fast, keyboard-driven, works over SSH
-- **Web Dashboard** (optional) - Rich visualizations, charts, and sharing
-
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Installation
 
 ```bash
-# macOS (Homebrew)
-brew install hindsight
-
 # From source
 git clone https://github.com/yourusername/hindsight
 cd hindsight
-cargo install --path .
+cargo build --release
+
+# The binary will be at target/release/hindsight
 ```
 
-**📝 Requirements:**
-- **Nerd Font** - For proper icon display in the TUI. Install any Nerd Font:
+**Requirements:**
+- Rust 1.75+
+- **Nerd Font** - For proper tree icons in the TUI. Install any Nerd Font:
   - [FiraCode Nerd Font](https://github.com/ryanoasis/nerd-fonts#patched-fonts)
   - [JetBrains Mono Nerd Font](https://github.com/ryanoasis/nerd-fonts#patched-fonts)
   - Configure your terminal to use the Nerd Font
@@ -85,7 +88,7 @@ hindsight stats <session-id>
 
 ---
 
-## 📖 Usage
+## Usage
 
 ### Live Monitoring
 
@@ -95,32 +98,14 @@ Watch your active Claude Code session in real-time:
 hindsight watch
 ```
 
-**Output:**
-```
-📊 Watching: my-project/ce3c149... (live)
-
-Duration: 00:45:23
-Tools: 128 (+3 in last 10s)
-Cost: $2.15
-
-Currently executing:
-  ▶ Tool: Bash - npm run build (3.2s)
-
-[d] Dashboard | [q] Quit | [/] Search
-```
+The TUI will update live as Claude Code executes tools and processes messages.
 
 ### Session Analysis
 
-Analyze any session with an interactive terminal UI:
+Analyze any session with the interactive terminal UI:
 
 ```bash
 hindsight show ce3c149
-```
-
-Or open the web dashboard for rich visualizations:
-
-```bash
-hindsight show ce3c149 --dashboard
 ```
 
 ### Browse Sessions
@@ -142,23 +127,10 @@ hindsight list --last 10
 
 ### Cost Analysis
 
-Find expensive operations and optimization opportunities:
+Analyze session costs by tool type:
 
 ```bash
 hindsight costs ce3c149
-
-💰 Cost Analysis
-
-Total: $2.15
-
-By Tool:
-  Task (subagents)  $0.72 (33%)  █████████████
-  Bash              $0.45 (21%)  ████████
-  Read              $0.38 (18%)  ███████
-
-Optimization Opportunities:
-  ⚠️ Read called 8x on same file → Save $0.15
-  ⚠️ 3 failed Edit operations → Wasted $0.08
 ```
 
 ### Error Debugging
@@ -167,18 +139,6 @@ Jump straight to errors with full context:
 
 ```bash
 hindsight errors ce3c149
-
-🚨 Error Analysis
-
-Found 3 errors:
-
-Error #1 (00:23:45)
-  Tool: Read
-  File: src/missing.txt
-  Error: File not found
-
-  Context:
-    User → Grep (*.txt) → Read (failed)
 ```
 
 ### Search Sessions
@@ -198,51 +158,62 @@ hindsight search --errors
 
 ---
 
-## 🎨 Interactive Terminal UI
+## Interactive Terminal UI
 
-Claude Hindsight features a beautiful, `lazygit`-style terminal interface built with [ratatui](https://github.com/ratatui-org/ratatui):
+Claude Hindsight features a professional, lazygit-style terminal interface built with [ratatui](https://github.com/ratatui-org/ratatui):
 
-**Features:**
-- ✅ Collapsible execution tree (expand/collapse with Enter)
-- ✅ Keyboard navigation (vim-style: j/k or arrows)
-- ✅ Split panels (tree view + details)
-- ✅ Real-time updates (for live sessions)
-- ✅ Syntax-highlighted JSON viewer
-- ✅ Search and filter (/ to search)
-- ✅ Color-coded nodes (success=green, error=red, thinking=blue)
+### Features
+- Hierarchical execution tree with expand/collapse
+- Full content display (no truncation)
+- Vim-like navigation shortcuts
+- Node type filtering
+- Split panels (tree + details + metadata)
+- Breadcrumb path showing node hierarchy
+- Scroll position indicators
+- Real-time updates for live sessions
+- Color-coded node types
 
-**Keyboard Shortcuts:**
-- `↑↓` or `j/k` - Navigate tree
+### Keyboard Shortcuts
+
+**Navigation:**
+- `j/k` or `↑↓` - Navigate tree or scroll details (depending on focus)
+- `Ctrl+d` / `Ctrl+u` - Half-page scroll (15 lines)
+- `Ctrl+f` / `Ctrl+b` - Full-page scroll (30 lines)
+- `PageDown` / `PageUp` - Full-page scroll
+- `g` - Jump to top
+- `G` - Jump to bottom
+
+**Tree Operations:**
 - `Enter` or `Space` - Expand/collapse node
-- `i` - View tool input
-- `o` - View tool output
-- `/` - Search
-- `d` - Open dashboard
+- `Tab` - Switch focus between tree and details pane
+
+**Filtering:**
+- `/` - Start node type filter
+- Type node types (comma-separated): `user,assistant,tool_use`
+- `Enter` - Apply filter
+- `Esc` - Cancel input
+- `Alt+c` - Clear active filter
+- `n` - Jump to next matching node
+- `N` - Jump to previous matching node
+
+**Other:**
 - `q` - Quit
 
----
-
-## 🌐 Web Dashboard
-
-For deep analysis and sharing, launch the web dashboard:
-
-```bash
-hindsight show ce3c149 --dashboard
-```
-
-**Features:**
-- 📊 Interactive execution tree with zoom/pan
-- 📈 Cost breakdown charts (Recharts)
-- ⏱️ Timeline view with parallel execution
-- 🔍 Full-text search across session
-- 📤 Export to HTML report
-- 🎨 Beautiful, modern UI (React + Tailwind)
+### Node Types
+Filter by these node types:
+- `user` - User messages and tool results
+- `assistant` - Assistant responses (text and tool calls)
+- `tool_use` - Tool invocations
+- `tool_result` - Tool execution results
+- `thinking` - Extended thinking blocks
+- `progress` - Progress updates
+- `system` - System messages
 
 ---
 
-## 🏗️ How It Works
+## How It Works
 
-Claude Hindsight analyzes Claude Code's JSONL transcript files located at `~/.claude/projects/`:
+Claude Hindsight analyzes Claude Code's JSONL transcript files located at `~/.claude/projects/` and `~/.claudep/projects/`:
 
 ```
 Claude Code Session
@@ -253,148 +224,135 @@ Claude Hindsight
   ↓ (builds)
 Execution Tree + Metrics
   ↓ (displayed in)
-Terminal UI or Web Dashboard
+Terminal UI
 ```
 
 **Key Features:**
-- ✅ No setup required - auto-discovers sessions
-- ✅ Zero-copy parsing - fast analysis even for large sessions
-- ✅ Real-time file watching - live updates as session progresses
-- ✅ Subagent tracking - understands multi-agent workflows
-- ✅ Offline analysis - works on historical sessions
+- No setup required - auto-discovers sessions
+- Fast JSONL parsing - handles large sessions efficiently
+- Real-time file watching - live updates as session progresses
+- Parent-child tree structure based on UUID relationships
+- Offline analysis - works on historical sessions
 
 ---
 
-## 📊 Use Cases
+## Use Cases
 
-### 🐛 Debugging
+### Debugging
 **Problem:** "My Claude Code session failed. What went wrong?"
 
 **Solution:**
 ```bash
-hindsight show --current
+hindsight errors <session-id>
 # Jump to errors, see full context, trace execution path
 ```
 
-### 💰 Cost Optimization
-**Problem:** "This session cost $10. Why?"
+### Cost Optimization
+**Problem:** "This session was expensive. What tools cost the most?"
 
 **Solution:**
 ```bash
 hindsight costs <session-id>
-# See expensive tools, detect redundant operations, get optimization tips
+# See cost breakdown by tool type
 ```
 
-### 🔍 Understanding Claude Code
+### Understanding Claude Code
 **Problem:** "How does Claude approach complex tasks?"
 
 **Solution:**
 ```bash
 hindsight show <session-id>
-# View thinking blocks, see decision-making flow, understand agent orchestration
+# View thinking blocks, see decision-making flow, trace tool execution
 ```
 
-### ⚡ Live Monitoring
-**Problem:** "Is Claude stuck? What's it doing?"
+### Live Monitoring
+**Problem:** "Is Claude making progress? What's it doing?"
 
 **Solution:**
 ```bash
 hindsight watch
-# Real-time view of current tool, progress, and costs
+# Real-time view of tool execution and session progress
 ```
 
 ---
 
-## 🛠️ Architecture
+## Architecture
 
 Claude Hindsight is built with:
 
-- **Rust** - Fast JSONL parsing, file watching, zero-copy processing
-- **ratatui** - Beautiful terminal UI with keyboard navigation
-- **React + TypeScript** - Rich web dashboard (optional)
+- **Rust** - Fast JSONL parsing, file watching, efficient processing
+- **ratatui** - Professional terminal UI with keyboard navigation
 - **SQLite** - Fast session indexing and caching
 
 **Key Components:**
-- 📝 **Parser** - JSONL parsing and session data extraction
-- 🌲 **Analyzer** - Tree building (simple parent-child hierarchy)
-- 🖥️ **TUI** - Interactive terminal interface with keyboard navigation
-- 🌐 **API** - Web dashboard support (JSON serialization)
-- 💾 **Storage** - Session indexing and fast lookups
+- **Parser** - JSONL parsing and session data extraction
+- **Analyzer** - Tree building (parent-child hierarchy based on UUIDs)
+- **TUI** - Interactive terminal interface with keyboard navigation
+- **Storage** - Session indexing and fast lookups
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-### ✅ Phase 1: Core (Weeks 1-2)
+### Phase 1: Core (Complete)
 - [x] JSONL parser
 - [x] Session discovery
-- [x] CLI commands (`init`, `list`, `stats`)
-- [ ] Interactive terminal UI
-- [ ] Live watch mode
-- [ ] Error debugging
+- [x] CLI commands (`init`, `list`, `stats`, `show`, `watch`, `costs`, `errors`, `search`)
+- [x] Interactive terminal UI with tree visualization
+- [x] Live watch mode
+- [x] Error debugging
+- [x] Node type filtering
+- [x] Vim-like navigation
+- [x] Full content display (no truncation)
 
-### 🚧 Phase 2: Advanced (Weeks 3-4)
-- [ ] Web dashboard
-- [ ] Cost analysis
-- [ ] Search functionality
+### Phase 2: Enhancements (In Progress)
 - [ ] Session comparison
-- [ ] Export to HTML
+- [ ] Export to HTML/JSON
+- [ ] Full-text content search
+- [ ] Performance profiling
+- [ ] Cost optimization recommendations
 
-### 🔮 Phase 3: Future
-- [ ] OpenTelemetry integration (optional)
+### Phase 3: Future
 - [ ] Cross-session analytics
-- [ ] Team dashboards
-- [ ] Cost alerting
+- [ ] Historical trends
 - [ ] Plugin system
+- [ ] Integration with other tools
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-We love contributions! Claude Hindsight is open source and welcomes:
+Claude Hindsight is open source and welcomes:
 
-- 🐛 Bug reports
-- 💡 Feature requests
-- 📝 Documentation improvements
-- 🔧 Code contributions
+- Bug reports
+- Feature requests
+- Documentation improvements
+- Code contributions
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-**Good First Issues:**
-- [Add syntax highlighting to terminal JSON viewer](issues/1)
-- [Support filtering sessions by date range](issues/2)
-- [Add export to CSV format](issues/3)
-
 ---
 
-## 📄 License
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Claude Code Team** - For building an amazing tool
-- **ratatui** - Beautiful terminal UI framework
-- **LangSmith** - Inspiration for observability UX
+- **ratatui** - Professional terminal UI framework
+- **Rust community** - For excellent tooling and libraries
 
 ---
 
-## 🔗 Links
+## Links
 
 - [Documentation](docs/)
 - [JSONL Structure Reference](docs/JSONL-STRUCTURE.md) - Complete guide to Claude Code transcript format
 - [Changelog](CHANGELOG.md)
-- [Issues](https://github.com/yourusername/hindsight/issues)
-- [Discussions](https://github.com/yourusername/hindsight/discussions)
 
 ---
 
-<p align="center">
-  Made with ❤️ for the Claude Code community
-</p>
-
-<p align="center">
-  <strong>⭐ Star us on GitHub if Claude Hindsight helps you!</strong>
-</p>
+Made for the Claude Code community
