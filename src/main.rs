@@ -9,6 +9,7 @@ use std::process;
 mod parser;
 mod commands;
 mod error;
+mod storage;
 
 use error::Result;
 
