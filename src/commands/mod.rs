@@ -10,3 +10,4 @@ pub mod errors;
 pub mod search;
 pub mod compare;
 pub mod export;
+pub mod config;

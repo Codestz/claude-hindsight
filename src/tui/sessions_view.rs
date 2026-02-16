@@ -2,6 +2,7 @@
 //!
 //! Shows all sessions for a selected project with metadata.
 
+use crate::config::Config;
 use crate::error::Result;
 use crate::storage::{SessionFile, SessionIndex, ProjectAnalytics};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -35,11 +36,14 @@ pub struct SessionsView {
 
     /// Project-specific analytics
     pub analytics: ProjectAnalytics,
+
+    /// Application configuration
+    pub config: Config,
 }
 
 impl SessionsView {
     /// Create a new sessions view for a project
-    pub fn new(project_name: String) -> Result<Self> {
+    pub fn new(project_name: String, config: &Config) -> Result<Self> {
         let index = SessionIndex::new()?;
         let sessions = index.find_by_project(&project_name)?;
         let analytics = index.get_project_analytics(&project_name)?;
@@ -59,6 +63,7 @@ impl SessionsView {
             filter_mode: false,
             status_message,
             analytics,
+            config: config.clone(),
         })
     }
 
@@ -465,77 +470,89 @@ impl SessionsView {
                 ),
             ]),
             Line::from(""),
-            // Activity section
-            Line::from(vec![
+        ];
+
+        // Activity section (conditional based on config)
+        if self.config.analytics.show_activity {
+            lines.push(Line::from(vec![
                 Span::styled(" Activity", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
+            ]));
+            lines.push(Line::from(""));
+            lines.push(Line::from(vec![
                 Span::raw("  This Week:      "),
                 Span::styled(
                     format!("{}", self.analytics.sessions_this_week),
                     Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" sessions"),
-            ]),
-            Line::from(vec![
+            ]));
+            lines.push(Line::from(vec![
                 Span::raw("  Today:          "),
                 Span::styled(
                     format!("{}", self.analytics.sessions_today),
                     Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" sessions"),
-            ]),
-            Line::from(""),
-            // Session Types section
-            Line::from(vec![
+            ]));
+            lines.push(Line::from(""));
+        }
+
+        // Session Types section (conditional based on config)
+        if self.config.analytics.show_subagent_count {
+            lines.push(Line::from(vec![
                 Span::styled(" Session Types", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
+            ]));
+            lines.push(Line::from(""));
+            lines.push(Line::from(vec![
                 Span::raw("  With Subagents: "),
                 Span::styled(
                     format!("{}", self.analytics.subagent_count),
                     Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
                 ),
-            ]),
-            Line::from(""),
-        ];
+            ]));
+            lines.push(Line::from(""));
+        }
 
-        // Top Tools section
-        lines.push(Line::from(vec![
-            Span::styled(" Top Tools", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-        ]));
-        lines.push(Line::from(""));
+        // Top Tools section (conditional based on config)
+        if self.config.analytics.show_top_tools {
+            lines.push(Line::from(vec![
+                Span::styled(" Top Tools", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]));
+            lines.push(Line::from(""));
 
-        if !self.analytics.top_tools.is_empty() {
-            for (tool, count) in &self.analytics.top_tools {
-                let tool_name = if tool.len() > 12 {
-                    format!("{}...", &tool[..9])
-                } else {
-                    tool.clone()
-                };
+            if !self.analytics.top_tools.is_empty() {
+                // Limit to configured number of tools
+                let tools_to_show = self.analytics.top_tools.iter()
+                    .take(self.config.analytics.tools_limit);
 
+                for (tool, count) in tools_to_show {
+                    let tool_name = if tool.len() > 12 {
+                        format!("{}...", &tool[..9])
+                    } else {
+                        tool.clone()
+                    };
+
+                    lines.push(Line::from(vec![
+                        Span::raw("  "),
+                        Span::styled(
+                            format!("{:12}", tool_name),
+                            Style::default().fg(Color::Blue),
+                        ),
+                        Span::styled(
+                            format!("{:>4}", count),
+                            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        ),
+                    ]));
+                }
+            } else {
                 lines.push(Line::from(vec![
                     Span::raw("  "),
                     Span::styled(
-                        format!("{:12}", tool_name),
-                        Style::default().fg(Color::Blue),
-                    ),
-                    Span::styled(
-                        format!("{:>4}", count),
-                        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                        "Analyzing...",
+                        Style::default().fg(Color::DarkGray),
                     ),
                 ]));
             }
-        } else {
-            lines.push(Line::from(vec![
-                Span::raw("  "),
-                Span::styled(
-                    "Analyzing...",
-                    Style::default().fg(Color::DarkGray),
-                ),
-            ]));
         }
 
         let paragraph = Paragraph::new(lines)
