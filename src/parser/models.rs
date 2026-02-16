@@ -141,15 +141,61 @@ pub struct Progress {
 pub struct TokenUsage {
     /// Input tokens
     pub input_tokens: Option<i64>,
-    
+
     /// Output tokens
     pub output_tokens: Option<i64>,
-    
+
     /// Cache creation tokens
     pub cache_creation_input_tokens: Option<i64>,
-    
+
     /// Cache read tokens
     pub cache_read_input_tokens: Option<i64>,
+}
+
+/// Tool use result from user nodes (file operations)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolUseResult {
+    /// Operation type (create, update, delete)
+    #[serde(rename = "type")]
+    pub operation_type: Option<String>,
+
+    /// File path affected
+    pub file_path: Option<String>,
+
+    /// File content
+    pub content: Option<String>,
+
+    /// Structured patch information
+    pub structured_patch: Option<serde_json::Value>,
+}
+
+/// Progress data (nested in progress nodes)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProgressData {
+    /// Progress subtype (bash_progress, hook_progress, waiting_for_task)
+    #[serde(rename = "type")]
+    pub progress_type: Option<String>,
+
+    /// Elapsed time in seconds (for bash_progress)
+    pub elapsed_time_seconds: Option<f64>,
+
+    /// Full output (for bash_progress)
+    pub full_output: Option<String>,
+
+    /// Exit code (for bash_progress)
+    pub exit_code: Option<i32>,
+
+    /// Hook name (for hook_progress)
+    pub hook_name: Option<String>,
+
+    /// Status (for hook_progress)
+    pub status: Option<String>,
+
+    /// Task description (for waiting_for_task)
+    pub task_description: Option<String>,
+
+    /// Task ID (for waiting_for_task)
+    pub task_id: Option<String>,
 }
 
 /// Complete session parsed from JSONL transcript

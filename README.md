@@ -384,6 +384,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 - [Documentation](docs/)
+- [JSONL Structure Reference](docs/JSONL-STRUCTURE.md) - Complete guide to Claude Code transcript format
 - [Changelog](CHANGELOG.md)
 - [Issues](https://github.com/yourusername/hindsight/issues)
 - [Discussions](https://github.com/yourusername/hindsight/discussions)

@@ -323,47 +323,10 @@ impl TreeNode {
         }
     }
 
-    /// Get a one-line summary of this node
+    /// Get a one-line summary of this node (uses smart labeling)
     pub fn summary(&self) -> String {
-        let label = self.label();
-
-        // For user/assistant messages, show preview of content
-        if self.node.node_type == "user" || self.node.node_type == "assistant" {
-            if let Some(ref msg) = self.node.message {
-                if let Some(ref content) = msg.content {
-                    let preview = extract_text_preview(content, 60);
-                    if !preview.is_empty() {
-                        return format!("{}: {}", label, preview);
-                    }
-                }
-            }
-        }
-
-        // For group nodes, just return the label
-        if self.node.node_type == "group" {
-            return label;
-        }
-
-        // For tool uses, show the tool name with parameters
-        if let Some(ref tool_use) = self.node.tool_use {
-            return format!("🔧 {}", tool_use.name);
-        }
-
-        // Add duration if available
-        if let Some(ref result) = self.node.tool_result {
-            if let Some(duration_ms) = result.duration_ms {
-                return format!("{} ({}.{}s)", label, duration_ms / 1000, duration_ms % 1000 / 100);
-            }
-        }
-
-        // Add token count if available
-        if let Some(ref usage) = self.node.token_usage {
-            let total = usage.input_tokens.unwrap_or(0) + usage.output_tokens.unwrap_or(0);
-            if total > 0 {
-                return format!("{} ({} tokens)", label, total);
-            }
-        }
-
+        // Use smart label detection from smart_label module
+        let (label, _color) = crate::analyzer::smart_label::get_node_label(self);
         label
     }
 
