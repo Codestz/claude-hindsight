@@ -89,7 +89,7 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .title("Execution Tree"),
+                .title("Session Nodes"),
         )
         .highlight_style(
             Style::default()
@@ -252,8 +252,6 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &mut App) {
             Span::raw(": Nav | "),
             Span::styled("Ctrl+d/u", Style::default().fg(Color::Yellow)),
             Span::raw(": HalfPage | "),
-            Span::styled("Enter", Style::default().fg(Color::Yellow)),
-            Span::raw(": Expand | "),
             Span::styled("Tab", Style::default().fg(Color::Yellow)),
             Span::raw(": Focus | "),
             Span::styled("/", Style::default().fg(Color::Yellow)),
@@ -268,7 +266,7 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &mut App) {
         // Line 2: Status info
         Line::from(vec![
             Span::styled(
-                format!("[{}] ", if app.focus_mode == FocusMode::Tree { "TREE" } else { "DETAILS" }),
+                format!("[{}] ", if app.focus_mode == FocusMode::Tree { "LIST" } else { "DETAILS" }),
                 Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
             ),
             Span::raw(format!("Node {}/{} | ", current_position, app.total_nodes)),

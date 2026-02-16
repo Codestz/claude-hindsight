@@ -13,21 +13,21 @@ Claude Hindsight is a powerful observability tool for [Claude Code](https://clau
 ## Features
 
 ### Execution Tree Visualization
-See the complete hierarchy of your Claude Code session—user messages, thinking blocks, tool calls, and results—rendered as a navigable tree with proper parent-child relationships.
+See the complete flow of your Claude Code session—user messages, thinking blocks, tool calls, and results—rendered as a navigable list with color-coded node types.
 
 ```
-▼ User: Fix the authentication bug
-  ▼ Assistant
-    ▶ Thinking (2.3s)
-    ▶ Tool: Grep
-    ▶ Tool: Read
-  ▼ User (Tool Result)
-    ▶ Success (45ms)
-  ▼ Assistant
-    ▶ Thinking (1.8s)
-    ▶ Tool: Edit
-  ▼ User (Tool Result)
-    ▶ Success (89ms)
+  User: Fix the authentication bug
+  Assistant
+  Thinking (2.3s)
+  Tool: Grep
+  Tool: Read
+  User (Tool Result)
+  Success (45ms)
+  Assistant
+  Thinking (1.8s)
+  Tool: Edit
+  User (Tool Result)
+  Success (89ms)
 ```
 
 ### Interactive Terminal UI
@@ -176,16 +176,13 @@ Claude Hindsight features a professional, lazygit-style terminal interface built
 ### Keyboard Shortcuts
 
 **Navigation:**
-- `j/k` or `↑↓` - Navigate tree or scroll details (depending on focus)
+- `j/k` or `↑↓` - Navigate list or scroll details (depending on focus)
 - `Ctrl+d` / `Ctrl+u` - Half-page scroll (15 lines)
 - `Ctrl+f` / `Ctrl+b` - Full-page scroll (30 lines)
 - `PageDown` / `PageUp` - Full-page scroll
 - `g` - Jump to top
 - `G` - Jump to bottom
-
-**Tree Operations:**
-- `Enter` or `Space` - Expand/collapse node
-- `Tab` - Switch focus between tree and details pane
+- `Tab` - Switch focus between list and details pane
 
 **Filtering:**
 - `/` - Start node type filter

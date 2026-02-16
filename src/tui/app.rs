@@ -358,18 +358,6 @@ impl App {
                 }
             }
 
-            // Expand/collapse
-            (KeyCode::Enter, KeyModifiers::NONE)
-            | (KeyCode::Char(' '), KeyModifiers::NONE)
-            | (KeyCode::Right, _) => {
-                self.tree_state.toggle_selected();
-                self.status_message = "✓ Toggled".to_string();
-            }
-            (KeyCode::Left, _) => {
-                self.tree_state.toggle_selected(); // Toggle to close if open
-                self.status_message = "✓ Toggled".to_string();
-            }
-
             // Focus switching
             (KeyCode::Tab, KeyModifiers::NONE) => {
                 self.focus_mode = match self.focus_mode {
@@ -378,7 +366,7 @@ impl App {
                         FocusMode::Details
                     }
                     FocusMode::Details => {
-                        self.status_message = "Focus: Tree".to_string();
+                        self.status_message = "Focus: List".to_string();
                         FocusMode::Tree
                     }
                 };
