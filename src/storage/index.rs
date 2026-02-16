@@ -653,4 +653,108 @@ mod tests {
         let count = index.count().unwrap();
         assert_eq!(count, 1);
     }
+
+    #[test]
+    fn test_tool_usage_table() {
+        use tempfile::TempDir;
+        use std::fs;
+        use crate::parser::ExecutionNode;
+        use crate::parser::models::ToolUse;
+
+        let temp_dir = TempDir::new().unwrap();
+        let session_path = temp_dir.path().join("test-session.jsonl");
+
+        // Create a test session with tool usage
+        let nodes = vec![
+            ExecutionNode {
+                uuid: Some("node1".to_string()),
+                parent_uuid: None,
+                timestamp: Some(1000),
+                node_type: "tool_use".to_string(),
+                message: None,
+                tool_use: Some(ToolUse {
+                    name: "Read".to_string(),
+                    input: serde_json::json!({"file": "test.rs"}),
+                    id: Some("tool1".to_string()),
+                }),
+                tool_result: None,
+                thinking: None,
+                progress: None,
+                token_usage: None,
+                extra: None,
+            },
+            ExecutionNode {
+                uuid: Some("node2".to_string()),
+                parent_uuid: None,
+                timestamp: Some(2000),
+                node_type: "tool_use".to_string(),
+                message: None,
+                tool_use: Some(ToolUse {
+                    name: "Edit".to_string(),
+                    input: serde_json::json!({"file": "test.rs"}),
+                    id: Some("tool2".to_string()),
+                }),
+                tool_result: None,
+                thinking: None,
+                progress: None,
+                token_usage: None,
+                extra: None,
+            },
+            ExecutionNode {
+                uuid: Some("node3".to_string()),
+                parent_uuid: None,
+                timestamp: Some(3000),
+                node_type: "tool_use".to_string(),
+                message: None,
+                tool_use: Some(ToolUse {
+                    name: "Read".to_string(),
+                    input: serde_json::json!({"file": "main.rs"}),
+                    id: Some("tool3".to_string()),
+                }),
+                tool_result: None,
+                thinking: None,
+                progress: None,
+                token_usage: None,
+                extra: None,
+            },
+        ];
+
+        // Write to JSONL file
+        let mut file_content = String::new();
+        for node in &nodes {
+            file_content.push_str(&serde_json::to_string(node).unwrap());
+            file_content.push('\n');
+        }
+        fs::write(&session_path, file_content).unwrap();
+
+        // Create index and index the session
+        let mut index = SessionIndex::new_in_memory().unwrap();
+        let session = SessionFile {
+            session_id: "test-session".to_string(),
+            project_name: "test-project".to_string(),
+            path: session_path,
+            file_size: 1024,
+            modified_at: 1234567890,
+            has_subagents: false,
+        };
+
+        index.index_session(&session).unwrap();
+
+        // Query tool usage
+        let top_tools = index.get_top_tools(100).unwrap();
+
+        // Should have 2 unique tools: Read (2 times) and Edit (1 time)
+        assert_eq!(top_tools.len(), 2);
+        assert_eq!(top_tools[0].0, "Read");
+        assert_eq!(top_tools[0].1, 2);
+        assert_eq!(top_tools[1].0, "Edit");
+        assert_eq!(top_tools[1].1, 1);
+    }
+
+    #[test]
+    fn test_get_top_tools_empty() {
+        let index = SessionIndex::new_in_memory().unwrap();
+        let top_tools = index.get_top_tools(100).unwrap();
+        assert_eq!(top_tools.len(), 0);
+    }
 }
