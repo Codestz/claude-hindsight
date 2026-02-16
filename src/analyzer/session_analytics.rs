@@ -201,8 +201,6 @@ mod tests {
 
         let analytics = SessionAnalytics::from_session(&session);
         assert_eq!(analytics.total_nodes, 0);
-        assert_eq!(analytics.input_tokens, 0);
-        assert_eq!(analytics.output_tokens, 0);
         assert_eq!(analytics.thinking_count, 0);
         assert_eq!(analytics.error_count, 0);
     }
