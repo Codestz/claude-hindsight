@@ -4,8 +4,11 @@
 
 pub mod app;
 pub mod events;
+pub mod projects_view;
 pub mod render;
+pub mod router;
 pub mod search;
+pub mod sessions_view;
 pub mod ui;
 
 pub use app::App;

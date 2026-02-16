@@ -6,7 +6,7 @@ pub mod discovery;
 pub mod index;
 
 pub use discovery::{discover_sessions, SessionFile};
-pub use index::SessionIndex;
+pub use index::{SessionIndex, ProjectStats};
 
 use crate::error::Result;
 

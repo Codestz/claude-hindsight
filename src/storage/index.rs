@@ -252,6 +252,65 @@ impl SessionIndex {
 
         Ok(count as usize)
     }
+
+    /// Get all unique project names
+    pub fn list_projects(&self) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT project_name FROM sessions ORDER BY project_name"
+        )?;
+
+        let projects = stmt.query_map([], |row| row.get(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(projects)
+    }
+
+    /// Get project statistics
+    pub fn get_project_stats(&self, project: &str) -> Result<ProjectStats> {
+        let mut stmt = self.conn.prepare(
+            "SELECT
+                COUNT(*) as session_count,
+                SUM(file_size) as total_size,
+                MAX(modified_at) as last_activity
+             FROM sessions
+             WHERE project_name = ?1"
+        )?;
+
+        let stats = stmt.query_row([project], |row| {
+            Ok(ProjectStats {
+                project_name: project.to_string(),
+                session_count: row.get::<_, i64>(0)? as usize,
+                total_size: row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+                last_activity: row.get::<_, Option<i64>>(2)?,
+            })
+        })?;
+
+        Ok(stats)
+    }
+
+    /// Get all project statistics
+    pub fn get_all_project_stats(&self) -> Result<Vec<ProjectStats>> {
+        let projects = self.list_projects()?;
+        let mut stats = Vec::new();
+
+        for project in projects {
+            stats.push(self.get_project_stats(&project)?);
+        }
+
+        // Sort by last activity (most recent first)
+        stats.sort_by(|a, b| b.last_activity.cmp(&a.last_activity));
+
+        Ok(stats)
+    }
+}
+
+/// Statistics for a project
+#[derive(Debug, Clone)]
+pub struct ProjectStats {
+    pub project_name: String,
+    pub session_count: usize,
+    pub total_size: u64,
+    pub last_activity: Option<i64>,
 }
 
 #[cfg(test)]
