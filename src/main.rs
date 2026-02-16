@@ -9,6 +9,7 @@ use std::process;
 mod analyzer;
 mod parser;
 mod commands;
+mod config;
 mod error;
 mod storage;
 mod tui;
@@ -138,6 +139,27 @@ enum Commands {
         #[arg(short, long, default_value = "report.html")]
         output: String,
     },
+
+    /// Manage configuration
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
+}
+
+#[derive(Subcommand)]
+enum ConfigAction {
+    /// Show current configuration
+    Show,
+
+    /// Edit configuration in $EDITOR
+    Edit,
+
+    /// Reset configuration to defaults
+    Reset,
+
+    /// Validate configuration file
+    Validate,
 }
 
 fn main() {
@@ -150,11 +172,23 @@ fn main() {
 fn run() -> Result<()> {
     let cli = Cli::parse();
 
-    // If no command provided, launch the main TUI hub
+    // If no command provided, check config for default view
     let command = match cli.command {
         Some(cmd) => cmd,
         None => {
-            return run_hub();
+            // Load config to determine default view
+            let config = config::Config::load()?;
+
+            match config.ui.default_view.as_str() {
+                "last_session" => {
+                    // Find and open the most recent session
+                    return run_last_session();
+                }
+                _ => {
+                    // Default to projects hub
+                    return run_hub();
+                }
+            }
         }
     };
 
@@ -216,6 +250,14 @@ fn run() -> Result<()> {
         } => {
             commands::export::run(session_id, output)?;
         }
+        Commands::Config { action } => {
+            match action {
+                ConfigAction::Show => commands::config::show_config()?,
+                ConfigAction::Edit => commands::config::edit_config()?,
+                ConfigAction::Reset => commands::config::reset_config()?,
+                ConfigAction::Validate => commands::config::validate_config()?,
+            }
+        }
     }
 
     Ok(())
@@ -249,4 +291,48 @@ fn run_hub() -> Result<()> {
     // Restore terminal
     tui::restore()?;
     Ok(())
+}
+
+/// Run the TUI opening the most recent session
+fn run_last_session() -> Result<()> {
+    use storage::SessionIndex;
+    use tui::router::Router;
+    use tui::EventHandler;
+
+    // Get the most recent session
+    let index = SessionIndex::new()?;
+    let latest = index.get_latest()?;
+
+    match latest {
+        Some(session_file) => {
+            // Create router with the session
+            let mut router = Router::new_with_session(session_file.session_id)?;
+
+            // Initialize terminal
+            let mut terminal = tui::init()?;
+            let mut event_handler = EventHandler::new(250);
+
+            // Main loop
+            loop {
+                terminal.draw(|f| router.render(f))?;
+
+                if let tui::Event::Key(key) = event_handler.next()? {
+                    router.handle_key(key)?;
+                }
+
+                if router.should_quit {
+                    break;
+                }
+            }
+
+            // Restore terminal
+            tui::restore()?;
+            Ok(())
+        }
+        None => {
+            eprintln!("No sessions found. Run 'hindsight init' to discover sessions.");
+            eprintln!("Falling back to projects view...");
+            run_hub()
+        }
+    }
 }

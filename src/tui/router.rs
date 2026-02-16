@@ -2,6 +2,7 @@
 //!
 //! Manages navigation between projects, sessions, and session detail views.
 
+use crate::config::Config;
 use crate::error::Result;
 use crate::parser::parse_session;
 use crate::storage::SessionIndex;
@@ -39,12 +40,23 @@ pub struct Router {
 
     /// Whether to quit
     pub should_quit: bool,
+
+    /// Application configuration
+    pub config: Config,
 }
 
 impl Router {
     /// Create a new router starting at projects view
     pub fn new() -> Result<Self> {
-        let projects_view = Some(ProjectsView::new()?);
+        let config = Config::load()?;
+
+        // Validate config
+        if let Err(e) = config.validate() {
+            eprintln!("Warning: Invalid configuration: {}", e);
+            eprintln!("Using default configuration.");
+        }
+
+        let projects_view = Some(ProjectsView::new(&config)?);
 
         Ok(Router {
             view_mode: ViewMode::Projects,
@@ -53,6 +65,7 @@ impl Router {
             sessions_view: None,
             session_detail_view: None,
             should_quit: false,
+            config,
         })
     }
 
@@ -66,6 +79,7 @@ impl Router {
 
         let session = parse_session(&session_file.path)?;
         let session_detail_view = Some(App::new(session));
+        let config = Config::load()?;
 
         Ok(Router {
             view_mode: ViewMode::SessionDetail(session_id),
@@ -74,6 +88,7 @@ impl Router {
             sessions_view: None,
             session_detail_view,
             should_quit: false,
+            config,
         })
     }
 
@@ -140,7 +155,7 @@ impl Router {
         self.view_stack.push(self.view_mode.clone());
 
         // Create sessions view
-        self.sessions_view = Some(SessionsView::new(project_name.clone())?);
+        self.sessions_view = Some(SessionsView::new(project_name.clone(), &self.config)?);
 
         // Update view mode
         self.view_mode = ViewMode::Sessions(project_name);
@@ -179,14 +194,14 @@ impl Router {
             match &self.view_mode {
                 ViewMode::Projects => {
                     if self.projects_view.is_none() {
-                        self.projects_view = Some(ProjectsView::new()?);
+                        self.projects_view = Some(ProjectsView::new(&self.config)?);
                     } else if let Some(ref mut view) = self.projects_view {
                         view.refresh()?;
                     }
                 }
                 ViewMode::Sessions(project_name) => {
                     if self.sessions_view.is_none() {
-                        self.sessions_view = Some(SessionsView::new(project_name.clone())?);
+                        self.sessions_view = Some(SessionsView::new(project_name.clone(), &self.config)?);
                     } else if let Some(ref mut view) = self.sessions_view {
                         view.refresh()?;
                     }
