@@ -3,6 +3,7 @@
 //! Draws the terminal UI layout and components.
 
 use crate::tui::app::{App, ViewMode};
+use crate::tui::render::render_node_content;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -81,17 +82,41 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
                 .bg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),
         )
-        .highlight_symbol(">> ");
+        .highlight_symbol(">> ")
+        // Enable tree visualization with nice symbols
+        .node_open_symbol("▼ ")
+        .node_closed_symbol("▶ ")
+        .node_no_children_symbol("  ");
 
     f.render_stateful_widget(tree_widget, area, &mut app.tree_state);
 }
 
 /// Draw the details panel (split into content 70% + metadata 30%)
 fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
+    use crate::tui::app::FocusMode;
+
     let title = match app.view_mode {
-        ViewMode::Summary => "Details [s]",
-        ViewMode::Input => "Tool Input [i]",
-        ViewMode::Output => "Tool Output [o]",
+        ViewMode::Summary => {
+            if app.focus_mode == FocusMode::Details {
+                "Details [s] *FOCUSED*"
+            } else {
+                "Details [s]"
+            }
+        }
+        ViewMode::Input => {
+            if app.focus_mode == FocusMode::Details {
+                "Tool Input [i] *FOCUSED*"
+            } else {
+                "Tool Input [i]"
+            }
+        }
+        ViewMode::Output => {
+            if app.focus_mode == FocusMode::Details {
+                "Tool Output [o] *FOCUSED*"
+            } else {
+                "Tool Output [o]"
+            }
+        }
     };
 
     // Split into content (70%) and metadata (30%)
@@ -114,9 +139,11 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
         Text::from("No node selected")
     };
 
+    // Apply scroll offset
     let content_widget = Paragraph::new(content)
         .block(Block::default().borders(Borders::ALL).title(title))
-        .wrap(Wrap { trim: true });
+        .wrap(Wrap { trim: true })
+        .scroll((app.details_scroll as u16, 0));
 
     f.render_widget(content_widget, chunks[0]);
 
@@ -131,148 +158,13 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
-/// Render node content (main content area)
+/// Render node content (main content area) - now using clean rendering module
 fn render_summary_content(node: &crate::analyzer::TreeNode) -> Text<'static> {
-    let mut lines = vec![];
-
-    // USER MESSAGE - show full content
-    if node.node.node_type == "user" {
-        if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                let text = extract_full_text(content);
-                if !text.is_empty() {
-                    lines.push(Line::from(Span::styled(" User".to_string(), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))));
-                    lines.push(Line::from("".to_string()));
-                    for line in text.lines() {
-                        lines.push(Line::from(Span::raw(line.to_string())));
-                    }
-                }
-            }
-        }
-    }
-    // ASSISTANT MESSAGE
-    else if node.node.node_type == "assistant" {
-        if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                let text = extract_full_text(content);
-                if !text.is_empty() {
-                    lines.push(Line::from(Span::styled(" Assistant".to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))));
-                    lines.push(Line::from("".to_string()));
-                    for line in text.lines() {
-                        lines.push(Line::from(Span::raw(line.to_string())));
-                    }
-                }
-            }
-        }
-    }
-    // THINKING
-    else if let Some(ref thinking) = node.node.thinking {
-        lines.push(Line::from(Span::styled(" Thinking".to_string(), Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD))));
-        lines.push(Line::from("".to_string()));
-        for line in thinking.lines() {
-            lines.push(Line::from(Span::raw(line.to_string())));
-        }
-    }
-    // TOOL USE
-    else if let Some(ref tool_use) = node.node.tool_use {
-        lines.push(Line::from(Span::styled(format!(" Tool: {}", tool_use.name), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))));
-        lines.push(Line::from("".to_string()));
-        if let Some(obj) = tool_use.input.as_object() {
-            if let Some(file_path) = obj.get("file_path").and_then(|v| v.as_str()) {
-                lines.push(Line::from(vec![Span::styled(" File: ".to_string(), Style::default().fg(Color::Cyan)), Span::raw(file_path.to_string())]));
-            }
-            if let Some(command) = obj.get("command").and_then(|v| v.as_str()) {
-                lines.push(Line::from(vec![Span::styled("$ ".to_string(), Style::default().fg(Color::Yellow)), Span::raw(command.to_string())]));
-            }
-            if let Some(pattern) = obj.get("pattern").and_then(|v| v.as_str()) {
-                lines.push(Line::from(vec![Span::styled(" Search: ".to_string(), Style::default().fg(Color::Cyan)), Span::raw(pattern.to_string())]));
-            }
-        }
-    }
-    // TOOL RESULT
-    else if let Some(ref result) = node.node.tool_result {
-        if let Some(is_error) = result.is_error {
-            if is_error {
-                lines.push(Line::from(Span::styled(" Error".to_string(), Style::default().fg(Color::Red).add_modifier(Modifier::BOLD))));
-                lines.push(Line::from("".to_string()));
-                if let Some(ref error) = result.error {
-                    for line in error.lines().take(20) {
-                        lines.push(Line::from(Span::raw(line.to_string())));
-                    }
-                }
-            } else {
-                lines.push(Line::from(Span::styled(" Success".to_string(), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))));
-                if let Some(ref content) = result.content {
-                    lines.push(Line::from("".to_string()));
-                    for line in content.lines().take(15) {
-                        lines.push(Line::from(Span::raw(line.to_string())));
-                    }
-                    if content.lines().count() > 15 {
-                        lines.push(Line::from(Span::styled("... (output truncated)".to_string(), Style::default().fg(Color::DarkGray))));
-                    }
-                }
-            }
-        }
-    }
-    // FILE SNAPSHOT
-    else if node.node.node_type == "file-history-snapshot" {
-        lines.push(Line::from(Span::styled(" File Snapshot".to_string(), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))));
-        lines.push(Line::from("".to_string()));
-        lines.push(Line::from("Backup point of tracked files in the session."));
-    }
-    // SYSTEM MESSAGE
-    else if node.node.node_type == "system" {
-        lines.push(Line::from(Span::styled(" System".to_string(), Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD))));
-        if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                let text = extract_full_text(content);
-                if !text.is_empty() {
-                    lines.push(Line::from("".to_string()));
-                    for line in text.lines() {
-                        lines.push(Line::from(Span::raw(line.to_string())));
-                    }
-                }
-            }
-        }
-    }
-    // PROGRESS UPDATE
-    else if node.node.node_type == "progress" {
-        lines.push(Line::from(Span::styled(" Progress".to_string(), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))));
-        if let Some(ref progress) = node.node.progress {
-            if let Some(ref message) = progress.message {
-                lines.push(Line::from("".to_string()));
-                lines.push(Line::from(Span::raw(message.clone())));
-            }
-            if let Some(percentage) = progress.percentage {
-                lines.push(Line::from(Span::styled(format!("{}%", percentage), Style::default().fg(Color::Cyan))));
-            }
-        }
-    }
-    // GROUP NODE
-    else if node.node.node_type == "group" {
-        if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                if let Some(label) = content.as_str() {
-                    lines.push(Line::from(Span::styled(label.to_string(), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))));
-                    lines.push(Line::from("".to_string()));
-                    lines.push(Line::from("Grouped items below."));
-                }
-            }
-        }
-    }
-    // OTHER NODES
-    else {
-        lines.push(Line::from(vec![Span::styled(" ".to_string(), Style::default().fg(Color::Cyan)), Span::raw(node.node.node_type.clone())]));
-    }
-
-    if lines.is_empty() {
-        lines.push(Line::from("No content available"));
-    }
-
+    // Use the clean rendering function from render.rs
+    let lines = render_node_content(node);
     Text::from(lines)
 }
 
-/// Render metadata panel (30% bottom section)
 fn render_metadata(node: &crate::analyzer::TreeNode) -> Text<'static> {
     let mut lines = vec![];
 
@@ -337,16 +229,67 @@ fn render_metadata(node: &crate::analyzer::TreeNode) -> Text<'static> {
     Text::from(lines)
 }
 
-/// Extract full text from message content
+/// Extract content items by type from message content array
+fn extract_content_by_type(content: &serde_json::Value, content_type: &str) -> Vec<String> {
+    match content {
+        serde_json::Value::Array(arr) => {
+            arr.iter().filter_map(|block| {
+                if let Some(block_type) = block.get("type").and_then(|t| t.as_str()) {
+                    if block_type == content_type {
+                        match content_type {
+                            "text" => block.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()),
+                            "thinking" => block.get("thinking").and_then(|t| t.as_str()).map(|s| s.to_string()),
+                            "tool_result" => block.get("content").and_then(|c| c.as_str()).map(|s| s.to_string()),
+                            "tool_use" => block.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }).collect()
+        }
+        _ => vec![],
+    }
+}
+
+/// Extract full text from message content (handles both string and type-based array formats)
 fn extract_full_text(content: &serde_json::Value) -> String {
     match content {
         serde_json::Value::String(s) => s.clone(),
         serde_json::Value::Array(arr) => {
             arr.iter().filter_map(|block| {
-                block.get("text").and_then(|t| t.as_str().map(|s| s.to_string()))
-            }).collect::<Vec<_>>().join("
-
-")
+                // Check if block has a "type" field to determine extraction strategy
+                if let Some(block_type) = block.get("type").and_then(|t| t.as_str()) {
+                    match block_type {
+                        "text" => block.get("text").and_then(|t| t.as_str()).map(|s| s.to_string()),
+                        "thinking" => block.get("thinking").and_then(|t| t.as_str()).map(|s| s.to_string()),
+                        "tool_result" => {
+                            // Extract content from tool_result block
+                            block.get("content").and_then(|c| c.as_str()).map(|s| {
+                                // Truncate tool results in user messages (just show preview)
+                                if s.len() > 100 {
+                                    format!("[Tool Result: {}...]", &s[..100])
+                                } else {
+                                    format!("[Tool Result: {}]", s)
+                                }
+                            })
+                        }
+                        "tool_use" => {
+                            // Show tool use name
+                            block.get("name").and_then(|n| n.as_str()).map(|name| {
+                                format!("[Tool: {}]", name)
+                            })
+                        }
+                        _ => None,
+                    }
+                } else {
+                    // Fallback: try to get "text" field directly (older format)
+                    block.get("text").and_then(|t| t.as_str()).map(|s| s.to_string())
+                }
+            }).collect::<Vec<_>>().join("\n\n")
         }
         _ => String::new(),
     }
@@ -401,11 +344,13 @@ fn draw_footer(f: &mut Frame, area: Rect, app: &mut App) {
     let shortcuts = vec![
         Line::from(vec![
             Span::styled("j/k", Style::default().fg(Color::Yellow)),
-            Span::raw(": Navigate | "),
+            Span::raw(": Navigate/Scroll | "),
+            Span::styled("Tab", Style::default().fg(Color::Yellow)),
+            Span::raw(": Switch Focus | "),
             Span::styled("Enter", Style::default().fg(Color::Yellow)),
-            Span::raw(": Expand/Collapse | "),
+            Span::raw(": Expand | "),
             Span::styled("i/o/s", Style::default().fg(Color::Yellow)),
-            Span::raw(": Input/Output/Summary | "),
+            Span::raw(": Views | "),
             Span::styled("q", Style::default().fg(Color::Yellow)),
             Span::raw(": Quit"),
         ]),
