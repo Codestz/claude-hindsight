@@ -41,18 +41,18 @@ use std::path::Path;
 pub fn parse_session(path: &Path) -> Result<Session> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
-    
+
     let mut nodes = Vec::new();
-    
+
     // Parse JSONL line by line
     for (line_num, line_result) in reader.lines().enumerate() {
         let line = line_result?;
-        
+
         // Skip empty lines
         if line.trim().is_empty() {
             continue;
         }
-        
+
         // Parse JSON line into ExecutionNode
         match serde_json::from_str::<ExecutionNode>(&line) {
             Ok(node) => nodes.push(node),
@@ -64,10 +64,10 @@ pub fn parse_session(path: &Path) -> Result<Session> {
             }
         }
     }
-    
+
     // Extract session ID from filename or first node
     let session_id = extract_session_id(path)?;
-    
+
     Ok(Session::new(session_id, nodes))
 }
 
@@ -79,7 +79,7 @@ fn extract_session_id(path: &Path) -> Result<String> {
             return Ok(name.to_string());
         }
     }
-    
+
     Err(HindsightError::InvalidSession(
         "Could not extract session ID from path".to_string()
     ))
@@ -93,8 +93,8 @@ mod tests {
 
     #[test]
     fn test_parse_empty_file() {
-        let mut file = NamedTempFile::new().unwrap();
-        
+        let file = NamedTempFile::new().unwrap();
+
         let session = parse_session(file.path()).unwrap();
         assert_eq!(session.nodes.len(), 0);
     }
@@ -106,7 +106,7 @@ mod tests {
             file,
             r#"{{"type":"user","message":{{"content":"Hello"}}}}"#
         ).unwrap();
-        
+
         let session = parse_session(file.path()).unwrap();
         assert_eq!(session.nodes.len(), 1);
         assert_eq!(session.nodes[0].node_type, "user");
@@ -119,7 +119,7 @@ mod tests {
             file,
             r#"{{"type":"tool_use","tool_use":{{"name":"Read","input":{{"file_path":"test.txt"}}}}}}"#
         ).unwrap();
-        
+
         let session = parse_session(file.path()).unwrap();
         assert_eq!(session.nodes.len(), 1);
         assert!(session.nodes[0].tool_use.is_some());
@@ -130,7 +130,7 @@ mod tests {
     fn test_invalid_json() {
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "{{invalid json").unwrap();
-        
+
         let result = parse_session(file.path());
         assert!(result.is_err());
     }

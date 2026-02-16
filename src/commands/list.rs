@@ -47,11 +47,11 @@ pub fn run(
     // Show header
     if sessions.is_empty() {
         println!("No sessions found.");
-        println!("\n💡 Run 'hindsight init' to discover sessions");
+        println!("\n  Run 'hindsight init' to discover sessions");
         return Ok(());
     }
 
-    println!("📋 Claude Code Sessions\n");
+    println!("  Claude Code Sessions\n");
 
     if let Some(ref proj) = project {
         println!("   Project: {}\n", proj);
@@ -64,7 +64,7 @@ pub fn run(
             .unwrap_or_else(|| "Unknown".to_string());
 
         let size_kb = session.file_size / 1024;
-        let subagents_icon = if session.has_subagents { "🌲" } else { "  " };
+        let subagents_icon = if session.has_subagents { "  " } else { "   " };
 
         println!(
             "{} {} | {} | {} | {} KB",
@@ -76,10 +76,10 @@ pub fn run(
         );
     }
 
-    println!("\n📊 Total: {} session(s)", sessions.len());
+    println!("\n  Total: {} session(s)", sessions.len());
 
     if errors {
-        println!("\n⚠️  Error filtering not yet implemented");
+        println!("\n  Error filtering not yet implemented");
     }
 
     Ok(())

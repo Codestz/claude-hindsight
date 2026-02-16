@@ -70,7 +70,7 @@ pub fn build_simple_tree(nodes: Vec<ExecutionNode>) -> Vec<TreeNode> {
     }
 
     // Second pass: build parent-child relationships
-    for (uuid, node) in &node_map {
+    for (_uuid, node) in &node_map {
         if let Some(ref parent_uuid) = node.parent_uuid {
             // Has parent - add to children map
             children_map

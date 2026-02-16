@@ -195,6 +195,7 @@ impl SessionIndex {
     }
 
     /// Get the most recently modified session
+    #[allow(dead_code)]
     pub fn get_latest(&self) -> Result<Option<SessionFile>> {
         let mut stmt = self.conn.prepare(
             "SELECT session_id, project_name, file_path, file_size, modified_at, has_subagents
@@ -222,6 +223,7 @@ impl SessionIndex {
     }
 
     /// Remove sessions that no longer exist on disk
+    #[allow(dead_code)]
     pub fn prune_missing(&mut self) -> Result<usize> {
         let sessions = self.list_sessions()?;
         let mut removed = 0;
@@ -240,6 +242,7 @@ impl SessionIndex {
     }
 
     /// Get total number of indexed sessions
+    #[allow(dead_code)]
     pub fn count(&self) -> Result<usize> {
         let count: i64 = self.conn.query_row(
             "SELECT COUNT(*) FROM sessions",

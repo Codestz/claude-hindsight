@@ -315,11 +315,11 @@ Claude Hindsight is built with:
 - **SQLite** - Fast session indexing and caching
 
 **Key Components:**
-- 📝 **JSONL Parser** - Parses Claude Code transcripts
-- 🌲 **Tree Builder** - Constructs hierarchical execution tree
-- 💾 **Session Index** - Fast lookups across all sessions
-- 🖥️ **Terminal UI** - Interactive ratatui-based interface
-- 🌐 **Web Server** - Optional dashboard (embedded in binary)
+- 📝 **Parser** - JSONL parsing and session data extraction
+- 🌲 **Analyzer** - Tree building (simple parent-child hierarchy)
+- 🖥️ **TUI** - Interactive terminal interface with keyboard navigation
+- 🌐 **API** - Web dashboard support (JSON serialization)
+- 💾 **Storage** - Session indexing and fast lookups
 
 ---
 
