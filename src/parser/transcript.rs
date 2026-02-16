@@ -60,7 +60,26 @@ pub fn parse_session(path: &Path) -> Result<Session> {
 
         // Parse JSON line into ExecutionNode
         match serde_json::from_str::<ExecutionNode>(&line) {
-            Ok(node) => nodes.push(node),
+            Ok(mut node) => {
+                // Extract tool results from message.content[] if present
+                if let Some(ref msg) = node.message {
+                    if let Some(ref content) = msg.content {
+                        if let Some(arr) = content.as_array() {
+                            for item in arr {
+                                if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
+                                    if item_type == "tool_result" && node.tool_result.is_none() {
+                                        // Try to deserialize tool result from content
+                                        if let Ok(tool_result) = serde_json::from_value::<crate::parser::models::ToolResult>(item.clone()) {
+                                            node.tool_result = Some(tool_result);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                nodes.push(node);
+            },
             Err(e) => {
                 return Err(HindsightError::JsonParse {
                     line: line_num + 1,
