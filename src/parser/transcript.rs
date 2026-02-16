@@ -92,10 +92,11 @@ pub fn parse_session(path: &Path) -> Result<Session> {
     // Extract session ID from filename or first node
     let session_id = extract_session_id(path)?;
 
-    // Get absolute path for display
+    // Get absolute path for display - try canonicalize, fallback to as-is
     let file_path = path.canonicalize()
         .ok()
-        .and_then(|p| p.to_str().map(String::from));
+        .and_then(|p| p.to_str().map(String::from))
+        .or_else(|| path.to_str().map(String::from));
 
     Ok(Session::new(session_id, file_path, nodes))
 }
