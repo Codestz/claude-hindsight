@@ -2,13 +2,13 @@
 //!
 //! Draws the terminal UI layout and components.
 
-use crate::tui::app::{App, ViewMode};
+use crate::tui::app::App;
 use crate::tui::render::render_node_content;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 use tui_tree_widget::Tree;
@@ -27,21 +27,36 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_header(f, chunks[0], app);
     draw_main(f, chunks[1], app);
     draw_footer(f, chunks[2], app);
+
+    // Draw search overlay if in input mode
+    if app.input_mode {
+        draw_search_overlay(f, app);
+    }
 }
 
 /// Draw the header
 fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
+    let breadcrumb = app.get_breadcrumb_path().join(" → ");
+    let breadcrumb_display = if !breadcrumb.is_empty() {
+        breadcrumb
+    } else {
+        "(no selection)".to_string()
+    };
+
     let session_info = vec![
         Line::from(vec![
-            Span::styled("Session: ".to_string(), Style::default().fg(Color::Cyan)),
+            Span::styled("Session: ", Style::default().fg(Color::Cyan)),
             Span::raw(&app.session.session_id),
+            Span::raw(" | "),
+            Span::styled("Nodes: ", Style::default().fg(Color::Cyan)),
+            Span::raw(format!("{}", app.total_nodes)),
+            Span::raw(" | "),
+            Span::styled("Groups: ", Style::default().fg(Color::Cyan)),
+            Span::raw(format!("{}", app.tree_roots.len())),
         ]),
         Line::from(vec![
-            Span::styled("Nodes: ".to_string(), Style::default().fg(Color::Cyan)),
-            Span::raw(format!("{}", app.total_nodes)),
-            Span::raw(" | ".to_string()),
-            Span::styled("Groups: ".to_string(), Style::default().fg(Color::Cyan)),
-            Span::raw(format!("{}", app.tree_roots.len())),
+            Span::styled("Path: ", Style::default().fg(Color::Cyan)),
+            Span::styled(breadcrumb_display, Style::default().fg(Color::Yellow)),
         ]),
     ];
 
@@ -95,28 +110,17 @@ fn draw_tree(f: &mut Frame, area: Rect, app: &mut App) {
 fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
     use crate::tui::app::FocusMode;
 
-    let title = match app.view_mode {
-        ViewMode::Summary => {
-            if app.focus_mode == FocusMode::Details {
-                "Details [s] *FOCUSED*"
-            } else {
-                "Details [s]"
-            }
-        }
-        ViewMode::Input => {
-            if app.focus_mode == FocusMode::Details {
-                "Tool Input [i] *FOCUSED*"
-            } else {
-                "Tool Input [i]"
-            }
-        }
-        ViewMode::Output => {
-            if app.focus_mode == FocusMode::Details {
-                "Tool Output [o] *FOCUSED*"
-            } else {
-                "Tool Output [o]"
-            }
-        }
+    let scroll_indicator = app.details_scroll_info.position_text();
+    let scroll_text = if !scroll_indicator.is_empty() {
+        format!(" ({})", scroll_indicator)
+    } else {
+        String::new()
+    };
+
+    let title = if app.focus_mode == FocusMode::Details {
+        format!("Details *FOCUSED*{}", scroll_text)
+    } else {
+        format!("Details{}", scroll_text)
     };
 
     // Split into content (70%) and metadata (30%)
@@ -130,14 +134,15 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
 
     // Render content
     let content = if let Some(node) = app.selected_node() {
-        match app.view_mode {
-            ViewMode::Summary => render_summary_content(node),
-            ViewMode::Input => render_input(node),
-            ViewMode::Output => render_output(node),
-        }
+        render_summary_content(node)
     } else {
         Text::from("No node selected")
     };
+
+    // Update scroll info based on content
+    let total_lines = content.lines.len();
+    let viewport_height = chunks[0].height.saturating_sub(2) as usize; // -2 for borders
+    app.update_scroll_info(total_lines, viewport_height);
 
     // Apply scroll offset
     let content_widget = Paragraph::new(content)
@@ -158,9 +163,8 @@ fn draw_details(f: &mut Frame, area: Rect, app: &mut App) {
     }
 }
 
-/// Render node content (main content area) - now using clean rendering module
+/// Render node content (main content area)
 fn render_summary_content(node: &crate::analyzer::TreeNode) -> Text<'static> {
-    // Use the clean rendering function from render.rs
     let lines = render_node_content(node);
     Text::from(lines)
 }
@@ -229,69 +233,75 @@ fn render_metadata(node: &crate::analyzer::TreeNode) -> Text<'static> {
     Text::from(lines)
 }
 
-/// Render tool input
-fn render_input(node: &crate::analyzer::TreeNode) -> Text<'static> {
-    if let Some(ref tool_use) = node.node.tool_use {
-        let input_json = serde_json::to_string_pretty(&tool_use.input)
-            .unwrap_or_else(|_| "Failed to serialize".to_string());
-        Text::from(input_json)
-    } else {
-        Text::from("No tool input available")
-    }
-}
-
-/// Render tool output
-fn render_output(node: &crate::analyzer::TreeNode) -> Text<'static> {
-    if let Some(ref result) = node.node.tool_result {
-        let mut lines = vec![];
-
-        if let Some(ref content) = result.content {
-            let preview = if content.len() > 1000 {
-                format!("{}...\n\n(showing first 1000 chars)", &content[..1000])
-            } else {
-                content.clone()
-            };
-            lines.push(Line::from(preview));
-        }
-
-        if let Some(ref error) = result.error {
-            lines.push(Line::from(""));
-            lines.push(Line::from(Span::styled(
-                "Error:",
-                Style::default().fg(Color::Red),
-            )));
-            lines.push(Line::from(error.clone()));
-        }
-
-        if lines.is_empty() {
-            Text::from("No output available")
-        } else {
-            Text::from(lines)
-        }
-    } else {
-        Text::from("No tool output available")
-    }
-}
-
 /// Draw the footer with keyboard shortcuts
 fn draw_footer(f: &mut Frame, area: Rect, app: &mut App) {
+    use crate::tui::app::FocusMode;
+
+    // Get current position for status display
+    let current_position = if app.selected_node().is_some() {
+        // Calculate rough position (could be improved with proper indexing)
+        1
+    } else {
+        0
+    };
+
     let shortcuts = vec![
+        // Line 1: Keyboard shortcuts
         Line::from(vec![
             Span::styled("j/k", Style::default().fg(Color::Yellow)),
-            Span::raw(": Navigate/Scroll | "),
-            Span::styled("Tab", Style::default().fg(Color::Yellow)),
-            Span::raw(": Switch Focus | "),
+            Span::raw(": Nav | "),
+            Span::styled("Ctrl+d/u", Style::default().fg(Color::Yellow)),
+            Span::raw(": HalfPage | "),
             Span::styled("Enter", Style::default().fg(Color::Yellow)),
             Span::raw(": Expand | "),
-            Span::styled("i/o/s", Style::default().fg(Color::Yellow)),
-            Span::raw(": Views | "),
+            Span::styled("Tab", Style::default().fg(Color::Yellow)),
+            Span::raw(": Focus | "),
+            Span::styled("/", Style::default().fg(Color::Yellow)),
+            Span::raw(": Filter | "),
+            Span::styled("n/N", Style::default().fg(Color::Yellow)),
+            Span::raw(": Next/Prev | "),
+            Span::styled("g/G", Style::default().fg(Color::Yellow)),
+            Span::raw(": Top/Bottom | "),
             Span::styled("q", Style::default().fg(Color::Yellow)),
             Span::raw(": Quit"),
         ]),
-        Line::from(app.status_message.clone()),
+        // Line 2: Status info
+        Line::from(vec![
+            Span::styled(
+                format!("[{}] ", if app.focus_mode == FocusMode::Tree { "TREE" } else { "DETAILS" }),
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+            ),
+            Span::raw(format!("Node {}/{} | ", current_position, app.total_nodes)),
+            Span::styled(&app.status_message, Style::default().fg(Color::Gray)),
+        ]),
     ];
 
     let footer = Paragraph::new(shortcuts).block(Block::default().borders(Borders::ALL));
 
     f.render_widget(footer, area);
+}
+
+/// Draw search overlay when in input mode
+fn draw_search_overlay(f: &mut Frame, app: &App) {
+    let area = f.area();
+
+    // Position search overlay at bottom (above footer)
+    let search_area = Rect {
+        x: area.x + 2,
+        y: area.height.saturating_sub(6),
+        width: area.width.saturating_sub(4).min(60),
+        height: 3,
+    };
+
+    let query = app.search_state.as_ref()
+        .map(|s| s.query.as_str())
+        .unwrap_or("");
+
+    let widget = Paragraph::new(format!("{}", query))
+        .style(Style::default().fg(Color::Yellow).bg(Color::DarkGray))
+        .block(Block::default().borders(Borders::ALL).title("Filter by node type (user,assistant,tool_use) - Enter: apply | Esc: cancel"));
+
+    // Clear the area first, then render the widget
+    f.render_widget(Clear, search_area);
+    f.render_widget(widget, search_area);
 }

@@ -105,14 +105,8 @@ fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
                                             "Output:",
                                             Style::default().fg(Color::Cyan),
                                         )));
-                                        for line in result_content.lines().take(30) {
+                                        for line in result_content.lines() {
                                             lines.push(Line::from(line.to_string()));
-                                        }
-                                        if result_content.lines().count() > 30 {
-                                            lines.push(Line::from(Span::styled(
-                                                "... (truncated)",
-                                                Style::default().fg(Color::DarkGray),
-                                            )));
                                         }
                                     } else {
                                         lines.push(Line::from(Span::styled(
@@ -183,14 +177,8 @@ fn render_assistant(node: &TreeNode) -> Vec<Line<'static>> {
                             }
 
                             if let Some(thinking) = item.get("thinking").and_then(|t| t.as_str()) {
-                                for line in thinking.lines().take(30) {
+                                for line in thinking.lines() {
                                     lines.push(Line::from(line.to_string()));
-                                }
-                                if thinking.lines().count() > 30 {
-                                    lines.push(Line::from(Span::styled(
-                                        "... (truncated)",
-                                        Style::default().fg(Color::DarkGray),
-                                    )));
                                 }
                             }
                         }
@@ -309,13 +297,7 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
                                         for (key, value) in obj.iter() {
                                             // Format value nicely
                                             let value_str = if let Some(s) = value.as_str() {
-                                                // For strings, show first 100 chars (character-safe)
-                                                if s.chars().count() > 100 {
-                                                    let truncated: String = s.chars().take(100).collect();
-                                                    format!("{}...", truncated)
-                                                } else {
-                                                    s.to_string()
-                                                }
+                                                s.to_string()
                                             } else {
                                                 // For other types, use debug format
                                                 format!("{}", value)
@@ -351,13 +333,7 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
             )));
             for (key, value) in obj.iter() {
                 let value_str = if let Some(s) = value.as_str() {
-                    // Character-safe truncation
-                    if s.chars().count() > 100 {
-                        let truncated: String = s.chars().take(100).collect();
-                        format!("{}...", truncated)
-                    } else {
-                        s.to_string()
-                    }
+                    s.to_string()
                 } else {
                     format!("{}", value)
                 };
@@ -389,7 +365,7 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
             lines.push(Line::from(""));
 
             if let Some(ref error) = result.error {
-                for line in error.lines().take(20) {
+                for line in error.lines() {
                     lines.push(Line::from(Span::styled(
                         line.to_string(),
                         Style::default().fg(Color::Red),
@@ -404,14 +380,8 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
             lines.push(Line::from(""));
 
             if let Some(ref content) = result.content {
-                for line in content.lines().take(20) {
+                for line in content.lines() {
                     lines.push(Line::from(line.to_string()));
-                }
-                if content.lines().count() > 20 {
-                    lines.push(Line::from(Span::styled(
-                        "... (truncated)",
-                        Style::default().fg(Color::DarkGray),
-                    )));
                 }
             }
         }
@@ -468,7 +438,7 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
                     }
                     if let Some(output) = data.get("fullOutput").and_then(|o| o.as_str()) {
                         lines.push(Line::from(""));
-                        for line in output.lines().take(15) {
+                        for line in output.lines() {
                             lines.push(Line::from(line.to_string()));
                         }
                     }
@@ -482,22 +452,15 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
                         ]));
                     }
 
-                    // Show the task/prompt (truncated)
+                    // Show the task/prompt
                     if let Some(prompt) = data.get("prompt").and_then(|p| p.as_str()) {
                         lines.push(Line::from(""));
                         lines.push(Line::from(Span::styled(
                             "Task:",
                             Style::default().fg(Color::Cyan),
                         )));
-                        let preview: String = prompt.chars().take(200).collect();
-                        for line in preview.lines().take(5) {
+                        for line in prompt.lines() {
                             lines.push(Line::from(line.to_string()));
-                        }
-                        if prompt.len() > 200 {
-                            lines.push(Line::from(Span::styled(
-                                "... (truncated)",
-                                Style::default().fg(Color::DarkGray),
-                            )));
                         }
                     }
                 }

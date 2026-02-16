@@ -5,6 +5,7 @@
 pub mod app;
 pub mod events;
 pub mod render;
+pub mod search;
 pub mod ui;
 
 pub use app::App;
