@@ -3,6 +3,7 @@
 //! Provides a lazygit-style terminal interface for exploring Claude Code sessions.
 
 pub mod app;
+pub mod code_render;
 pub mod events;
 pub mod projects_view;
 pub mod render;
