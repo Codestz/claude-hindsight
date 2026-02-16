@@ -37,9 +37,6 @@ where
 }
 
 impl TreeNode {
-    /// Get the timestamp of this node in milliseconds
-    pub fn timestamp(&self) -> Option<i64> {
-        self.node.timestamp
-    }
+    // TreeNode methods can be added here as needed
 }
 
