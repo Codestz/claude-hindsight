@@ -59,7 +59,7 @@ hindsight watch
 See the complete flow of your session—user messages, thinking blocks, tool calls, and results—rendered as a navigable tree with visual indicators:
 
 ```
-  User: Fix the authentication bug
+  User Fix the authentication bug
   Assistant
   Thinking (2.3s)
   Tool: Grep (searching for auth code...)

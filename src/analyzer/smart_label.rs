@@ -10,7 +10,7 @@ pub fn get_node_label(node: &TreeNode) -> (String, &'static str) {
     let (node_type, details) = detect_node_type(node);
 
     match node_type.as_str() {
-        "user_message" => (format!(" User: {}", details), "cyan"),
+        "user_message" => (format!(" User {}", details), "cyan"),
         "user_tool_result" => (format!(" Tool Result: {}", details), "blue"),
         "assistant_thinking" => (format!(" Thinking"), "magenta"),
         "assistant_text" => (format!(" Assistant: {}", details), "green"),

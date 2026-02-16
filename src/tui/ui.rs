@@ -71,7 +71,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
     if let Some(ref file_path) = app.session.file_path {
         session_info.push(Line::from(vec![
             Span::styled("File: ", Style::default().fg(Color::Cyan)),
-            Span::styled(file_path.clone(), Style::default().fg(Color::DarkGray)),
+            Span::styled(file_path.clone(), Style::default().fg(Color::Gray)),
         ]));
     }
 
