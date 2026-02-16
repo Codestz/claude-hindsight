@@ -4,20 +4,20 @@
 
 use ratatui::style::Color;
 
-/// Icon set for different node types
+/// Icon set for different node types (Nerd Font icons)
 pub mod icons {
-    pub const USER: &str = "💬";
-    pub const ASSISTANT: &str = "🤖";
-    pub const TOOL_USE: &str = "🔧";
-    pub const TOOL_RESULT: &str = "✅";
-    pub const THINKING: &str = "💭";
-    pub const PROGRESS: &str = "⏳";
-    pub const ERROR: &str = "❌";
-    pub const SUCCESS: &str = "✨";
-    pub const FILE: &str = "📄";
-    pub const SYSTEM: &str = "⚙️";
-    pub const SEARCH: &str = "🔍";
-    pub const FILTER: &str = "🔎";
+    pub const USER: &str = "";           // nf-fa-user
+    pub const ASSISTANT: &str = "";      // nf-fa-robot
+    pub const TOOL_USE: &str = "";       // nf-fa-wrench
+    pub const TOOL_RESULT: &str = "";    // nf-fa-check_circle
+    pub const THINKING: &str = "";       // nf-fa-lightbulb
+    pub const PROGRESS: &str = "";       // nf-fa-clock
+    pub const ERROR: &str = "";          // nf-fa-times_circle
+    pub const SUCCESS: &str = "";        // nf-fa-check_circle
+    pub const FILE: &str = "";           // nf-fa-file_code
+    pub const SYSTEM: &str = "";         // nf-fa-cog
+    pub const SEARCH: &str = "";         // nf-fa-search
+    pub const FILTER: &str = "";         // nf-fa-filter
 }
 
 /// Box drawing characters for visual separation

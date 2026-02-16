@@ -173,7 +173,7 @@ pub fn render_edit_result(content: &str) -> Option<Vec<Line<'static>>> {
     // Extract file path
     if let Some(file_path) = json.get("file_path").and_then(|v| v.as_str()) {
         lines.push(Line::from(vec![
-            Span::styled("📄 File: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(" File: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),  // nf-fa-file_code
             Span::styled(file_path.to_string(), Style::default().fg(Color::Yellow)),
         ]));
         lines.push(Line::from(""));
@@ -183,7 +183,7 @@ pub fn render_edit_result(content: &str) -> Option<Vec<Line<'static>>> {
         // Show old code if present
         if let Some(old_string) = json.get("old_string").and_then(|v| v.as_str()) {
             lines.push(Line::from(Span::styled(
-                "❌ Removed:",
+                " Removed:",  // nf-fa-minus_circle
                 Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             )));
             lines.push(Line::from(""));
@@ -199,7 +199,7 @@ pub fn render_edit_result(content: &str) -> Option<Vec<Line<'static>>> {
         // Show new code if present
         if let Some(new_string) = json.get("new_string").and_then(|v| v.as_str()) {
             lines.push(Line::from(Span::styled(
-                "✅ Added:",
+                " Added:",  // nf-fa-plus_circle
                 Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
             )));
             lines.push(Line::from(""));
