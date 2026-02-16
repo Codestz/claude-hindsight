@@ -150,6 +150,7 @@ mod tests {
             message: None,
             tool_use: None,
             tool_result: None,
+            tool_use_result: None,
             thinking: None,
             progress: None,
             token_usage: None,
