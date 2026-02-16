@@ -73,7 +73,12 @@ pub fn parse_session(path: &Path) -> Result<Session> {
     // Extract session ID from filename or first node
     let session_id = extract_session_id(path)?;
 
-    Ok(Session::new(session_id, nodes))
+    // Get absolute path for display
+    let file_path = path.canonicalize()
+        .ok()
+        .and_then(|p| p.to_str().map(String::from));
+
+    Ok(Session::new(session_id, file_path, nodes))
 }
 
 /// Extract session ID from file path or content

@@ -224,32 +224,35 @@ pub struct ProgressData {
 pub struct Session {
     /// Session identifier
     pub session_id: String,
-    
+
+    /// Full file path to the JSONL file
+    pub file_path: Option<String>,
+
     /// All execution nodes (flat list)
     pub nodes: Vec<ExecutionNode>,
-    
+
     /// Session start time
     pub start_time: Option<i64>,
-    
+
     /// Session end time
     pub end_time: Option<i64>,
-    
+
     /// Total tool calls
     pub total_tools: usize,
-    
+
     /// Total tokens used
     pub total_tokens: i64,
-    
+
     /// Estimated cost in USD
     pub estimated_cost: f64,
-    
+
     /// Number of errors
     pub error_count: usize,
 }
 
 impl Session {
     /// Create a new session from parsed nodes
-    pub fn new(session_id: String, nodes: Vec<ExecutionNode>) -> Self {
+    pub fn new(session_id: String, file_path: Option<String>, nodes: Vec<ExecutionNode>) -> Self {
         let total_tools = nodes
             .iter()
             .filter(|n| n.tool_use.is_some())
@@ -266,10 +269,24 @@ impl Session {
         let error_count = nodes
             .iter()
             .filter(|n| {
-                n.tool_result
+                // Check tool_result for errors
+                let tool_result_error = n.tool_result
                     .as_ref()
                     .and_then(|r| r.is_error)
-                    .unwrap_or(false)
+                    .unwrap_or(false);
+
+                // Check tool_use_result for errors
+                let tool_use_result_error = n.tool_use_result
+                    .as_ref()
+                    .and_then(|v| {
+                        // Try to parse as ToolResult
+                        serde_json::from_value::<ToolResult>(v.clone())
+                            .ok()
+                            .and_then(|r| r.is_error)
+                    })
+                    .unwrap_or(false);
+
+                tool_result_error || tool_use_result_error
             })
             .count();
         
@@ -303,6 +320,7 @@ impl Session {
         
         Session {
             session_id,
+            file_path,
             nodes,
             start_time,
             end_time,
