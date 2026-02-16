@@ -6,6 +6,7 @@
 use clap::{Parser, Subcommand};
 use std::process;
 
+mod parser;
 mod commands;
 mod error;
 
