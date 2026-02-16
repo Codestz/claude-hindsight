@@ -270,7 +270,7 @@ impl ExecutionTree {
 }
 
 impl TreeNode {
-    /// Get a display-friendly label for this node
+    /// Get a display-friendly label for this node (Nerd Font icons)
     pub fn label(&self) -> String {
         match self.node.node_type.as_str() {
             "group" => {
@@ -282,44 +282,44 @@ impl TreeNode {
                         }
                     }
                 }
-                "📦 Group".to_string()
+                " Group".to_string()
             }
             "tool_use" => {
                 if let Some(ref tool_use) = self.node.tool_use {
-                    format!("🔧 {}", tool_use.name)
+                    format!(" {}", tool_use.name)
                 } else {
-                    "🔧 Tool".to_string()
+                    " Tool".to_string()
                 }
             }
             "tool_result" => {
                 if let Some(ref result) = self.node.tool_result {
                     if result.is_error.unwrap_or(false) {
-                        "❌ Error".to_string()
+                        " Error".to_string()
                     } else {
-                        "✅ Result".to_string()
+                        " Success".to_string()
                     }
                 } else {
-                    "📤 Result".to_string()
+                    " Result".to_string()
                 }
             }
-            "thinking" => "🧠 Thinking".to_string(),
-            "user" => "👤 User".to_string(),
-            "assistant" => "🤖 Assistant".to_string(),
+            "thinking" => " Thinking".to_string(),
+            "user" => " User".to_string(),
+            "assistant" => " Assistant".to_string(),
             "message" => {
                 if let Some(ref msg) = self.node.message {
                     match msg.role.as_deref() {
-                        Some("user") => "👤 User".to_string(),
-                        Some("assistant") => "🤖 Assistant".to_string(),
-                        _ => "💬 Message".to_string(),
+                        Some("user") => " User".to_string(),
+                        Some("assistant") => " Assistant".to_string(),
+                        _ => " Message".to_string(),
                     }
                 } else {
-                    "💬 Message".to_string()
+                    " Message".to_string()
                 }
             }
-            "progress" => "📊 Progress".to_string(),
-            "system" => "⚙️ System".to_string(),
-            "file-history-snapshot" => "📁 File Snapshot".to_string(),
-            _ => format!("📄 {}", self.node.node_type),
+            "progress" => " Progress".to_string(),
+            "system" => " System".to_string(),
+            "file-history-snapshot" => " File Snapshot".to_string(),
+            _ => format!(" {}", self.node.node_type),
         }
     }
 
