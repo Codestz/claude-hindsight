@@ -145,22 +145,48 @@ fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
 
                                 lines.push(Line::from(""));
 
-                                // Show content
-                                if let Some(result_content) = item.get("content").and_then(|c| c.as_str()) {
+                                // Show content - prefer clean toolUseResult over message content
+                                let (content, file_path) = if let Some(ref tool_use_result) = node.node.tool_use_result {
+                                    // Try to parse toolUseResult as structured data
+                                    if let Ok(result) = serde_json::from_value::<crate::parser::models::ToolResult>(tool_use_result.clone()) {
+                                        if let Some(ref file) = result.file {
+                                            (file.content.clone(), file.file_path.clone())
+                                        } else {
+                                            (result.content.clone(), None)
+                                        }
+                                    } else {
+                                        // Fallback to message content if toolUseResult is not structured
+                                        (item.get("content").and_then(|c| c.as_str()).map(String::from), None)
+                                    }
+                                } else {
+                                    // No toolUseResult, use message content
+                                    (item.get("content").and_then(|c| c.as_str()).map(String::from), None)
+                                };
+
+                                if let Some(result_content) = content {
                                     if !result_content.is_empty() {
                                         lines.push(Line::from(Span::styled(
                                             "Output:",
                                             Style::default().fg(Color::Cyan),
                                         )));
-                                        for line in result_content.lines() {
-                                            lines.push(Line::from(line.to_string()));
-                                        }
+
+                                        // Detect language from file path
+                                        let language = file_path.as_ref().and_then(|path| code_render::detect_language(path));
+
+                                        // Apply syntax highlighting
+                                        let highlighted_lines = code_render::highlight_code(&result_content, language);
+                                        lines.extend(highlighted_lines);
                                     } else {
                                         lines.push(Line::from(Span::styled(
                                             "(no output)",
                                             Style::default().fg(Color::DarkGray),
                                         )));
                                     }
+                                } else {
+                                    lines.push(Line::from(Span::styled(
+                                        "(no output)",
+                                        Style::default().fg(Color::DarkGray),
+                                    )));
                                 }
                             }
                         }
