@@ -18,7 +18,6 @@ pub use events::{Event, EventHandler};
 
 use crate::error::Result;
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -32,7 +31,7 @@ use std::io;
 pub fn init() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    execute!(stdout, EnterAlternateScreen)?;  // Mouse capture removed for text selection
     let backend = CrosstermBackend::new(stdout);
     let terminal = Terminal::new(backend)?;
     Ok(terminal)
@@ -43,9 +42,8 @@ pub fn restore() -> Result<()> {
     disable_raw_mode()?;
     execute!(
         io::stdout(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
+        LeaveAlternateScreen
+    )?;  // Mouse capture removed for text selection
     Ok(())
 }
 
