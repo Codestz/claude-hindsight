@@ -433,39 +433,6 @@ We welcome contributions! Whether it's:
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
----
-
-## Roadmap
-
-### ✅ Phase 1: Core (Complete)
-
-- [x] JSONL parser with error handling
-- [x] Session discovery and indexing
-- [x] Interactive TUI with tree visualization
-- [x] Real-time file watching
-- [x] Cost analysis and error debugging
-- [x] Node filtering and search
-- [x] Performance optimizations (5-10x faster)
-- [x] Visual improvements (icons, colors, themes)
-
-### 🚧 Phase 2: Enterprise (In Progress)
-
-- [ ] Session comparison diff view
-- [ ] Export to HTML/PDF reports
-- [ ] Full-text search across sessions
-- [ ] Custom analytics dashboards
-- [ ] Team collaboration features
-
-### 🔮 Phase 3: Intelligence (Future)
-
-- [ ] AI-powered insights and recommendations
-- [ ] Cost optimization suggestions
-- [ ] Pattern detection (common failures, inefficiencies)
-- [ ] Historical trend analysis
-- [ ] Plugin system for custom analyzers
-
----
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

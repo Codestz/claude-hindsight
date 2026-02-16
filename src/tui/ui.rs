@@ -45,7 +45,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
 
     let analytics = &app.analytics;
 
-    let session_info = vec![
+    let mut session_info = vec![
         Line::from(vec![
             Span::styled("Session: ", Style::default().fg(Color::Cyan)),
             Span::raw(&app.session.session_id),
@@ -65,11 +65,20 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
                 Style::default().fg(if analytics.error_count > 0 { Color::Red } else { Color::Green })
             ),
         ]),
-        Line::from(vec![
-            Span::styled("Path: ", Style::default().fg(Color::Cyan)),
-            Span::styled(breadcrumb_display, Style::default().fg(Color::Yellow)),
-        ]),
     ];
+
+    // Add file path if available
+    if let Some(ref file_path) = app.session.file_path {
+        session_info.push(Line::from(vec![
+            Span::styled("File: ", Style::default().fg(Color::Cyan)),
+            Span::styled(file_path.clone(), Style::default().fg(Color::DarkGray)),
+        ]));
+    }
+
+    session_info.push(Line::from(vec![
+        Span::styled("Node: ", Style::default().fg(Color::Cyan)),
+        Span::styled(breadcrumb_display, Style::default().fg(Color::Yellow)),
+    ]));
 
     let header = Paragraph::new(session_info)
         .block(Block::default().borders(Borders::ALL).title("Claude Hindsight"));

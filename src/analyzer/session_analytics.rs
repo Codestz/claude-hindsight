@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn test_empty_session() {
-        let session = Session::new("test-session".to_string(), vec![]);
+        let session = Session::new("test-session".to_string(), None, vec![]);
 
         let analytics = SessionAnalytics::from_session(&session);
         assert_eq!(analytics.total_nodes, 0);
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_duration_formatting() {
-        let session = Session::new("test-session".to_string(), vec![]);
+        let session = Session::new("test-session".to_string(), None, vec![]);
         let mut analytics = SessionAnalytics::from_session(&session);
 
         // Test various durations
