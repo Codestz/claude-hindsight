@@ -11,8 +11,10 @@ mod parser;
 mod commands;
 mod config;
 mod error;
+mod search;
 mod storage;
 mod tui;
+mod watcher;
 
 use error::Result;
 

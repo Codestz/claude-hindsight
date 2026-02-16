@@ -8,8 +8,9 @@ use crate::parser::parse_session;
 use crate::storage::SessionIndex;
 use crate::tui::app::App;
 use crate::tui::projects_view::{ProjectAction, ProjectsView};
+use crate::tui::search_modal::{SearchAction, SearchContext, SearchModal};
 use crate::tui::sessions_view::{SessionAction, SessionsView};
-use crossterm::event::KeyEvent;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::Frame;
 
 /// Current view mode
@@ -38,6 +39,9 @@ pub struct Router {
     /// Session detail view
     pub session_detail_view: Option<App>,
 
+    /// Search modal (overlay)
+    pub search_modal: SearchModal,
+
     /// Whether to quit
     pub should_quit: bool,
 
@@ -57,6 +61,7 @@ impl Router {
         }
 
         let projects_view = Some(ProjectsView::new(&config)?);
+        let search_modal = SearchModal::new(SearchContext::Global);
 
         Ok(Router {
             view_mode: ViewMode::Projects,
@@ -64,6 +69,7 @@ impl Router {
             projects_view,
             sessions_view: None,
             session_detail_view: None,
+            search_modal,
             should_quit: false,
             config,
         })
@@ -80,6 +86,7 @@ impl Router {
         let session = parse_session(&session_file.path)?;
         let session_detail_view = Some(App::new(session));
         let config = Config::load()?;
+        let search_modal = SearchModal::new(SearchContext::Session(session_id.clone()));
 
         Ok(Router {
             view_mode: ViewMode::SessionDetail(session_id),
@@ -87,6 +94,7 @@ impl Router {
             projects_view: None,
             sessions_view: None,
             session_detail_view,
+            search_modal,
             should_quit: false,
             config,
         })
@@ -104,6 +112,17 @@ impl Router {
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        // If search modal is active, let it handle the key first
+        if self.search_modal.is_active {
+            return self.handle_search_key(key);
+        }
+
+        // Check for global '/' key to open search (like vim/less)
+        if matches!(key.code, KeyCode::Char('/')) {
+            self.activate_search();
+            return Ok(());
+        }
+
         match &self.view_mode {
             ViewMode::Projects => {
                 if let Some(ref mut view) = self.projects_view {
@@ -225,8 +244,41 @@ impl Router {
         Ok(())
     }
 
+    /// Activate search modal with appropriate context
+    fn activate_search(&mut self) {
+        let context = match &self.view_mode {
+            ViewMode::Projects => SearchContext::Global,
+            ViewMode::Sessions(project) => SearchContext::Project(project.clone()),
+            ViewMode::SessionDetail(session_id) => SearchContext::Session(session_id.clone()),
+        };
+
+        self.search_modal.context = context;
+        self.search_modal.activate();
+    }
+
+    /// Handle key when search modal is active
+    fn handle_search_key(&mut self, key: KeyEvent) -> Result<()> {
+        match self.search_modal.handle_key(key)? {
+            SearchAction::None => Ok(()),
+            SearchAction::Cancel => Ok(()),
+            SearchAction::SelectSession(session_id) => {
+                // Navigate to the selected session
+                self.navigate_to_session_detail(session_id)?;
+                Ok(())
+            }
+            SearchAction::SelectNode(node_uuid) => {
+                // Jump to the selected node in session detail view
+                if let Some(ref mut view) = self.session_detail_view {
+                    view.select_node_by_uuid(&node_uuid);
+                }
+                Ok(())
+            }
+        }
+    }
+
     /// Render the current view
     pub fn render(&mut self, f: &mut Frame) {
+        // Render the main view
         match &self.view_mode {
             ViewMode::Projects => {
                 if let Some(ref mut view) = self.projects_view {
@@ -246,5 +298,8 @@ impl Router {
                 }
             }
         }
+
+        // Render search modal as overlay (if active)
+        self.search_modal.render(f, f.area());
     }
 }

@@ -7,8 +7,10 @@ pub mod api;
 pub mod config;
 pub mod error;
 pub mod parser;
+pub mod search;
 pub mod storage;
 pub mod tui;
+pub mod watcher;
 
 pub use analyzer::{TreeNode, build_simple_tree};
 pub use error::{HindsightError, Result};
