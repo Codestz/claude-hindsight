@@ -89,6 +89,12 @@ pub struct App {
 
     /// Session-level analytics
     pub analytics: SessionAnalytics,
+
+    /// Last time search input was modified (for debouncing)
+    pub last_search_input_time: Option<std::time::Instant>,
+
+    /// Last executed search query (to avoid re-executing same query)
+    pub last_search_query: Option<String>,
 }
 
 impl App {
@@ -129,6 +135,8 @@ impl App {
             should_quit: false,
             status_message: String::new(),
             analytics,
+            last_search_input_time: None,
+            last_search_query: None,
         }
     }
 
@@ -224,6 +232,33 @@ impl App {
         }
 
         self.input_mode = false;
+    }
+
+    /// Process periodic updates (called on each event loop tick)
+    ///
+    /// Handles debounced search execution - waits 150ms after last keystroke
+    /// before executing the search to avoid rebuilding tree on every character.
+    pub fn tick(&mut self) {
+        // Check if we should execute a debounced search
+        if let Some(last_input) = self.last_search_input_time {
+            if last_input.elapsed() > std::time::Duration::from_millis(150) {
+                // Check if we need to execute search (query has changed)
+                let should_execute = if let Some(ref search) = self.search_state {
+                    let current_query = search.query.clone();
+                    self.last_search_query.as_ref() != Some(&current_query)
+                } else {
+                    false
+                };
+
+                if should_execute {
+                    self.execute_search();
+                    if let Some(ref search) = self.search_state {
+                        self.last_search_query = Some(search.query.clone());
+                    }
+                }
+                self.last_search_input_time = None;
+            }
+        }
     }
 
     /// Jump to next search match
@@ -399,21 +434,32 @@ impl App {
     fn handle_input_key(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
             KeyCode::Enter => {
+                // Immediate execution on Enter (no debouncing)
                 self.execute_search();
+                self.last_search_input_time = None;
+                if let Some(ref search) = self.search_state {
+                    self.last_search_query = Some(search.query.clone());
+                }
             }
             KeyCode::Esc => {
                 self.cancel_search();
+                self.last_search_input_time = None;
+                self.last_search_query = None;
             }
             KeyCode::Backspace => {
                 if let Some(ref mut search) = self.search_state {
                     search.query.pop();
                     self.status_message = format!("Search: {}", search.query);
+                    // Set debounce timer for search execution
+                    self.last_search_input_time = Some(std::time::Instant::now());
                 }
             }
             KeyCode::Char(c) => {
                 if let Some(ref mut search) = self.search_state {
                     search.query.push(c);
                     self.status_message = format!("Search: {}", search.query);
+                    // Set debounce timer for search execution
+                    self.last_search_input_time = Some(std::time::Instant::now());
                 }
             }
             _ => {}

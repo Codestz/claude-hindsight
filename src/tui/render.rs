@@ -420,7 +420,7 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
     lines.push(Line::from(""));
 
     // Check for progress subtype in data.type
-    if let Some(data) = node.node.extra.get("data") {
+    if let Some(data) = node.node.extra.as_ref().and_then(|e| e.get("data")) {
         if let Some(progress_type) = data.get("type").and_then(|t| t.as_str()) {
             lines.push(Line::from(vec![
                 Span::styled("Type: ", Style::default().fg(Color::Cyan)),
@@ -482,7 +482,7 @@ fn render_file_snapshot(node: &TreeNode) -> Vec<Line<'static>> {
     )));
     lines.push(Line::from(""));
 
-    if let Some(snapshot) = node.node.extra.get("snapshot") {
+    if let Some(snapshot) = node.node.extra.as_ref().and_then(|e| e.get("snapshot")) {
         if let Some(tracked_files) = snapshot.get("trackedFileBackups") {
             if let Some(files_obj) = tracked_files.as_object() {
                 lines.push(Line::from(format!("{} tracked files:", files_obj.len())));
@@ -518,14 +518,14 @@ fn render_system(node: &TreeNode) -> Vec<Line<'static>> {
     )));
     lines.push(Line::from(""));
 
-    if let Some(subtype) = node.node.extra.get("subtype").and_then(|s| s.as_str()) {
+    if let Some(subtype) = node.node.extra.as_ref().and_then(|e| e.get("subtype")).and_then(|s| s.as_str()) {
         lines.push(Line::from(vec![
             Span::styled("Type: ", Style::default().fg(Color::Cyan)),
             Span::raw(subtype.to_string()),
         ]));
 
         if subtype == "turn_duration" {
-            if let Some(duration_ms) = node.node.extra.get("durationMs").and_then(|d| d.as_i64()) {
+            if let Some(duration_ms) = node.node.extra.as_ref().and_then(|e| e.get("durationMs")).and_then(|d| d.as_i64()) {
                 lines.push(Line::from(vec![
                     Span::styled("Duration: ", Style::default().fg(Color::Cyan)),
                     Span::raw(format!("{:.2}s", duration_ms as f64 / 1000.0)),

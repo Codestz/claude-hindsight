@@ -41,11 +41,14 @@ impl SessionAnalytics {
     /// Calculate analytics from a session
     pub fn from_session(session: &Session) -> Self {
         let total_nodes = session.nodes.len();
-        let mut node_counts: HashMap<String, usize> = HashMap::new();
-        let mut tool_counts: HashMap<String, usize> = HashMap::new();
+
+        // Pre-allocate with capacity hints to reduce reallocations
+        let mut node_counts: HashMap<String, usize> = HashMap::with_capacity(10);
+        let mut tool_counts: HashMap<String, usize> = HashMap::with_capacity(20);
+        let mut timestamps = Vec::with_capacity(total_nodes);
+
         let mut input_tokens = 0u64;
         let mut output_tokens = 0u64;
-        let mut timestamps = Vec::new();
         let mut error_count = 0;
         let mut has_subagents = false;
         let mut thinking_count = 0;
@@ -55,7 +58,7 @@ impl SessionAnalytics {
             *node_counts.entry(node.node_type.clone()).or_insert(0) += 1;
 
             // Check for subagents
-            if let Some(ref extra) = node.extra.get("isSidechain") {
+            if let Some(ref extra) = node.extra.as_ref().and_then(|e| e.get("isSidechain")) {
                 if let Some(is_sidechain) = extra.as_bool() {
                     if is_sidechain {
                         has_subagents = true;
@@ -149,7 +152,7 @@ impl SessionAnalytics {
 
         // Calculate duration
         let duration_seconds = if timestamps.len() >= 2 {
-            timestamps.sort();
+            timestamps.sort_unstable();
             let first = timestamps.first().unwrap();
             let last = timestamps.last().unwrap();
             Some((last - first) / 1000) // Convert ms to seconds
@@ -157,9 +160,9 @@ impl SessionAnalytics {
             None
         };
 
-        // Sort tools by usage
+        // Sort tools by usage (unstable sort is faster, order of equal elements doesn't matter)
         let mut tool_usage: Vec<_> = tool_counts.into_iter().collect();
-        tool_usage.sort_by(|a, b| b.1.cmp(&a.1));
+        tool_usage.sort_unstable_by(|a, b| b.1.cmp(&a.1));
 
         SessionAnalytics {
             total_nodes,

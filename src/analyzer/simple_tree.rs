@@ -5,6 +5,7 @@
 use crate::analyzer::TreeNode;
 use crate::parser::ExecutionNode;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 /// Deduplicate consecutive progress nodes (especially agent progress)
 fn deduplicate_progress(nodes: Vec<ExecutionNode>) -> Vec<ExecutionNode> {
@@ -15,7 +16,7 @@ fn deduplicate_progress(nodes: Vec<ExecutionNode>) -> Vec<ExecutionNode> {
     for node in nodes {
         // Check if this is agent progress
         if node.node_type == "progress" {
-            if let Some(data) = node.extra.get("data") {
+            if let Some(data) = node.extra.as_ref().and_then(|e| e.get("data")) {
                 if let Some(progress_type) = data.get("type").and_then(|t| t.as_str()) {
                     if progress_type == "agent_progress" {
                         if let Some(agent_id) = data.get("agentId").and_then(|a| a.as_str()) {
@@ -57,29 +58,32 @@ pub fn build_simple_tree(nodes: Vec<ExecutionNode>) -> Vec<TreeNode> {
     // Deduplicate progress nodes (collapse consecutive agent progress updates)
     let nodes = deduplicate_progress(nodes);
 
+    // Wrap all nodes in Rc immediately to avoid expensive cloning
+    let rc_nodes: Vec<Rc<ExecutionNode>> = nodes.into_iter().map(Rc::new).collect();
+
     // Index nodes by UUID for fast lookup
-    let mut node_map: HashMap<String, ExecutionNode> = HashMap::new();
-    let mut children_map: HashMap<String, Vec<ExecutionNode>> = HashMap::new();
-    let mut root_nodes: Vec<ExecutionNode> = Vec::new();
+    let mut node_map: HashMap<String, Rc<ExecutionNode>> = HashMap::new();
+    let mut children_map: HashMap<String, Vec<Rc<ExecutionNode>>> = HashMap::new();
+    let mut root_nodes: Vec<Rc<ExecutionNode>> = Vec::new();
 
     // First pass: index all nodes
-    for node in nodes {
-        if let Some(ref uuid) = node.uuid {
-            node_map.insert(uuid.clone(), node);
+    for rc_node in rc_nodes {
+        if let Some(ref uuid) = rc_node.uuid {
+            node_map.insert(uuid.clone(), rc_node);
         }
     }
 
     // Second pass: build parent-child relationships
-    for (_uuid, node) in &node_map {
-        if let Some(ref parent_uuid) = node.parent_uuid {
-            // Has parent - add to children map
+    for (_uuid, rc_node) in &node_map {
+        if let Some(ref parent_uuid) = rc_node.parent_uuid {
+            // Has parent - add to children map (Rc::clone is just a pointer increment)
             children_map
                 .entry(parent_uuid.clone())
                 .or_insert_with(Vec::new)
-                .push(node.clone());
+                .push(Rc::clone(rc_node));
         } else {
             // No parent - this is a root
-            root_nodes.push(node.clone());
+            root_nodes.push(Rc::clone(rc_node));
         }
     }
 
@@ -102,21 +106,21 @@ pub fn build_simple_tree(nodes: Vec<ExecutionNode>) -> Vec<TreeNode> {
     // Third pass: build TreeNode hierarchy from roots
     root_nodes
         .into_iter()
-        .map(|node| build_tree_node(&node, &children_map, 0))
+        .map(|rc_node| build_tree_node(&rc_node, &children_map, 0))
         .collect()
 }
 
 /// Recursively build TreeNode from ExecutionNode
 fn build_tree_node(
-    node: &ExecutionNode,
-    children_map: &HashMap<String, Vec<ExecutionNode>>,
+    rc_node: &Rc<ExecutionNode>,
+    children_map: &HashMap<String, Vec<Rc<ExecutionNode>>>,
     depth: usize,
 ) -> TreeNode {
-    let children = if let Some(ref uuid) = node.uuid {
+    let children = if let Some(ref uuid) = rc_node.uuid {
         if let Some(child_nodes) = children_map.get(uuid) {
             child_nodes
                 .iter()
-                .map(|child| build_tree_node(child, children_map, depth + 1))
+                .map(|child_rc| build_tree_node(child_rc, children_map, depth + 1))
                 .collect()
         } else {
             Vec::new()
@@ -126,7 +130,7 @@ fn build_tree_node(
     };
 
     TreeNode {
-        node: node.clone(),
+        node: Rc::clone(rc_node),
         children,
         depth,
     }

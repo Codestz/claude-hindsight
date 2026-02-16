@@ -32,8 +32,21 @@ impl SessionIndex {
         Ok(index)
     }
 
+    /// Create a new in-memory session index for testing
+    #[cfg(test)]
+    fn new_in_memory() -> Result<Self> {
+        let conn = Connection::open_in_memory()?;
+        let mut index = SessionIndex { conn };
+        index.initialize_schema()?;
+        Ok(index)
+    }
+
     /// Initialize the database schema
     fn initialize_schema(&mut self) -> Result<()> {
+        // Check schema version
+        let version: i64 = self.conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+
+        // Create tables if they don't exist
         self.conn.execute_batch(
             r#"
             CREATE TABLE IF NOT EXISTS sessions (
@@ -49,20 +62,42 @@ impl SessionIndex {
             CREATE INDEX IF NOT EXISTS idx_project_name ON sessions(project_name);
             CREATE INDEX IF NOT EXISTS idx_modified_at ON sessions(modified_at DESC);
             CREATE INDEX IF NOT EXISTS idx_has_subagents ON sessions(has_subagents);
+
+            CREATE TABLE IF NOT EXISTS tool_usage (
+                session_id TEXT NOT NULL,
+                tool_name TEXT NOT NULL,
+                usage_count INTEGER NOT NULL,
+                PRIMARY KEY (session_id, tool_name),
+                FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_tool_name ON tool_usage(tool_name);
+            CREATE INDEX IF NOT EXISTS idx_usage_count ON tool_usage(usage_count DESC);
             "#,
         )?;
+
+        // Set schema version to 1 if this is a new database
+        if version == 0 {
+            self.conn.execute("PRAGMA user_version = 1", [])?;
+        }
 
         Ok(())
     }
 
     /// Index a single session file
     pub fn index_session(&mut self, session: &SessionFile) -> Result<()> {
+        use std::collections::HashMap;
+
         let indexed_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs() as i64)
             .unwrap_or(0);
 
-        self.conn.execute(
+        // Start a transaction for atomic updates
+        let tx = self.conn.transaction()?;
+
+        // Insert/update session metadata
+        tx.execute(
             r#"
             INSERT OR REPLACE INTO sessions
             (session_id, project_name, file_path, file_size, modified_at, has_subagents, indexed_at)
@@ -79,6 +114,52 @@ impl SessionIndex {
             ],
         )?;
 
+        // Parse session to extract tool counts
+        if let Ok(parsed_session) = crate::parser::parse_session(&session.path) {
+            let mut tool_counts: HashMap<String, usize> = HashMap::new();
+
+            // Count tools from all nodes
+            for node in &parsed_session.nodes {
+                // Check top-level tool_use
+                if let Some(ref tool_use) = node.tool_use {
+                    *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
+                }
+
+                // Check message.content[] for tool_use blocks
+                if let Some(ref message) = node.message {
+                    if let Some(ref content) = message.content {
+                        if let Some(content_array) = content.as_array() {
+                            for content_item in content_array {
+                                if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
+                                    if content_type == "tool_use" {
+                                        if let Some(tool_name) = content_item.get("name").and_then(|v| v.as_str()) {
+                                            *tool_counts.entry(tool_name.to_string()).or_insert(0) += 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Delete old tool_usage entries for this session
+            tx.execute(
+                "DELETE FROM tool_usage WHERE session_id = ?1",
+                params![session.session_id],
+            )?;
+
+            // Insert new tool_usage entries
+            let mut stmt = tx.prepare(
+                "INSERT INTO tool_usage (session_id, tool_name, usage_count) VALUES (?1, ?2, ?3)"
+            )?;
+
+            for (tool_name, count) in tool_counts {
+                stmt.execute(params![session.session_id, tool_name, count as i64])?;
+            }
+        }
+
+        tx.commit()?;
         Ok(())
     }
 
@@ -379,94 +460,26 @@ impl SessionIndex {
         })
     }
 
-    /// Extract top tools from recent sessions
-    fn get_top_tools(&self, limit: usize) -> Result<Vec<(String, usize)>> {
-        use std::collections::HashMap;
-        use std::io::Write;
-
-        // Get recent sessions
+    /// Extract top tools from recent sessions (using indexed tool_usage table)
+    fn get_top_tools(&self, _session_limit: usize) -> Result<Vec<(String, usize)>> {
+        // Query aggregates tool usage across all sessions (no file parsing!)
         let mut stmt = self.conn.prepare(
-            "SELECT file_path FROM sessions ORDER BY modified_at DESC LIMIT ?1"
+            r#"
+            SELECT tool_name, SUM(usage_count) as total_count
+            FROM tool_usage
+            GROUP BY tool_name
+            ORDER BY total_count DESC
+            LIMIT 5
+            "#
         )?;
 
-        let paths: Vec<PathBuf> = stmt.query_map([limit as i64], |row| {
-            Ok(PathBuf::from(row.get::<_, String>(0)?))
+        let top_tools = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)? as usize,
+            ))
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
-
-        let mut tool_counts: HashMap<String, usize> = HashMap::new();
-        let mut parsed_count = 0;
-        let mut error_count = 0;
-        let mut tool_node_count = 0;
-
-        // Parse each session and count tools
-        for path in &paths {
-            match crate::parser::parse_session(path) {
-                Ok(session) => {
-                    parsed_count += 1;
-                    for node in &session.nodes {
-                        // Check top-level tool_use (older format)
-                        if let Some(ref tool_use) = node.tool_use {
-                            tool_node_count += 1;
-                            *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
-                        }
-
-                        // Check message.content[] for tool_use blocks (newer format)
-                        if let Some(ref message) = node.message {
-                            if let Some(ref content) = message.content {
-                                if let Some(content_array) = content.as_array() {
-                                    for content_item in content_array {
-                                        if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
-                                            if content_type == "tool_use" {
-                                                if let Some(tool_name) = content_item.get("name").and_then(|v| v.as_str()) {
-                                                    tool_node_count += 1;
-                                                    *tool_counts.entry(tool_name.to_string()).or_insert(0) += 1;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    error_count += 1;
-                    // Log first error to file for debugging
-                    if error_count == 1 {
-                        if let Ok(mut file) = std::fs::OpenOptions::new()
-                            .create(true)
-                            .append(true)
-                            .open("/tmp/hindsight_debug.log") {
-                            let _ = writeln!(file, "Parse error: {:?} for path: {:?}", e, path);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Debug: Always write stats to log file
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open("/tmp/hindsight_debug.log") {
-            let _ = writeln!(file, "Top Tools Stats:");
-            let _ = writeln!(file, "  Checked {} sessions", paths.len());
-            let _ = writeln!(file, "  Successfully parsed: {}", parsed_count);
-            let _ = writeln!(file, "  Parse errors: {}", error_count);
-            let _ = writeln!(file, "  Tool nodes found: {}", tool_node_count);
-            let _ = writeln!(file, "  Unique tools: {}", tool_counts.len());
-            let _ = writeln!(file, "\nTool counts:");
-            for (tool, count) in &tool_counts {
-                let _ = writeln!(file, "  {}: {}", tool, count);
-            }
-        }
-
-        // Sort by count and take top 5
-        let mut top_tools: Vec<_> = tool_counts.into_iter().collect();
-        top_tools.sort_by(|a, b| b.1.cmp(&a.1));
-        top_tools.truncate(5);
 
         Ok(top_tools)
     }
@@ -545,54 +558,27 @@ impl SessionIndex {
     }
 
     /// Get top tools for a specific project
-    fn get_top_tools_for_project(&self, project: &str, limit: usize) -> Result<Vec<(String, usize)>> {
-        use std::collections::HashMap;
-
-        // Get recent sessions for this project
+    fn get_top_tools_for_project(&self, project: &str, _session_limit: usize) -> Result<Vec<(String, usize)>> {
+        // Query aggregates tool usage for this project (no file parsing!)
         let mut stmt = self.conn.prepare(
-            "SELECT file_path FROM sessions WHERE project_name = ?1 ORDER BY modified_at DESC LIMIT ?2"
+            r#"
+            SELECT t.tool_name, SUM(t.usage_count) as total_count
+            FROM tool_usage t
+            JOIN sessions s ON t.session_id = s.session_id
+            WHERE s.project_name = ?1
+            GROUP BY t.tool_name
+            ORDER BY total_count DESC
+            LIMIT 5
+            "#
         )?;
 
-        let paths: Vec<PathBuf> = stmt.query_map([project, &limit.to_string()], |row| {
-            Ok(PathBuf::from(row.get::<_, String>(0)?))
+        let top_tools = stmt.query_map([project], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, i64>(1)? as usize,
+            ))
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?;
-
-        let mut tool_counts: HashMap<String, usize> = HashMap::new();
-
-        // Parse each session and count tools
-        for path in &paths {
-            if let Ok(session) = crate::parser::parse_session(path) {
-                for node in &session.nodes {
-                    // Check top-level tool_use
-                    if let Some(ref tool_use) = node.tool_use {
-                        *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
-                    }
-
-                    // Check message.content[] for tool_use blocks
-                    if let Some(ref message) = node.message {
-                        if let Some(ref content) = message.content {
-                            if let Some(content_array) = content.as_array() {
-                                for content_item in content_array {
-                                    if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
-                                        if content_type == "tool_use" {
-                                            if let Some(tool_name) = content_item.get("name").and_then(|v| v.as_str()) {
-                                                *tool_counts.entry(tool_name.to_string()).or_insert(0) += 1;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Sort by count and take top 5
-        let mut top_tools: Vec<_> = tool_counts.into_iter().collect();
-        top_tools.sort_by(|a, b| b.1.cmp(&a.1));
-        top_tools.truncate(5);
 
         Ok(top_tools)
     }
@@ -650,8 +636,7 @@ mod tests {
 
     #[test]
     fn test_index_session() {
-        let _temp_dir = TempDir::new().unwrap();
-        let mut index = SessionIndex::new().unwrap();
+        let mut index = SessionIndex::new_in_memory().unwrap();
 
         let session = SessionFile {
             session_id: "test-session-123".to_string(),

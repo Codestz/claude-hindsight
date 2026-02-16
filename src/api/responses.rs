@@ -63,7 +63,7 @@ impl NodeResponse {
                 .unwrap_or(false),
             timestamp: node.node.timestamp,
             children: node.children.iter().map(Self::from_tree_node).collect(),
-            data: serde_json::to_value(&node.node).unwrap_or(serde_json::Value::Null),
+            data: serde_json::to_value(&*node.node).unwrap_or(serde_json::Value::Null),
         }
     }
 }

@@ -73,10 +73,10 @@ pub struct ExecutionNode {
     
     /// Token usage statistics
     pub token_usage: Option<TokenUsage>,
-    
-    /// Additional metadata
+
+    /// Additional metadata (optional to save memory when not present)
     #[serde(flatten)]
-    pub extra: HashMap<String, serde_json::Value>,
+    pub extra: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Message content (user or assistant)
