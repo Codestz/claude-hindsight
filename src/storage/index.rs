@@ -302,6 +302,300 @@ impl SessionIndex {
 
         Ok(stats)
     }
+
+    /// Get global analytics across all sessions
+    pub fn get_global_analytics(&self) -> Result<GlobalAnalytics> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        let one_week_ago = now - (7 * 24 * 60 * 60);
+        let today_start = now - (now % (24 * 60 * 60));
+
+        // Total sessions and size
+        let mut stmt = self.conn.prepare(
+            "SELECT COUNT(*), SUM(file_size) FROM sessions"
+        )?;
+
+        let (total_sessions, total_size) = stmt.query_row([], |row| {
+            Ok((
+                row.get::<_, i64>(0)? as usize,
+                row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+            ))
+        })?;
+
+        // Sessions this week
+        let sessions_this_week: usize = self.conn.query_row(
+            "SELECT COUNT(*) FROM sessions WHERE modified_at >= ?1",
+            [one_week_ago],
+            |row| row.get::<_, i64>(0).map(|c| c as usize),
+        )?;
+
+        // Sessions today
+        let sessions_today: usize = self.conn.query_row(
+            "SELECT COUNT(*) FROM sessions WHERE modified_at >= ?1",
+            [today_start],
+            |row| row.get::<_, i64>(0).map(|c| c as usize),
+        )?;
+
+        // Total projects
+        let total_projects = self.list_projects()?.len();
+
+        // Subagent count
+        let subagent_count: usize = self.conn.query_row(
+            "SELECT COUNT(*) FROM sessions WHERE has_subagents = 1",
+            [],
+            |row| row.get::<_, i64>(0).map(|c| c as usize),
+        )?;
+
+        // Average session size
+        let avg_session_size = if total_sessions > 0 {
+            total_size / total_sessions as u64
+        } else {
+            0
+        };
+
+        // Most active project
+        let most_active_project = self.conn.query_row(
+            "SELECT project_name FROM sessions ORDER BY modified_at DESC LIMIT 1",
+            [],
+            |row| row.get::<_, String>(0),
+        ).ok();
+
+        // Top tools - parse recent sessions to extract tool usage
+        let top_tools = self.get_top_tools(100)?;
+
+        Ok(GlobalAnalytics {
+            total_sessions,
+            sessions_this_week,
+            sessions_today,
+            total_size,
+            total_projects,
+            subagent_count,
+            avg_session_size,
+            most_active_project,
+            top_tools,
+        })
+    }
+
+    /// Extract top tools from recent sessions
+    fn get_top_tools(&self, limit: usize) -> Result<Vec<(String, usize)>> {
+        use std::collections::HashMap;
+        use std::io::Write;
+
+        // Get recent sessions
+        let mut stmt = self.conn.prepare(
+            "SELECT file_path FROM sessions ORDER BY modified_at DESC LIMIT ?1"
+        )?;
+
+        let paths: Vec<PathBuf> = stmt.query_map([limit as i64], |row| {
+            Ok(PathBuf::from(row.get::<_, String>(0)?))
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        let mut tool_counts: HashMap<String, usize> = HashMap::new();
+        let mut parsed_count = 0;
+        let mut error_count = 0;
+        let mut tool_node_count = 0;
+
+        // Parse each session and count tools
+        for path in &paths {
+            match crate::parser::parse_session(path) {
+                Ok(session) => {
+                    parsed_count += 1;
+                    for node in &session.nodes {
+                        // Check top-level tool_use (older format)
+                        if let Some(ref tool_use) = node.tool_use {
+                            tool_node_count += 1;
+                            *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
+                        }
+
+                        // Check message.content[] for tool_use blocks (newer format)
+                        if let Some(ref message) = node.message {
+                            if let Some(ref content) = message.content {
+                                if let Some(content_array) = content.as_array() {
+                                    for content_item in content_array {
+                                        if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
+                                            if content_type == "tool_use" {
+                                                if let Some(tool_name) = content_item.get("name").and_then(|v| v.as_str()) {
+                                                    tool_node_count += 1;
+                                                    *tool_counts.entry(tool_name.to_string()).or_insert(0) += 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    error_count += 1;
+                    // Log first error to file for debugging
+                    if error_count == 1 {
+                        if let Ok(mut file) = std::fs::OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open("/tmp/hindsight_debug.log") {
+                            let _ = writeln!(file, "Parse error: {:?} for path: {:?}", e, path);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Debug: Always write stats to log file
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open("/tmp/hindsight_debug.log") {
+            let _ = writeln!(file, "Top Tools Stats:");
+            let _ = writeln!(file, "  Checked {} sessions", paths.len());
+            let _ = writeln!(file, "  Successfully parsed: {}", parsed_count);
+            let _ = writeln!(file, "  Parse errors: {}", error_count);
+            let _ = writeln!(file, "  Tool nodes found: {}", tool_node_count);
+            let _ = writeln!(file, "  Unique tools: {}", tool_counts.len());
+            let _ = writeln!(file, "\nTool counts:");
+            for (tool, count) in &tool_counts {
+                let _ = writeln!(file, "  {}: {}", tool, count);
+            }
+        }
+
+        // Sort by count and take top 5
+        let mut top_tools: Vec<_> = tool_counts.into_iter().collect();
+        top_tools.sort_by(|a, b| b.1.cmp(&a.1));
+        top_tools.truncate(5);
+
+        Ok(top_tools)
+    }
+
+    /// Get project-specific analytics
+    pub fn get_project_analytics(&self, project: &str) -> Result<ProjectAnalytics> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        let one_week_ago = now - (7 * 24 * 60 * 60);
+        let today_start = now - (now % (24 * 60 * 60));
+
+        // Total sessions and size for this project
+        let mut stmt = self.conn.prepare(
+            "SELECT COUNT(*), SUM(file_size) FROM sessions WHERE project_name = ?1"
+        )?;
+
+        let (total_sessions, total_size) = stmt.query_row([project], |row| {
+            Ok((
+                row.get::<_, i64>(0)? as usize,
+                row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+            ))
+        })?;
+
+        // Sessions this week
+        let sessions_this_week: usize = self.conn.query_row(
+            "SELECT COUNT(*) FROM sessions WHERE project_name = ?1 AND modified_at >= ?2",
+            [project, &one_week_ago.to_string()],
+            |row| row.get::<_, i64>(0).map(|c| c as usize),
+        )?;
+
+        // Sessions today
+        let sessions_today: usize = self.conn.query_row(
+            "SELECT COUNT(*) FROM sessions WHERE project_name = ?1 AND modified_at >= ?2",
+            [project, &today_start.to_string()],
+            |row| row.get::<_, i64>(0).map(|c| c as usize),
+        )?;
+
+        // Subagent count
+        let subagent_count: usize = self.conn.query_row(
+            "SELECT COUNT(*) FROM sessions WHERE project_name = ?1 AND has_subagents = 1",
+            [project],
+            |row| row.get::<_, i64>(0).map(|c| c as usize),
+        )?;
+
+        // Average session size
+        let avg_session_size = if total_sessions > 0 {
+            total_size / total_sessions as u64
+        } else {
+            0
+        };
+
+        // Last activity
+        let last_activity = self.conn.query_row(
+            "SELECT modified_at FROM sessions WHERE project_name = ?1 ORDER BY modified_at DESC LIMIT 1",
+            [project],
+            |row| row.get::<_, i64>(0),
+        ).ok();
+
+        // Top tools for this project
+        let top_tools = self.get_top_tools_for_project(project, 50)?;
+
+        Ok(ProjectAnalytics {
+            project_name: project.to_string(),
+            total_sessions,
+            sessions_this_week,
+            sessions_today,
+            total_size,
+            subagent_count,
+            avg_session_size,
+            top_tools,
+            last_activity,
+        })
+    }
+
+    /// Get top tools for a specific project
+    fn get_top_tools_for_project(&self, project: &str, limit: usize) -> Result<Vec<(String, usize)>> {
+        use std::collections::HashMap;
+
+        // Get recent sessions for this project
+        let mut stmt = self.conn.prepare(
+            "SELECT file_path FROM sessions WHERE project_name = ?1 ORDER BY modified_at DESC LIMIT ?2"
+        )?;
+
+        let paths: Vec<PathBuf> = stmt.query_map([project, &limit.to_string()], |row| {
+            Ok(PathBuf::from(row.get::<_, String>(0)?))
+        })?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        let mut tool_counts: HashMap<String, usize> = HashMap::new();
+
+        // Parse each session and count tools
+        for path in &paths {
+            if let Ok(session) = crate::parser::parse_session(path) {
+                for node in &session.nodes {
+                    // Check top-level tool_use
+                    if let Some(ref tool_use) = node.tool_use {
+                        *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
+                    }
+
+                    // Check message.content[] for tool_use blocks
+                    if let Some(ref message) = node.message {
+                        if let Some(ref content) = message.content {
+                            if let Some(content_array) = content.as_array() {
+                                for content_item in content_array {
+                                    if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
+                                        if content_type == "tool_use" {
+                                            if let Some(tool_name) = content_item.get("name").and_then(|v| v.as_str()) {
+                                                *tool_counts.entry(tool_name.to_string()).or_insert(0) += 1;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort by count and take top 5
+        let mut top_tools: Vec<_> = tool_counts.into_iter().collect();
+        top_tools.sort_by(|a, b| b.1.cmp(&a.1));
+        top_tools.truncate(5);
+
+        Ok(top_tools)
+    }
 }
 
 /// Statistics for a project
@@ -310,6 +604,35 @@ pub struct ProjectStats {
     pub project_name: String,
     pub session_count: usize,
     pub total_size: u64,
+    pub last_activity: Option<i64>,
+}
+
+/// Global analytics across all sessions
+#[derive(Debug, Clone)]
+pub struct GlobalAnalytics {
+    pub total_sessions: usize,
+    pub sessions_this_week: usize,
+    pub sessions_today: usize,
+    pub total_size: u64,
+    pub total_projects: usize,
+    pub subagent_count: usize,
+    pub avg_session_size: u64,
+    pub most_active_project: Option<String>,
+    pub top_tools: Vec<(String, usize)>,
+}
+
+/// Project-specific analytics
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct ProjectAnalytics {
+    pub project_name: String,
+    pub total_sessions: usize,
+    pub sessions_this_week: usize,
+    pub sessions_today: usize,
+    pub total_size: u64,
+    pub subagent_count: usize,
+    pub avg_session_size: u64,
+    pub top_tools: Vec<(String, usize)>,
     pub last_activity: Option<i64>,
 }
 

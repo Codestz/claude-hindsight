@@ -16,6 +16,7 @@ use ratatui::Frame;
 pub enum ViewMode {
     Projects,
     Sessions(String),      // Project name
+    #[allow(dead_code)]
     SessionDetail(String), // Session ID
 }
 
@@ -56,6 +57,7 @@ impl Router {
     }
 
     /// Create a router that goes directly to a session
+    #[allow(dead_code)]
     pub fn new_with_session(session_id: String) -> Result<Self> {
         let index = SessionIndex::new()?;
         let session_file = index

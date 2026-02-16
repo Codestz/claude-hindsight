@@ -15,7 +15,6 @@ pub fn run(enable_otel: bool) -> Result<()> {
     // Show discovery locations
     println!("  Scanned directories:");
     println!("   ~/.claude/projects/");
-    println!("   ~/.claudep/projects/\n");
 
     // Index sessions
     println!("  Building session index...");

@@ -210,7 +210,7 @@ Filter by these node types:
 
 ## How It Works
 
-Claude Hindsight analyzes Claude Code's JSONL transcript files located at `~/.claude/projects/` and `~/.claudep/projects/`:
+Claude Hindsight analyzes Claude Code's JSONL transcript files located at `~/.claude/projects/`:
 
 ```
 Claude Code Session
