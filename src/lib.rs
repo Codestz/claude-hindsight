@@ -6,6 +6,7 @@ pub mod analyzer;
 pub mod error;
 pub mod parser;
 pub mod storage;
+pub mod tui;
 
 pub use analyzer::{ExecutionTree, TreeNode, TreeStats, RenderConfig, render_tree, render_flat, render_stats};
 pub use error::{HindsightError, Result};

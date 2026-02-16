@@ -11,6 +11,7 @@ mod parser;
 mod commands;
 mod error;
 mod storage;
+mod tui;
 
 use error::Result;
 
