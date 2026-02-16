@@ -402,7 +402,16 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
 fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
-    if let Some(ref result) = node.node.tool_result {
+    // Try to parse toolUseResult from JSON value (if it's an object, not error string)
+    let tool_use_result: Option<crate::parser::models::ToolResult> =
+        node.node.tool_use_result.as_ref()
+            .and_then(|v| serde_json::from_value(v.clone()).ok());
+
+    // Prefer toolUseResult (clean content) over tool_result (has line numbers)
+    let result = tool_use_result.as_ref()
+        .or(node.node.tool_result.as_ref());
+
+    if let Some(result) = result {
         let is_error = result.is_error.unwrap_or(false);
 
         if is_error {
@@ -427,37 +436,24 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
             )));
             lines.push(Line::from(""));
 
-            if let Some(ref content) = result.content {
-                // Clean up content (Read tool adds line numbers like "1→ code")
-                let cleaned_lines: Vec<String> = content.lines()
-                    .map(|line| {
-                        // Strip line numbers from Read tool output (format: "123→ content" or "123: content")
-                        if let Some(arrow_pos) = line.find('→') {
-                            line[arrow_pos + '→'.len_utf8()..].to_string()
-                        } else if let Some(colon_pos) = line.find(':') {
-                            // Check if everything before colon is a number
-                            if line[..colon_pos].trim().chars().all(|c| c.is_numeric()) {
-                                line[colon_pos + 1..].to_string()
-                            } else {
-                                line.to_string()
-                            }
-                        } else {
-                            line.to_string()
-                        }
-                    })
-                    .collect();
+            // Prefer file.content (clean) over content (may have line numbers)
+            let (content_str, file_path) = if let Some(ref file) = result.file {
+                (file.content.as_ref(), file.file_path.as_ref())
+            } else {
+                (result.content.as_ref(), None)
+            };
 
-                // Detect language from context if possible (we'd need file_path from tool_use)
-                let content_str = cleaned_lines.join("\n");
+            if let Some(content) = content_str {
+                // Detect language from file path if available
+                let language = file_path.and_then(|path| code_render::detect_language(path));
 
                 // Try smart rendering for Edit tool results (JSON with file_path, old_string, new_string)
-                if let Some(rendered) = code_render::render_edit_result(&content_str) {
+                if let Some(rendered) = code_render::render_edit_result(content) {
                     lines.extend(rendered);
                 } else {
-                    // Render as code with basic highlighting if it looks like code
-                    for line in cleaned_lines {
-                        lines.push(Line::from(line));
-                    }
+                    // Render with syntax highlighting if we detected a language
+                    let highlighted_lines = code_render::highlight_code(content, language);
+                    lines.extend(highlighted_lines);
                 }
             }
         }

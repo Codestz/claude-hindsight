@@ -64,7 +64,11 @@ pub struct ExecutionNode {
     
     /// Tool result (for tool_result events)
     pub tool_result: Option<ToolResult>,
-    
+
+    /// Tool use result (raw tool output - can be string or object)
+    #[serde(rename = "toolUseResult")]
+    pub tool_use_result: Option<serde_json::Value>,
+
     /// Thinking content (for thinking blocks)
     pub thinking: Option<String>,
     
@@ -107,21 +111,36 @@ pub struct ToolUse {
     pub id: Option<String>,
 }
 
+/// File information from toolUseResult
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileInfo {
+    #[serde(rename = "filePath")]
+    pub file_path: Option<String>,
+
+    pub content: Option<String>,
+
+    #[serde(rename = "numLines")]
+    pub num_lines: Option<i64>,
+}
+
 /// Tool result (tool output) details
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolResult {
     /// Tool use ID this result corresponds to
     pub tool_use_id: Option<String>,
-    
-    /// Result content
+
+    /// Result content (may have line numbers - prefer file.content)
     pub content: Option<String>,
-    
+
+    /// File information (clean content without line numbers)
+    pub file: Option<FileInfo>,
+
     /// Whether tool succeeded
     pub is_error: Option<bool>,
-    
+
     /// Error message if failed
     pub error: Option<String>,
-    
+
     /// Duration in milliseconds
     pub duration_ms: Option<i64>,
 }
