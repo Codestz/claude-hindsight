@@ -8,6 +8,34 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Custom deserializer for timestamp that handles both string and number formats
+mod timestamp_format {
+    use serde::{Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<i64>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum TimestampFormat {
+            Number(i64),
+            String(String),
+        }
+
+        match Option::<TimestampFormat>::deserialize(deserializer)? {
+            None => Ok(None),
+            Some(TimestampFormat::Number(n)) => Ok(Some(n)),
+            Some(TimestampFormat::String(s)) => {
+                // Parse ISO 8601 string to milliseconds
+                chrono::DateTime::parse_from_rfc3339(&s)
+                    .map(|dt| Some(dt.timestamp_millis()))
+                    .map_err(serde::de::Error::custom)
+            }
+        }
+    }
+}
+
 /// A single execution node in the Claude Code session tree
 ///
 /// Represents any event in the transcript: user messages, assistant responses,
@@ -20,7 +48,8 @@ pub struct ExecutionNode {
     /// Parent node UUID (for building hierarchy)
     pub parent_uuid: Option<String>,
     
-    /// Timestamp in milliseconds
+    /// Timestamp in milliseconds (accepts both ISO 8601 string and number)
+    #[serde(default, deserialize_with = "timestamp_format::deserialize")]
     pub timestamp: Option<i64>,
     
     /// Node type (user, assistant, tool_use, etc.)
@@ -53,12 +82,13 @@ pub struct ExecutionNode {
 /// Message content (user or assistant)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
-    /// Text content
-    pub content: Option<String>,
-    
+    /// Content (can be string or array of content blocks)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<serde_json::Value>,
+
     /// Role (user, assistant, system)
     pub role: Option<String>,
-    
+
     /// Additional message metadata
     #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
