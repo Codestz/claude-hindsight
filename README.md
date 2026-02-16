@@ -140,7 +140,7 @@ hindsight show <session-id>
 
 ## Usage
 
-### 🔴 Live Monitoring
+### Live Monitoring
 
 Watch your active Claude Code session update in real-time:
 
