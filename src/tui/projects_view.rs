@@ -246,16 +246,79 @@ impl ProjectsView {
         let chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
+                Constraint::Length(11),  // Welcome header
                 Constraint::Min(0),      // Project list
                 Constraint::Length(3),   // Status bar
             ])
             .split(area);
 
+        // Render welcome header
+        self.render_header(f, chunks[0]);
+
         // Render project list
-        self.render_list(f, chunks[0]);
+        self.render_list(f, chunks[1]);
 
         // Render status bar
-        self.render_status(f, chunks[1]);
+        self.render_status(f, chunks[2]);
+    }
+
+    /// Render the welcome header with ASCII art
+    fn render_header(&self, f: &mut Frame, area: Rect) {
+        let total_sessions: usize = self.projects.iter().map(|p| p.session_count).sum();
+        let total_size: u64 = self.projects.iter().map(|p| p.total_size).sum();
+        let size_mb = total_size as f64 / 1_000_000.0;
+
+        let header_text = vec![
+            Line::from(vec![
+                Span::styled(
+                    "    ╦ ╦╦╔╗╔╔╦╗╔═╗╦╔═╗╦ ╦╔╦╗",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "    ╠═╣║║║║ ║║╚═╗║║ ╦╠═╣ ║ ",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled(
+                    "    ╩ ╩╩╝╚╝═╩╝╚═╝╩╚═╝╩ ╩ ╩ ",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "    20/20 hindsight for your Claude Code sessions",
+                    Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC),
+                ),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("Projects: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("{}", self.projects.len()), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                Span::raw("  │  "),
+                Span::styled("Sessions: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("{}", total_sessions), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+                Span::raw("  │  "),
+                Span::styled("Total: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("{:.1} MB", size_mb), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled(
+                    "────────────────────────────────────────────────────────────────────────────────",
+                    Style::default().fg(Color::DarkGray),
+                ),
+            ]),
+        ];
+
+        let header = Paragraph::new(header_text)
+            .block(Block::default());
+
+        f.render_widget(header, area);
     }
 
     /// Render the project list
@@ -267,24 +330,24 @@ impl ProjectsView {
                 let time_ago = format_time_ago(project.last_activity);
 
                 let line = Line::from(vec![
+                    Span::raw("  "),
                     Span::styled(
-                        format!("{:20}", project.project_name),
+                        format!("{:22}", project.project_name),
                         Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                     ),
-                    Span::raw(" | "),
                     Span::styled(
-                        format!("{:3} sessions", project.session_count),
+                        format!("{:4} sessions", project.session_count),
                         Style::default().fg(Color::Yellow),
                     ),
-                    Span::raw(" | "),
+                    Span::raw("    "),
                     Span::styled(
-                        format!("{:6.1} MB", size_mb),
+                        format!("{:8.1} MB", size_mb),
                         Style::default().fg(Color::Green),
                     ),
-                    Span::raw(" | "),
+                    Span::raw("    "),
                     Span::styled(
-                        time_ago,
-                        Style::default().fg(Color::Gray),
+                        format!("{:>12}", time_ago),
+                        Style::default().fg(Color::DarkGray),
                     ),
                 ]);
 
@@ -292,37 +355,62 @@ impl ProjectsView {
             })
             .collect();
 
+        let title = if self.projects.is_empty() {
+            "Projects (none found - run 'hindsight init' first)"
+        } else {
+            "Projects"
+        };
+
         let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("Projects"))
+            .block(Block::default().borders(Borders::ALL).title(title))
             .highlight_style(
                 Style::default()
-                    .bg(Color::DarkGray)
+                    .fg(Color::Black)
+                    .bg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),
             )
-            .highlight_symbol(">> ");
+            .highlight_symbol(" ▶ ");
 
         f.render_stateful_widget(list, area, &mut self.list_state);
     }
 
     /// Render status bar
     fn render_status(&self, f: &mut Frame, area: Rect) {
-        let shortcuts = vec![
-            Line::from(vec![
-                Span::styled("j/k", Style::default().fg(Color::Yellow)),
-                Span::raw(": Nav | "),
-                Span::styled("Enter", Style::default().fg(Color::Yellow)),
-                Span::raw(": Select | "),
-                Span::styled("/", Style::default().fg(Color::Yellow)),
-                Span::raw(": Filter | "),
-                Span::styled("r", Style::default().fg(Color::Yellow)),
-                Span::raw(": Refresh | "),
-                Span::styled("q", Style::default().fg(Color::Yellow)),
-                Span::raw(": Quit"),
-            ]),
-            Line::from(self.status_message.as_str()),
-        ];
+        let shortcuts = if self.projects.is_empty() {
+            vec![
+                Line::from(vec![
+                    Span::styled(" Tip: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::raw("Run "),
+                    Span::styled("hindsight init", Style::default().fg(Color::Cyan)),
+                    Span::raw(" to discover Claude Code sessions"),
+                ]),
+            ]
+        } else {
+            vec![
+                Line::from(vec![
+                    Span::styled(" ↑↓", Style::default().fg(Color::Cyan)),
+                    Span::raw(" navigate  "),
+                    Span::styled("Enter", Style::default().fg(Color::Cyan)),
+                    Span::raw(" select  "),
+                    Span::styled("/", Style::default().fg(Color::Cyan)),
+                    Span::raw(" filter  "),
+                    Span::styled("r", Style::default().fg(Color::Cyan)),
+                    Span::raw(" refresh  "),
+                    Span::styled("q", Style::default().fg(Color::Cyan)),
+                    Span::raw(" quit"),
+                ]),
+            ]
+        };
 
-        let status = Paragraph::new(shortcuts)
+        let mut text = shortcuts;
+        if !self.status_message.is_empty() {
+            text.push(Line::from(vec![
+                Span::styled(" ", Style::default()),
+                Span::styled(self.status_message.as_str(), Style::default().fg(Color::Yellow)),
+            ]));
+        }
+
+        let status = Paragraph::new(text)
             .block(Block::default().borders(Borders::ALL));
 
         f.render_widget(status, area);
