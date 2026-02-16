@@ -3,6 +3,7 @@
 //! Simple, maintainable rendering functions for each node type.
 
 use crate::analyzer::TreeNode;
+use crate::tui::theme::{colors, icons};
 use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
@@ -67,8 +68,8 @@ fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
     if is_tool_result {
         // This is a tool result - show it differently
         lines.push(Line::from(Span::styled(
-            " Tool Result",
-            Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
+            format!("{}  Tool Result", icons::TOOL_RESULT),
+            Style::default().fg(colors::TOOL_RESULT).add_modifier(Modifier::BOLD),
         )));
         lines.push(Line::from(""));
 
@@ -122,10 +123,10 @@ fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
             }
         }
     } else {
-        // Regular user message
+        // Regular user message with icon
         lines.push(Line::from(Span::styled(
-            "  User Message",
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            format!("{}  User Message", icons::USER),
+            Style::default().fg(colors::USER_MSG).add_modifier(Modifier::BOLD),
         )));
         lines.push(Line::from(""));
 
@@ -272,8 +273,8 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
                                 let tool_name = item.get("name").and_then(|n| n.as_str()).unwrap_or("Unknown");
 
                                 lines.push(Line::from(Span::styled(
-                                    format!("  Tool: {}", tool_name),
-                                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                                    format!("{}  Tool: {}", icons::TOOL_USE, tool_name),
+                                    Style::default().fg(colors::TOOL_USE).add_modifier(Modifier::BOLD),
                                 )));
                                 lines.push(Line::from(""));
 
@@ -395,8 +396,8 @@ fn render_thinking(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
     lines.push(Line::from(Span::styled(
-        "  Thinking",
-        Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
+        format!("{}  Thinking", icons::THINKING),
+        Style::default().fg(colors::THINKING).add_modifier(Modifier::BOLD),
     )));
     lines.push(Line::from(""));
 
@@ -414,8 +415,8 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
     lines.push(Line::from(Span::styled(
-        "  Progress",
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+        format!("{}  Progress", icons::PROGRESS),
+        Style::default().fg(colors::PROGRESS).add_modifier(Modifier::BOLD),
     )));
     lines.push(Line::from(""));
 

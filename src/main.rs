@@ -145,6 +145,13 @@ enum Commands {
         #[command(subcommand)]
         action: ConfigAction,
     },
+
+    /// Reindex all sessions to populate tool_usage analytics
+    Reindex {
+        /// Show detailed progress
+        #[arg(short, long)]
+        verbose: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -257,6 +264,9 @@ fn run() -> Result<()> {
                 ConfigAction::Reset => commands::config::reset_config()?,
                 ConfigAction::Validate => commands::config::validate_config()?,
             }
+        }
+        Commands::Reindex { verbose } => {
+            commands::reindex::run(verbose)?;
         }
     }
 

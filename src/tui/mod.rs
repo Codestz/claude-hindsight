@@ -9,6 +9,7 @@ pub mod render;
 pub mod router;
 pub mod search;
 pub mod sessions_view;
+pub mod theme;
 pub mod ui;
 
 pub use app::App;
