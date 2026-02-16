@@ -10,6 +10,51 @@ use ratatui::{
     text::{Line, Span},
 };
 
+/// Helper to render regular tool parameters
+fn render_parameters(lines: &mut Vec<Line<'static>>, input: &serde_json::Value) {
+    lines.push(Line::from(Span::styled(
+        "Parameters:",
+        Style::default().fg(Color::Cyan),
+    )));
+
+    if let Some(obj) = input.as_object() {
+        for (key, value) in obj.iter() {
+            // Skip rendering long strings (like old_string, new_string) in plain view
+            if key == "old_string" || key == "new_string" {
+                let preview = if let Some(s) = value.as_str() {
+                    let lines_count = s.lines().count();
+                    format!("({} lines)", lines_count)
+                } else {
+                    continue;
+                };
+                lines.push(Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled(format!("{}: ", key), Style::default().fg(Color::Yellow)),
+                    Span::styled(preview, Style::default().fg(Color::DarkGray)),
+                ]));
+            } else {
+                // Format value nicely
+                let value_str = if let Some(s) = value.as_str() {
+                    // Truncate very long strings
+                    if s.len() > 200 {
+                        format!("{}... ({} chars)", &s[..200], s.len())
+                    } else {
+                        s.to_string()
+                    }
+                } else {
+                    format!("{}", value)
+                };
+
+                lines.push(Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled(format!("{}: ", key), Style::default().fg(Color::Yellow)),
+                    Span::raw(value_str),
+                ]));
+            }
+        }
+    }
+}
+
 /// Render a node's content for the details panel
 pub fn render_node_content(node: &TreeNode) -> Vec<Line<'static>> {
     // For assistant messages, check if it's actually a tool call
@@ -287,30 +332,31 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
                                     ]));
                                 }
 
-                                // Show input parameters in detail
+                                // Show input parameters with smart rendering for Edit tool
                                 if let Some(input) = item.get("input") {
                                     lines.push(Line::from(""));
-                                    lines.push(Line::from(Span::styled(
-                                        "Parameters:",
-                                        Style::default().fg(Color::Cyan),
-                                    )));
 
-                                    if let Some(obj) = input.as_object() {
-                                        for (key, value) in obj.iter() {
-                                            // Format value nicely
-                                            let value_str = if let Some(s) = value.as_str() {
-                                                s.to_string()
-                                            } else {
-                                                // For other types, use debug format
-                                                format!("{}", value)
-                                            };
-
-                                            lines.push(Line::from(vec![
-                                                Span::styled("  ", Style::default()),
-                                                Span::styled(format!("{}: ", key), Style::default().fg(Color::Yellow)),
-                                                Span::raw(value_str),
-                                            ]));
+                                    // Check if this is Edit tool - use smart rendering
+                                    if tool_name == "Edit" {
+                                        if let Some(rendered) = code_render::render_edit_result(&input.to_string()) {
+                                            lines.extend(rendered);
+                                        } else {
+                                            // Fallback to regular rendering
+                                            render_parameters(&mut lines, input);
                                         }
+                                    } else if tool_name == "Read" {
+                                        // For Read tool, show file path prominently
+                                        if let Some(obj) = input.as_object() {
+                                            if let Some(file_path) = obj.get("file_path").and_then(|v| v.as_str()) {
+                                                lines.push(Line::from(vec![
+                                                    Span::styled("📄 Reading: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                                                    Span::styled(file_path.to_string(), Style::default().fg(Color::Yellow)),
+                                                ]));
+                                            }
+                                        }
+                                    } else {
+                                        // Regular parameter rendering
+                                        render_parameters(&mut lines, input);
                                     }
                                 }
                             }
@@ -382,13 +428,35 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
             lines.push(Line::from(""));
 
             if let Some(ref content) = result.content {
+                // Clean up content (Read tool adds line numbers like "1→ code")
+                let cleaned_lines: Vec<String> = content.lines()
+                    .map(|line| {
+                        // Strip line numbers from Read tool output (format: "123→ content" or "123: content")
+                        if let Some(arrow_pos) = line.find('→') {
+                            line[arrow_pos + '→'.len_utf8()..].to_string()
+                        } else if let Some(colon_pos) = line.find(':') {
+                            // Check if everything before colon is a number
+                            if line[..colon_pos].trim().chars().all(|c| c.is_numeric()) {
+                                line[colon_pos + 1..].to_string()
+                            } else {
+                                line.to_string()
+                            }
+                        } else {
+                            line.to_string()
+                        }
+                    })
+                    .collect();
+
+                // Detect language from context if possible (we'd need file_path from tool_use)
+                let content_str = cleaned_lines.join("\n");
+
                 // Try smart rendering for Edit tool results (JSON with file_path, old_string, new_string)
-                if let Some(rendered) = code_render::render_edit_result(content) {
+                if let Some(rendered) = code_render::render_edit_result(&content_str) {
                     lines.extend(rendered);
                 } else {
-                    // Fallback to plain text
-                    for line in content.lines() {
-                        lines.push(Line::from(line.to_string()));
+                    // Render as code with basic highlighting if it looks like code
+                    for line in cleaned_lines {
+                        lines.push(Line::from(line));
                     }
                 }
             }
