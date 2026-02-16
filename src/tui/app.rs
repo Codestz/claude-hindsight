@@ -142,12 +142,16 @@ impl App {
     /// Update the selected index based on tree state
     fn update_selected_index(&mut self) {
         let selected = self.tree_state.selected();
-        // Find the node index by matching the identifier
-        if let Some(uuid_str) = selected.first() {
-            if let Some(index) = self.nodes.iter().position(|node| {
-                node.node.uuid.as_ref().map(|s| s.as_str()) == Some(uuid_str.as_str())
-            }) {
-                self.selected_index = index;
+        // The identifier format is either "uuid-counter" or "node-counter"
+        // Extract the counter to find the node index
+        if let Some(identifier) = selected.first() {
+            // Extract counter from identifier (last part after last '-')
+            if let Some(counter_str) = identifier.rsplit('-').next() {
+                if let Ok(index) = counter_str.parse::<usize>() {
+                    if index < self.nodes.len() {
+                        self.selected_index = index;
+                    }
+                }
             }
         }
     }
@@ -160,26 +164,29 @@ impl App {
 
 /// Build tree items for tui-tree-widget
 fn build_tree_items(tree: &ExecutionTree) -> Vec<TreeItem<'static, String>> {
+    let mut counter = 0;
     tree.roots
         .iter()
-        .map(|root| build_tree_item(root))
+        .map(|root| build_tree_item(root, &mut counter))
         .collect()
 }
 
-/// Recursively build a tree item
-fn build_tree_item(node: &TreeNode) -> TreeItem<'static, String> {
-    let identifier = node
-        .node
-        .uuid
-        .clone()
-        .unwrap_or_else(|| "unknown".to_string());
+/// Recursively build a tree item with unique identifiers
+fn build_tree_item(node: &TreeNode, counter: &mut usize) -> TreeItem<'static, String> {
+    // Create unique identifier using counter to avoid duplicates
+    let identifier = if let Some(ref uuid) = node.node.uuid {
+        format!("{}-{}", uuid, counter)
+    } else {
+        format!("node-{}", counter)
+    };
+    *counter += 1;
 
     let text = node.summary();
 
     let children: Vec<TreeItem<String>> = node
         .children
         .iter()
-        .map(|child| build_tree_item(child))
+        .map(|child| build_tree_item(child, counter))
         .collect();
 
     TreeItem::new(identifier, text, children).expect("Failed to create tree item")
