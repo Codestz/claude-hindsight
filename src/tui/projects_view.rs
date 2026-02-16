@@ -246,7 +246,7 @@ impl ProjectsView {
         let chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
-                Constraint::Length(11),  // Welcome header
+                Constraint::Length(12),  // Welcome header (taller for new ASCII art)
                 Constraint::Min(0),      // Project list
                 Constraint::Length(3),   // Status bar
             ])
@@ -268,55 +268,76 @@ impl ProjectsView {
         let total_size: u64 = self.projects.iter().map(|p| p.total_size).sum();
         let size_mb = total_size as f64 / 1_000_000.0;
 
+        // Calculate horizontal padding for centering (assuming ~80 char width for content)
+        let content_width = 85;
+        let padding = (area.width.saturating_sub(content_width)) / 2;
+        let pad = " ".repeat(padding as usize);
+
         let header_text = vec![
+            Line::from(""),
             Line::from(vec![
+                Span::raw(&pad),
                 Span::styled(
-                    "    ╦ ╦╦╔╗╔╔╦╗╔═╗╦╔═╗╦ ╦╔╦╗",
+                    "██╗  ██╗██╗███╗   ██╗██████╗ ███████╗██╗ ██████╗ ██╗  ██╗████████╗",
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
+                Span::raw(&pad),
                 Span::styled(
-                    "    ╠═╣║║║║ ║║╚═╗║║ ╦╠═╣ ║ ",
+                    "██║  ██║██║████╗  ██║██╔══██╗██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝",
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
+                Span::raw(&pad),
                 Span::styled(
-                    "    ╩ ╩╩╝╚╝═╩╝╚═╝╩╚═╝╩ ╩ ╩ ",
+                    "███████║██║██╔██╗ ██║██║  ██║███████╗██║██║  ███╗███████║   ██║   ",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw(&pad),
+                Span::styled(
+                    "██╔══██║██║██║╚██╗██║██║  ██║╚════██║██║██║   ██║██╔══██║   ██║   ",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw(&pad),
+                Span::styled(
+                    "██║  ██║██║██║ ╚████║██████╔╝███████║██║╚██████╔╝██║  ██║   ██║   ",
+                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw(&pad),
+                Span::styled(
+                    "╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ",
                     Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
             Line::from(vec![
+                Span::raw(" ".repeat((area.width as usize).saturating_sub(76) / 2)),
                 Span::styled(
-                    "    20/20 hindsight for your Claude Code sessions",
-                    Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC),
+                    "A powerful observability tool for Claude Code. Debug sessions,",
+                    Style::default().fg(Color::Gray),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw(" ".repeat((area.width as usize).saturating_sub(76) / 2)),
+                Span::styled(
+                    "analyze costs, and understand Claude's decision-making process.",
+                    Style::default().fg(Color::Gray),
                 ),
             ]),
             Line::from(""),
-            Line::from(vec![
-                Span::raw("    "),
-                Span::styled("Projects: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(format!("{}", self.projects.len()), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::raw("  │  "),
-                Span::styled("Sessions: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(format!("{}", total_sessions), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-                Span::raw("  │  "),
-                Span::styled("Total: ", Style::default().fg(Color::DarkGray)),
-                Span::styled(format!("{:.1} MB", size_mb), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled(
-                    "────────────────────────────────────────────────────────────────────────────────",
-                    Style::default().fg(Color::DarkGray),
-                ),
-            ]),
         ];
 
         let header = Paragraph::new(header_text)
-            .block(Block::default());
+            .block(Block::default())
+            .alignment(ratatui::layout::Alignment::Left);
 
         f.render_widget(header, area);
     }
