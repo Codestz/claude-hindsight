@@ -9,8 +9,8 @@ use crate::tui::{App, run as run_tui};
 
 pub fn run(session_id: String, dashboard: bool, _port: u16) -> Result<()> {
     if dashboard {
-        println!("🌐 Web dashboard not yet implemented");
-        println!("💡 Use without --dashboard flag to view in terminal\n");
+        println!("  Web dashboard not yet implemented");
+        println!("  Use without --dashboard flag to view in terminal\n");
         return Ok(());
     }
 

@@ -153,6 +153,7 @@ pub struct TokenUsage {
 }
 
 /// Tool use result from user nodes (file operations)
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolUseResult {
     /// Operation type (create, update, delete)
@@ -170,6 +171,7 @@ pub struct ToolUseResult {
 }
 
 /// Progress data (nested in progress nodes)
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgressData {
     /// Progress subtype (bash_progress, hook_progress, waiting_for_task)
@@ -199,7 +201,7 @@ pub struct ProgressData {
 }
 
 /// Complete session parsed from JSONL transcript
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
     /// Session identifier
     pub session_id: String,

@@ -21,6 +21,7 @@ pub fn initialize_index() -> Result<usize> {
 }
 
 /// Refresh the index and remove missing sessions
+#[allow(dead_code)]
 pub fn refresh_index() -> Result<(usize, usize)> {
     let mut index = SessionIndex::new()?;
     let removed = index.prune_missing()?;

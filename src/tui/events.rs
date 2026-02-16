@@ -14,6 +14,7 @@ pub enum Event {
     Key(KeyEvent),
 
     /// Terminal resize event
+    #[allow(dead_code)]
     Resize(u16, u16),
 }
 

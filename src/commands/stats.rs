@@ -15,7 +15,7 @@ pub fn run(session_id: String) -> Result<()> {
         .find_by_id(&session_id)?
         .ok_or_else(|| HindsightError::SessionNotFound(session_id.clone()))?;
 
-    println!("📊 Session Statistics\n");
+    println!("  Session Statistics\n");
     println!("   ID: {}", session_file.session_id);
     println!("   Project: {}", session_file.project_name);
 
@@ -31,14 +31,14 @@ pub fn run(session_id: String) -> Result<()> {
     println!("   File size: {} KB", session_file.file_size / 1024);
 
     if session_file.has_subagents {
-        println!("   Subagents: Yes 🌲");
+        println!("   Subagents: Yes  ");
     }
 
     // Parse the session to get detailed stats
-    println!("\n🔍 Parsing session...");
+    println!("\n  Parsing session...");
     let session = parse_session(&session_file.path)?;
 
-    println!("\n📈 Execution Summary:");
+    println!("\n  Execution Summary:");
     println!("   Total nodes: {}", session.nodes.len());
     println!("   Tool calls: {}", session.total_tools);
     println!("   Errors: {}", session.error_count);
@@ -52,7 +52,7 @@ pub fn run(session_id: String) -> Result<()> {
         println!("   Duration: {}m {}s", minutes, seconds);
     }
 
-    println!("\n💰 Token Usage:");
+    println!("\n  Token Usage:");
     println!("   Total tokens: {}", session.total_tokens);
     println!("   Estimated cost: ${:.4}", session.estimated_cost);
 
@@ -67,7 +67,7 @@ pub fn run(session_id: String) -> Result<()> {
     }
 
     if !tool_counts.is_empty() {
-        println!("\n🔧 Tool Usage:");
+        println!("\n  Tool Usage:");
         let mut sorted_tools: Vec<_> = tool_counts.iter().collect();
         sorted_tools.sort_by(|a, b| b.1.cmp(a.1));
 

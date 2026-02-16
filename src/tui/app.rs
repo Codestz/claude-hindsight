@@ -43,12 +43,6 @@ pub struct App {
     /// Tree items for rendering
     pub tree_items: Vec<TreeItem<'static, String>>,
 
-    /// Currently selected node index (in DFS order)
-    pub selected_index: usize,
-
-    /// All nodes in DFS order
-    pub nodes: Vec<TreeNode>,
-
     /// Mapping from UUID to node (for fast lookup)
     pub uuid_to_node: HashMap<String, TreeNode>,
 
@@ -91,17 +85,11 @@ impl App {
         let mut tree_state = tui_tree_widget::TreeState::default();
         tree_state.select_first();
 
-        // Get first node as selected
-        let nodes = vec![]; // No longer needed
-        let selected_index = 0; // No longer needed
-
         App {
             session,
             tree_roots,
             tree_state,
             tree_items,
-            selected_index,
-            nodes,
             uuid_to_node,
             total_nodes,
             view_mode: ViewMode::Summary,
@@ -128,7 +116,6 @@ impl App {
                 match self.focus_mode {
                     FocusMode::Tree => {
                         self.tree_state.key_down();
-                        self.update_selected_index();
                         self.details_scroll = 0; // Reset scroll when changing nodes
                     }
                     FocusMode::Details => {
@@ -140,7 +127,6 @@ impl App {
                 match self.focus_mode {
                     FocusMode::Tree => {
                         self.tree_state.key_up();
-                        self.update_selected_index();
                         self.details_scroll = 0; // Reset scroll when changing nodes
                     }
                     FocusMode::Details => {
@@ -190,22 +176,15 @@ impl App {
             // Home/End
             (KeyCode::Home, _) | (KeyCode::Char('g'), KeyModifiers::NONE) => {
                 self.tree_state.select_first();
-                self.update_selected_index();
             }
             (KeyCode::End, _) | (KeyCode::Char('G'), KeyModifiers::SHIFT) => {
                 self.tree_state.select_last();
-                self.update_selected_index();
             }
 
             _ => {}
         }
 
         Ok(())
-    }
-
-    /// Update the selected index based on tree state (no longer needed with UUID lookup)
-    fn update_selected_index(&mut self) {
-        // No-op: we now use UUID-based lookup in selected_node()
     }
 
     /// Get the currently selected node
