@@ -43,6 +43,8 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
         "(no selection)".to_string()
     };
 
+    let analytics = &app.analytics;
+
     let session_info = vec![
         Line::from(vec![
             Span::styled("Session: ", Style::default().fg(Color::Cyan)),
@@ -51,8 +53,17 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
             Span::styled("Nodes: ", Style::default().fg(Color::Cyan)),
             Span::raw(format!("{}", app.total_nodes)),
             Span::raw(" | "),
-            Span::styled("Groups: ", Style::default().fg(Color::Cyan)),
-            Span::raw(format!("{}", app.tree_roots.len())),
+            Span::styled("Duration: ", Style::default().fg(Color::Cyan)),
+            Span::styled(analytics.duration_string(), Style::default().fg(Color::Yellow)),
+            Span::raw(" | "),
+            Span::styled("Thinking: ", Style::default().fg(Color::Cyan)),
+            Span::styled(format!("{}", analytics.thinking_count), Style::default().fg(Color::Magenta)),
+            Span::raw(" | "),
+            Span::styled("Errors: ", Style::default().fg(Color::Cyan)),
+            Span::styled(
+                format!("{}", analytics.error_count),
+                Style::default().fg(if analytics.error_count > 0 { Color::Red } else { Color::Green })
+            ),
         ]),
         Line::from(vec![
             Span::styled("Path: ", Style::default().fg(Color::Cyan)),
