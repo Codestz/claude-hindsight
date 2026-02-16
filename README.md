@@ -1,4 +1,4 @@
-# Claude Hindsight 🔍
+# Claude Hindsight
 
 > **20/20 hindsight for your Claude Code sessions**
 
@@ -13,17 +13,17 @@
 
 ## Why Hindsight?
 
-###  **Visibility is Security**
+### **Visibility is Security**
 
 AI coding assistants are powerful, but they operate as black boxes. Without observability:
-- ❌ You can't audit what code was modified or why
-- ❌ Debugging failures means guessing what went wrong
-- ❌ Cost optimization is impossible without usage data
-- ❌ Team collaboration suffers from lack of session sharing
+- You can't audit what code was modified or why
+- Debugging failures means guessing what went wrong
+- Cost optimization is impossible without usage data
+- Team collaboration suffers from lack of session sharing
 
 **Hindsight gives you X-ray vision into every AI decision.**
 
-### ⚡ **Performance That Matters**
+### **Performance That Matters**
 
 When you're debugging a production incident, **every second counts**:
 
@@ -34,7 +34,7 @@ When you're debugging a production incident, **every second counts**:
 
 Built in Rust for developers who value speed.
 
-### 🎯 **Built for Real Workflows**
+### **Built for Real Workflows**
 
 ```bash
 # Debugging a failed session? Get to errors instantly.
@@ -54,36 +54,36 @@ hindsight watch
 
 ## Features
 
-### 🌳 **Execution Tree Visualization**
+### **Execution Tree Visualization**
 
 See the complete flow of your session—user messages, thinking blocks, tool calls, and results—rendered as a navigable tree with visual indicators:
 
 ```
-💬  User: Fix the authentication bug
-🤖  Assistant
-💭  Thinking (2.3s)
-🔧  Tool: Grep (searching for auth code...)
-📄  Result: Found 3 matches
-🔧  Tool: Read (analyzing auth.rs...)
-✅  Success (45ms)
-🤖  Assistant Response
-💭  Thinking (analyzing the issue...)
-🔧  Tool: Edit (applying fix...)
-✅  Success (89ms)
+  User: Fix the authentication bug
+  Assistant
+  Thinking (2.3s)
+  Tool: Grep (searching for auth code...)
+  Result: Found 3 matches
+  Tool: Read (analyzing auth.rs...)
+  Success (45ms)
+  Assistant Response
+  Thinking (analyzing the issue...)
+  Tool: Edit (applying fix...)
+  Success (89ms)
 ```
 
-### 🎨 **Beautiful Terminal UI**
+### **Beautiful Terminal UI**
 
 Professional, keyboard-driven interface designed for productivity:
 
-- 💬 **Icons & Colors** - Visual distinction for every node type
-- ⌨️  **Vim Bindings** - `j/k`, `g/G`, `Ctrl+d/u` navigation
-- 🔍 **Live Search** - Filter by node type with debounced input
-- 📊 **Split Panes** - Tree + details + metadata in one view
-- 📍 **Breadcrumbs** - Always know where you are in the execution
-- ⚡ **Instant Updates** - Real-time file watching for live sessions
+- **Icons & Colors** - Visual distinction for every node type
+- **Vim Bindings** - `j/k`, `g/G`, `Ctrl+d/u` navigation
+- **Live Search** - Filter by node type with debounced input
+- **Split Panes** - Tree + details + metadata in one view
+- **Breadcrumbs** - Always know where you are in the execution
+- **Instant Updates** - Real-time file watching for live sessions
 
-### 📈 **Session Analytics**
+### **Session Analytics**
 
 Deep insights into your AI development workflow:
 
@@ -93,7 +93,7 @@ Deep insights into your AI development workflow:
 - **Tool Usage** - Understand which tools Claude uses most
 - **Token Statistics** - Monitor input/output token consumption
 
-### 🔒 **Security & Auditability**
+### **Security & Auditability**
 
 Enterprise-ready observability for AI-assisted development:
 
@@ -154,7 +154,7 @@ Perfect for:
 - Catching errors as they happen
 - Learning from Claude's tool selection
 
-### 🔍 Session Analysis
+### Session Analysis
 
 Deep-dive into any session with the interactive TUI:
 
@@ -175,7 +175,7 @@ hindsight show ce3c149e-7f2a-4b5c-9d1e-8a4f6b2c1d3e
 - `g/G` - Jump to top/bottom
 - `q` - Quit
 
-### 💰 Cost Analysis
+### Cost Analysis
 
 Identify expensive operations:
 
@@ -196,7 +196,7 @@ hindsight costs --by-time ce3c149
 - Repeated tool calls indicate inefficiency
 - Historical trends reveal optimization opportunities
 
-### 🐛 Error Debugging
+### Error Debugging
 
 Jump straight to failures with full context:
 
@@ -210,7 +210,7 @@ See:
 - Previous tool calls that led to the error
 - How Claude attempted to recover
 
-### 📋 Browse Sessions
+### Browse Sessions
 
 List and filter all your Claude Code sessions:
 
@@ -317,7 +317,7 @@ hindsight show <session-id>
 # Press '/' and filter: "thinking,tool_use"
 ```
 
-#### 🐛 **Debugging Production Incidents**
+#### **Debugging Production Incidents**
 
 *"Claude broke production. I need to know exactly what it did."*
 
@@ -391,10 +391,10 @@ Recent performance work delivered **5-10x improvements**:
          ↓
 ┌────────────────────────────────┐
 │ Interactive TUI                │
-│  🌳 Execution Tree             │
-│  📊 Analytics Dashboard        │
-│  🔍 Search & Filter            │
-│  💬 Full Content Display       │
+│  Execution Tree                │
+│  Analytics Dashboard           │
+│  Search & Filter               │
+│  Full Content Display          │
 └────────────────────────────────┘
 ```
 
@@ -425,11 +425,11 @@ Recent performance work delivered **5-10x improvements**:
 
 We welcome contributions! Whether it's:
 
-- 🐛 Bug reports
-- ✨ Feature requests
-- 📝 Documentation improvements
-- 🔧 Code contributions
-- 💡 Ideas and feedback
+- Bug reports
+- Feature requests
+- Documentation improvements
+- Code contributions
+- Ideas and feedback
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
