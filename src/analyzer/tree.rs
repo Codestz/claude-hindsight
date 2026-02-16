@@ -404,8 +404,15 @@ fn extract_text_preview(content: &serde_json::Value, max_len: usize) -> String {
 
     // Truncate and clean
     let cleaned = text.replace('\n', " ").trim().to_string();
-    if cleaned.len() > max_len {
-        format!("{}...", &cleaned[..max_len])
+
+    // Use char_indices to safely truncate at character boundaries (not byte boundaries)
+    if cleaned.chars().count() > max_len {
+        let truncate_pos = cleaned
+            .char_indices()
+            .nth(max_len)
+            .map(|(idx, _)| idx)
+            .unwrap_or(cleaned.len());
+        format!("{}...", &cleaned[..truncate_pos])
     } else {
         cleaned
     }
