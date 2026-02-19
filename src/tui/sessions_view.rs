@@ -14,12 +14,41 @@ use ratatui::{
     Frame,
 };
 
+/// Sort order for the sessions list
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SortMode {
+    Newest,
+    MostExpensive,
+    MostTokens,
+    MostErrors,
+}
+
+impl SortMode {
+    fn label(self) -> &'static str {
+        match self {
+            SortMode::Newest       => "Newest",
+            SortMode::MostExpensive => "Cost ↓",
+            SortMode::MostTokens   => "Tokens ↓",
+            SortMode::MostErrors   => "Errors ↓",
+        }
+    }
+
+    fn next(self) -> Self {
+        match self {
+            SortMode::Newest        => SortMode::MostExpensive,
+            SortMode::MostExpensive => SortMode::MostTokens,
+            SortMode::MostTokens    => SortMode::MostErrors,
+            SortMode::MostErrors    => SortMode::Newest,
+        }
+    }
+}
+
 /// Sessions view state
 pub struct SessionsView {
     /// Project name
     pub project_name: String,
 
-    /// Sessions for this project
+    /// Sessions for this project (sorted per sort_mode)
     pub sessions: Vec<SessionFile>,
 
     /// List selection state
@@ -39,6 +68,9 @@ pub struct SessionsView {
 
     /// Application configuration
     pub config: Config,
+
+    /// Current sort mode
+    pub sort_mode: SortMode,
 }
 
 impl SessionsView {
@@ -64,6 +96,7 @@ impl SessionsView {
             status_message,
             analytics,
             config: config.clone(),
+            sort_mode: SortMode::Newest,
         })
     }
 
@@ -129,7 +162,7 @@ impl SessionsView {
             // Start filter
             (KeyCode::Char('/'), KeyModifiers::NONE) => {
                 self.filter_mode = true;
-                self.status_message = "Filter: ".to_string();
+                self.status_message = "Filter by ID or message: ".to_string();
                 Ok(SessionAction::None)
             }
 
@@ -140,12 +173,45 @@ impl SessionsView {
                 Ok(SessionAction::None)
             }
 
+            // Sort toggle (S cycles through sort modes)
+            (KeyCode::Char('s'), KeyModifiers::NONE) | (KeyCode::Char('S'), KeyModifiers::SHIFT) => {
+                self.sort_mode = self.sort_mode.next();
+                self.apply_sort();
+                self.status_message = format!("Sort: {}", self.sort_mode.label());
+                Ok(SessionAction::None)
+            }
+
             // Quit
             (KeyCode::Char('q'), KeyModifiers::NONE) => {
                 Ok(SessionAction::Quit)
             }
 
             _ => Ok(SessionAction::None),
+        }
+    }
+
+    /// Re-sort sessions according to the current sort mode
+    fn apply_sort(&mut self) {
+        match self.sort_mode {
+            SortMode::Newest => {
+                self.sessions.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+            }
+            SortMode::MostExpensive => {
+                self.sessions.sort_by(|a, b| {
+                    b.estimated_cost.partial_cmp(&a.estimated_cost)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
+            }
+            SortMode::MostTokens => {
+                self.sessions.sort_by(|a, b| b.total_tokens.cmp(&a.total_tokens));
+            }
+            SortMode::MostErrors => {
+                self.sessions.sort_by(|a, b| b.error_count.cmp(&a.error_count));
+            }
+        }
+        // Keep selection at top after sort
+        if !self.sessions.is_empty() {
+            self.list_state.select(Some(0));
         }
     }
 
@@ -189,7 +255,13 @@ impl SessionsView {
             let query = self.filter_query.to_lowercase();
             self.sessions = all_sessions
                 .into_iter()
-                .filter(|s| s.session_id.to_lowercase().contains(&query))
+                .filter(|s| {
+                    s.session_id.to_lowercase().contains(&query)
+                        || s.first_message
+                            .as_deref()
+                            .map(|m| m.to_lowercase().contains(&query))
+                            .unwrap_or(false)
+                })
                 .collect();
         }
 
@@ -382,64 +454,92 @@ impl SessionsView {
         f.render_widget(header, area);
     }
 
-    /// Render the session list
+    /// Render the session list with column header
     fn render_list(&mut self, f: &mut Frame, area: Rect) {
+        // Render the outer block and get inner area for children
+        let title = format!("Sessions — Sort: {} (S:cycle)  ●=clean ●=errors", self.sort_mode.label());
+        let block = Block::default().borders(Borders::ALL).title(title);
+        let inner = block.inner(area);
+        f.render_widget(block, area);
+
+        // Split inner: 1-line header row + list body
+        let chunks = Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)])
+            .split(inner);
+
+        // ── #11: Column header row ────────────────────────────────────────
+        let header = Paragraph::new(Line::from(vec![
+            Span::styled("  ● ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:8}", "ID"),      Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:7}", "Age"),     Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:8}", "Updated"), Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:12}", "Model"),  Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:7}", "Tokens"),  Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+            Span::styled(format!("{:7}", "Cost"),    Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
+            Span::styled("Message",                   Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+        ]));
+        f.render_widget(header, chunks[0]);
+
+        // ── Data rows ─────────────────────────────────────────────────────
         let items: Vec<ListItem> = self.sessions
             .iter()
             .map(|session| {
-                let size_kb = session.file_size / 1024;
-                let time_ago = format_time_ago(Some(session.modified_at));
+                let age_str = format_time_ago(Some(session.created_at));
+                let updated_str = format_time_ago(Some(session.modified_at));
+                let short_id = &session.session_id[..8.min(session.session_id.len())];
+                let dot_color = if session.error_count == 0 { Color::Green } else { Color::Red };
+                let model_raw = session.model.as_deref().unwrap_or("-");
+                let model_display = if model_raw.len() > 12 { &model_raw[..12] } else { model_raw };
+                let tok_str = fmt_tokens(session.total_tokens);
+                let cost_str = format!("${:.3}", session.estimated_cost);
+                let preview_raw = session.first_message.as_deref().unwrap_or("(no message)");
+                let preview_end = preview_raw.char_indices().nth(35).map(|(i, _)| i).unwrap_or(preview_raw.len());
+                let preview = &preview_raw[..preview_end];
 
-                // Short session ID (first 8 chars)
-                let short_id = if session.session_id.len() > 8 {
-                    &session.session_id[..8]
-                } else {
-                    &session.session_id
-                };
-
-                let line = Line::from(vec![
-                    Span::styled(
-                        format!("{:8}", short_id),
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
-                    ),
-                    Span::raw(" | "),
-                    Span::styled(
-                        time_ago,
-                        Style::default().fg(Color::Yellow),
-                    ),
-                    Span::raw(" | "),
-                    Span::styled(
-                        format!("{:6} KB", size_kb),
-                        Style::default().fg(Color::Green),
-                    ),
-                    Span::raw(if session.has_subagents { " | " } else { "" }),
-                    Span::styled(
-                        if session.has_subagents { "subagents" } else { "" },
-                        Style::default().fg(Color::Magenta),
-                    ),
-                ]);
-
-                ListItem::new(line)
+                ListItem::new(Line::from(vec![
+                    Span::styled("  ", Style::default()),
+                    Span::styled("●", Style::default().fg(dot_color)),
+                    Span::raw(" "),
+                    Span::styled(format!("{:8}", short_id), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                    Span::raw(" │ "),
+                    Span::styled(format!("{:7}", age_str),     Style::default().fg(Color::DarkGray)),
+                    Span::raw(" │ "),
+                    Span::styled(format!("{:8}", updated_str), Style::default().fg(Color::Yellow)),
+                    Span::raw(" │ "),
+                    Span::styled(format!("{:12}", model_display), Style::default().fg(Color::Blue)),
+                    Span::raw(" │ "),
+                    Span::styled(format!("{:7}", tok_str), Style::default().fg(Color::Green)),
+                    Span::raw(" │ "),
+                    Span::styled(format!("{:7}", cost_str), Style::default().fg(Color::Yellow)),
+                    Span::raw(" │ "),
+                    Span::styled(preview.to_string(), Style::default().fg(Color::Gray)),
+                ]))
             })
             .collect();
 
-        let title = format!("Sessions - {}", self.project_name);
         let list = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title(title))
-            .highlight_style(
-                Style::default()
-                    .bg(Color::DarkGray)
-                    .add_modifier(Modifier::BOLD),
-            )
+            .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
 
-        f.render_stateful_widget(list, area, &mut self.list_state);
+        f.render_stateful_widget(list, chunks[1], &mut self.list_state);
     }
 
     /// Render analytics panel
     fn render_analytics_panel(&self, f: &mut Frame, area: Rect) {
         let size_mb = self.analytics.total_size as f64 / 1_000_000.0;
-        let avg_size_kb = self.analytics.avg_session_size / 1024;
+        let total_tokens = fmt_tokens(self.analytics.total_tokens);
+        let avg_cost = if self.analytics.total_sessions > 0 {
+            self.analytics.total_cost / self.analytics.total_sessions as f64
+        } else {
+            0.0
+        };
 
         let mut lines = vec![
             Line::from(""),
@@ -449,7 +549,7 @@ impl SessionsView {
             ]),
             Line::from(""),
             Line::from(vec![
-                Span::raw("  Total Sessions: "),
+                Span::raw("  Sessions:       "),
                 Span::styled(
                     format!("{}", self.analytics.total_sessions),
                     Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
@@ -462,11 +562,40 @@ impl SessionsView {
                     Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
                 ),
             ]),
+            Line::from(""),
+            // Cost & tokens
             Line::from(vec![
-                Span::raw("  Avg Size:       "),
+                Span::styled(" Cost & Usage", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::raw("  Total Tokens:   "),
                 Span::styled(
-                    format!("{} KB", avg_size_kb),
+                    total_tokens,
                     Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("  Total Cost:     "),
+                Span::styled(
+                    format!("${:.2}", self.analytics.total_cost),
+                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("  Avg Cost/Sess:  "),
+                Span::styled(
+                    format!("${:.3}", avg_cost),
+                    Style::default().fg(Color::Yellow),
+                ),
+            ]),
+            Line::from(vec![
+                Span::raw("  Total Errors:   "),
+                Span::styled(
+                    format!("{}", self.analytics.total_errors),
+                    Style::default().fg(
+                        if self.analytics.total_errors > 0 { Color::Red } else { Color::Green }
+                    ).add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
@@ -570,10 +699,12 @@ impl SessionsView {
                 Span::raw(": Nav | "),
                 Span::styled("Enter", Style::default().fg(Color::Yellow)),
                 Span::raw(": View | "),
+                Span::styled("S", Style::default().fg(Color::Yellow)),
+                Span::raw(": Sort | "),
                 Span::styled("h/Esc", Style::default().fg(Color::Yellow)),
                 Span::raw(": Back | "),
                 Span::styled("/", Style::default().fg(Color::Yellow)),
-                Span::raw(": Filter | "),
+                Span::raw(": Filter (ID or message) | "),
                 Span::styled("r", Style::default().fg(Color::Yellow)),
                 Span::raw(": Refresh | "),
                 Span::styled("q", Style::default().fg(Color::Yellow)),
@@ -596,6 +727,17 @@ pub enum SessionAction {
     SelectSession(String),
     Back,
     Quit,
+}
+
+/// Format token count as compact string (e.g. 8200 → "8.2k", 1500000 → "1.5M")
+fn fmt_tokens(n: u64) -> String {
+    if n < 1_000 {
+        format!("{}", n)
+    } else if n < 1_000_000 {
+        format!("{:.1}k", n as f64 / 1_000.0)
+    } else {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    }
 }
 
 /// Format timestamp as relative time

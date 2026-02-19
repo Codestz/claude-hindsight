@@ -147,21 +147,21 @@ impl SearchModal {
             (KeyCode::Char(c), KeyModifiers::NONE) | (KeyCode::Char(c), KeyModifiers::SHIFT) => {
                 self.query.insert(self.cursor_pos, c);
                 self.cursor_pos += 1;
-                self.update_search()?;
+                self.run_search();
                 Ok(SearchAction::None)
             }
             (KeyCode::Backspace, _) => {
                 if self.cursor_pos > 0 {
                     self.query.remove(self.cursor_pos - 1);
                     self.cursor_pos -= 1;
-                    self.update_search()?;
+                    self.run_search();
                 }
                 Ok(SearchAction::None)
             }
             (KeyCode::Delete, _) => {
                 if self.cursor_pos < self.query.len() {
                     self.query.remove(self.cursor_pos);
-                    self.update_search()?;
+                    self.run_search();
                 }
                 Ok(SearchAction::None)
             }
@@ -218,6 +218,14 @@ impl SearchModal {
         self.list_state.select(Some(prev));
     }
 
+    /// Run search and surface any error in the status bar instead of crashing.
+    fn run_search(&mut self) {
+        if let Err(e) = self.update_search() {
+            self.results.clear();
+            self.status = format!("Search error: {}", e);
+        }
+    }
+
     /// Update search results based on current query
     fn update_search(&mut self) -> Result<()> {
         match &self.context.clone() {
@@ -229,80 +237,30 @@ impl SearchModal {
 
     /// Search all sessions globally
     fn search_global_sessions(&mut self) -> Result<()> {
+        let (text, errors_only, tool) = parse_query(&self.query);
         let index = SessionIndex::new()?;
-        let all_sessions = index.list_sessions()?;
-
-        self.total_results = all_sessions.len();
-
-        // Filter and score sessions based on query
-        let filtered = if self.query.is_empty() {
-            all_sessions
-        } else {
-            let query_lower = self.query.to_lowercase();
-            all_sessions.into_iter()
-                .filter(|s| {
-                    s.session_id.to_lowercase().contains(&query_lower) ||
-                    s.project_name.to_lowercase().contains(&query_lower)
-                })
-                .collect()
-        };
-
-        // Convert to search results
-        self.results = filtered.iter()
-            .map(|session| session_to_result_item(session))
-            .collect();
-
-        // Update status
-        self.status = if self.results.len() == self.total_results {
-            format!("{} sessions", self.total_results)
-        } else {
-            format!("{}/{} sessions", self.results.len(), self.total_results)
-        };
-
-        // Reset selection
+        let results = index.search_sessions(&text, None, errors_only, tool.as_deref())?;
+        self.total_results = results.len();
+        self.results = results.iter().map(session_to_result_item).collect();
+        self.status = format!("{} sessions", self.results.len());
         if !self.results.is_empty() {
             self.list_state.select(Some(0));
         }
-
         Ok(())
     }
 
     /// Search sessions within a project
     fn search_project_sessions(&mut self, project: &str) -> Result<()> {
+        let (text, errors_only, tool) = parse_query(&self.query);
         let index = SessionIndex::new()?;
-        let all_sessions = index.find_by_project(project)?;
-
-        self.total_results = all_sessions.len();
-
-        // Filter and score sessions based on query
-        let filtered = if self.query.is_empty() {
-            all_sessions
-        } else {
-            let query_lower = self.query.to_lowercase();
-            all_sessions.into_iter()
-                .filter(|s| {
-                    s.session_id.to_lowercase().contains(&query_lower)
-                })
-                .collect()
-        };
-
-        // Convert to search results
-        self.results = filtered.iter()
-            .map(|session| session_to_result_item(session))
-            .collect();
-
-        // Update status
-        self.status = if self.results.len() == self.total_results {
-            format!("{} sessions in {}", self.total_results, project)
-        } else {
-            format!("{}/{} sessions in {}", self.results.len(), self.total_results, project)
-        };
-
-        // Reset selection
+        let results =
+            index.search_sessions(&text, Some(project), errors_only, tool.as_deref())?;
+        self.total_results = results.len();
+        self.results = results.iter().map(session_to_result_item).collect();
+        self.status = format!("{} sessions in {}", self.results.len(), project);
         if !self.results.is_empty() {
             self.list_state.select(Some(0));
         }
-
         Ok(())
     }
 
@@ -341,11 +299,16 @@ impl SearchModal {
                         }
                     }
 
-                    // Search in message content
+                    // Search in message content (handles both string and block array)
                     if let Some(ref message) = node.message {
-                        if let Some(ref content) = message.content {
-                            if let Some(text) = content.as_str() {
-                                if text.to_lowercase().contains(&query_lower) {
+                        let text = message.text_content();
+                        if text.to_lowercase().contains(&query_lower) {
+                            return true;
+                        }
+                        // Also search tool names in typed blocks
+                        for block in message.content_blocks() {
+                            if let crate::parser::models::ContentBlock::ToolUse { name, .. } = block {
+                                if name.to_lowercase().contains(&query_lower) {
                                     return true;
                                 }
                             }
@@ -582,24 +545,59 @@ pub enum SearchAction {
     SelectNode(String),
 }
 
+/// Parse a search query into (text, errors_only, tool) parts.
+///
+/// Supported syntax:
+///   `errors`   → errors_only = true
+///   `@ToolName` → tool filter
+///   anything else → free-text search
+fn parse_query(q: &str) -> (String, bool, Option<String>) {
+    let q = q.trim();
+    if q.eq_ignore_ascii_case("errors") {
+        return (String::new(), true, None);
+    }
+    if let Some(tool) = q.strip_prefix('@') {
+        return (String::new(), false, Some(tool.to_string()));
+    }
+    (q.to_string(), false, None)
+}
+
+/// Format token count as compact string (e.g. 8200 → "8.2k")
+fn fmt_tokens(n: u64) -> String {
+    if n < 1_000 {
+        format!("{}", n)
+    } else if n < 1_000_000 {
+        format!("{:.1}k", n as f64 / 1_000.0)
+    } else {
+        format!("{:.1}M", n as f64 / 1_000_000.0)
+    }
+}
+
 /// Convert a SessionFile to a SearchResultItem
-fn session_to_result_item(session: &SessionFile) -> SearchResultItem {
-    let time_ago = format_time_ago(session.modified_at);
-    let size = format_file_size(session.file_size);
+fn session_to_result_item(s: &SessionFile) -> SearchResultItem {
+    let short_id = &s.session_id[..8.min(s.session_id.len())];
+    let msg_preview = s.first_message.as_deref().unwrap_or("(no message)");
+    let msg_short: String = msg_preview.chars().take(55).collect();
+    let model = s.model.as_deref().unwrap_or("-");
+    let updated = format_time_ago(s.modified_at);
+    let age = format_time_ago(s.created_at);
 
     SearchResultItem {
-        title: format!("{} | {}", &session.session_id[..8.min(session.session_id.len())], session.project_name),
-        subtitle: format!("{} • {}", time_ago, size),
+        title: format!("{}  {}", short_id, s.project_name),
+        subtitle: msg_short,
         preview: format!(
-            "Session: {}\nProject: {}\nModified: {}\nSize: {}\nHas subagents: {}",
-            session.session_id,
-            session.project_name,
-            time_ago,
-            size,
-            if session.has_subagents { "Yes" } else { "No" }
+            "Project:  {}\nMessage:  {}\nModel:    {}\nTokens:   {}\nCost:     ${:.4}\nErrors:   {}\nUpdated:  {}\nAge:      {}",
+            s.project_name,
+            msg_preview,
+            model,
+            fmt_tokens(s.total_tokens),
+            s.estimated_cost,
+            s.error_count,
+            updated,
+            age,
         ),
-        id: session.session_id.clone(),
-        score: 1.0, // Simple scoring for now
+        id: s.session_id.clone(),
+        score: 1.0,
     }
 }
 
@@ -639,7 +637,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             .unwrap_or_else(|| "Unknown".to_string());
 
         let time = node.timestamp
-            .map(|ts| format_timestamp(ts))
+            .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
@@ -654,7 +652,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             .unwrap_or("RESULT");
 
         let time = node.timestamp
-            .map(|ts| format_timestamp(ts))
+            .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
@@ -675,7 +673,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             .unwrap_or_else(|| "Thinking...".to_string());
 
         let time = node.timestamp
-            .map(|ts| format_timestamp(ts))
+            .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
@@ -684,22 +682,26 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
         )
     } else if node.message.is_some() && node_type_lower.contains("user") {
         // This is a user message node
-        // Extract preview of user message
-        let preview = node.message.as_ref()
-            .and_then(|m| m.content.as_ref())
-            .and_then(|c| c.as_str())
-            .map(|text| {
-                let preview: String = text.chars().take(60).collect();
-                if text.len() > 60 {
-                    format!("{}...", preview)
+        let preview = node
+            .message
+            .as_ref()
+            .map(|m| {
+                let text = m.text_content();
+                if text.is_empty() {
+                    "User message".to_string()
                 } else {
-                    preview
+                    let p: String = text.chars().take(60).collect();
+                    if text.len() > 60 {
+                        format!("{}...", p)
+                    } else {
+                        p
+                    }
                 }
             })
             .unwrap_or_else(|| "User message".to_string());
 
         let time = node.timestamp
-            .map(|ts| format_timestamp(ts))
+            .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
@@ -709,7 +711,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
     } else if node.message.is_some() && node_type_lower.contains("assistant") {
         // This is an assistant message node
         let time = node.timestamp
-            .map(|ts| format_timestamp(ts))
+            .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
@@ -719,7 +721,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
     } else {
         // Fallback for other node types
         let time = node.timestamp
-            .map(|ts| format_timestamp(ts))
+            .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
@@ -762,10 +764,19 @@ fn build_node_preview(node: &ExecutionNode) -> String {
     }
 
     if let Some(ref message) = node.message {
-        if let Some(ref content) = message.content {
-            if let Some(text) = content.as_str() {
-                let preview_text = truncate_string(text, 500);
-                preview.push_str(&format!("Content:\n{}\n", preview_text));
+        // Text content (handles legacy string + blocks)
+        let text = message.text_content();
+        if !text.is_empty() {
+            preview.push_str(&format!("Content:\n{}\n", truncate_string(&text, 500)));
+        }
+        // Tool names in typed blocks
+        for block in message.content_blocks() {
+            if let crate::parser::models::ContentBlock::ToolUse { name, input, .. } = block {
+                preview.push_str(&format!(
+                    "Tool: {}\nInput: {}\n",
+                    name,
+                    serde_json::to_string_pretty(input).unwrap_or_default()
+                ));
             }
         }
     }
