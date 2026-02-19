@@ -3,12 +3,22 @@
 //! Simple, maintainable rendering functions for each node type.
 
 use crate::analyzer::TreeNode;
+use crate::parser::models::ContentBlock;
 use crate::tui::code_render;
 use crate::tui::theme::{colors, icons};
 use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span},
 };
+use std::collections::HashMap;
+
+/// Context passed to all renderers carrying session-level data.
+pub struct RenderContext<'a> {
+    /// tool_use_id → tool_name (for matching ToolResult with its ToolUse)
+    pub tool_correlation: &'a HashMap<String, String>,
+    /// tool_use_id → brief result summary (✓ 42 lines / ✗ error msg)
+    pub tool_result_map: &'a HashMap<String, String>,
+}
 
 /// Helper to render regular tool parameters
 fn render_parameters(lines: &mut Vec<Line<'static>>, input: &serde_json::Value) {
@@ -19,36 +29,20 @@ fn render_parameters(lines: &mut Vec<Line<'static>>, input: &serde_json::Value) 
 
     if let Some(obj) = input.as_object() {
         for (key, value) in obj.iter() {
-            // Skip rendering long strings (like old_string, new_string) in plain view
-            if key == "old_string" || key == "new_string" {
-                let preview = if let Some(s) = value.as_str() {
-                    let lines_count = s.lines().count();
-                    format!("({} lines)", lines_count)
-                } else {
-                    continue;
-                };
-                lines.push(Line::from(vec![
-                    Span::styled("  ", Style::default()),
-                    Span::styled(format!("{}: ", key), Style::default().fg(Color::Yellow)),
-                    Span::styled(preview, Style::default().fg(Color::DarkGray)),
-                ]));
+            lines.push(Line::from(vec![
+                Span::styled("  ", Style::default()),
+                Span::styled(format!("{}: ", key), Style::default().fg(Color::Yellow)),
+            ]));
+            // Render value line-by-line so multiline strings (old_string, new_string, etc.) display fully
+            let value_str = if let Some(s) = value.as_str() {
+                s.to_string()
             } else {
-                // Format value nicely
-                let value_str = if let Some(s) = value.as_str() {
-                    // Truncate very long strings
-                    if s.len() > 200 {
-                        format!("{}... ({} chars)", &s[..200], s.len())
-                    } else {
-                        s.to_string()
-                    }
-                } else {
-                    format!("{}", value)
-                };
-
+                format!("{}", value)
+            };
+            for line in value_str.lines() {
                 lines.push(Line::from(vec![
-                    Span::styled("  ", Style::default()),
-                    Span::styled(format!("{}: ", key), Style::default().fg(Color::Yellow)),
-                    Span::raw(value_str),
+                    Span::styled("    ", Style::default()),
+                    Span::raw(line.to_string()),
                 ]));
             }
         }
@@ -56,27 +50,12 @@ fn render_parameters(lines: &mut Vec<Line<'static>>, input: &serde_json::Value) 
 }
 
 /// Render a node's content for the details panel
-pub fn render_node_content(node: &TreeNode) -> Vec<Line<'static>> {
-    // For assistant messages, check if it's actually a tool call
-    if node.node.node_type == "assistant" {
-        if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                if let Some(arr) = content.as_array() {
-                    if let Some(first_item) = arr.first() {
-                        if let Some(item_type) = first_item.get("type").and_then(|t| t.as_str()) {
-                            if item_type == "tool_use" {
-                                return render_tool_use(node);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
+pub fn render_node_content(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> {
     match node.node.node_type.as_str() {
-        "user" => render_user(node),
-        "assistant" => render_assistant(node),
+        "user" => render_user(node, ctx),
+        // All assistant nodes (including those with thinking + tool_use merged blocks)
+        // go through render_assistant which handles every block type in order.
+        "assistant" => render_assistant(node, ctx),
         "tool_use" => render_tool_use(node),
         "tool_result" => render_tool_result(node),
         "thinking" => render_thinking(node),
@@ -88,108 +67,123 @@ pub fn render_node_content(node: &TreeNode) -> Vec<Line<'static>> {
 }
 
 /// Render user message
-fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
+fn render_user(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
-    // Check if this is a tool result or user message
-    let is_tool_result = if let Some(ref msg) = node.node.message {
-        if let Some(ref content) = msg.content {
-            if let Some(arr) = content.as_array() {
-                arr.iter().any(|item| {
-                    item.get("type")
-                        .and_then(|t| t.as_str())
-                        .map(|t| t == "tool_result")
-                        .unwrap_or(false)
-                })
-            } else {
-                false
-            }
-        } else {
-            false
-        }
-    } else {
-        false
-    };
+    // Check if this is a tool result using typed blocks
+    let is_tool_result = node
+        .node
+        .message
+        .as_ref()
+        .map(|m| {
+            m.content_blocks()
+                .iter()
+                .any(|b| matches!(b, ContentBlock::ToolResult { .. }))
+        })
+        .unwrap_or(false);
 
     if is_tool_result {
-        // This is a tool result - show it differently
-        lines.push(Line::from(Span::styled(
-            format!("{}  Tool Result", icons::TOOL_RESULT),
-            Style::default().fg(colors::TOOL_RESULT).add_modifier(Modifier::BOLD),
-        )));
-        lines.push(Line::from(""));
-
         if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                if let Some(arr) = content.as_array() {
-                    for item in arr {
-                        if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                            if item_type == "tool_result" {
-                                // Show tool_use_id
-                                if let Some(tool_use_id) = item.get("tool_use_id").and_then(|id| id.as_str()) {
-                                    lines.push(Line::from(vec![
-                                        Span::styled("Tool ID: ", Style::default().fg(Color::Cyan)),
-                                        Span::raw(tool_use_id.to_string()),
-                                    ]));
-                                }
+            for block in msg.content_blocks() {
+                if let ContentBlock::ToolResult {
+                    tool_use_id,
+                    content,
+                    is_error,
+                } = block
+                {
+                    // Look up matched tool name from correlation map
+                    let tool_name = ctx
+                        .tool_correlation
+                        .get(tool_use_id.as_str())
+                        .map(|s| s.as_str())
+                        .unwrap_or("Unknown");
 
-                                // Show error status
-                                let is_error = item.get("is_error").and_then(|e| e.as_bool()).unwrap_or(false);
-                                lines.push(Line::from(vec![
-                                    Span::styled("Status: ", Style::default().fg(Color::Cyan)),
-                                    Span::styled(
-                                        if is_error { "Error" } else { "Success" },
-                                        Style::default().fg(if is_error { Color::Red } else { Color::Green }),
-                                    ),
-                                ]));
+                    // Header: "Tool Result ← ToolName  [id]"
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            format!("{}  Tool Result ← ", icons::TOOL_RESULT),
+                            Style::default()
+                                .fg(colors::TOOL_RESULT)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            tool_name.to_string(),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(
+                            format!("  [{}]", tool_use_id),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                    ]));
+                    lines.push(Line::from(""));
 
-                                lines.push(Line::from(""));
+                    // Show error status
+                    let err = is_error.unwrap_or(false);
+                    lines.push(Line::from(vec![
+                        Span::styled("Status: ", Style::default().fg(Color::Cyan)),
+                        Span::styled(
+                            if err { "Error" } else { "Success" },
+                            Style::default()
+                                .fg(if err { Color::Red } else { Color::Green }),
+                        ),
+                    ]));
 
-                                // Show content - prefer clean toolUseResult over message content
-                                let (content, file_path) = if let Some(ref tool_use_result) = node.node.tool_use_result {
-                                    // Try to parse toolUseResult as structured data
-                                    if let Ok(result) = serde_json::from_value::<crate::parser::models::ToolResult>(tool_use_result.clone()) {
-                                        if let Some(ref file) = result.file {
-                                            (file.content.clone(), file.file_path.clone())
-                                        } else {
-                                            (result.content.clone(), None)
-                                        }
-                                    } else {
-                                        // Fallback to message content if toolUseResult is not structured
-                                        (item.get("content").and_then(|c| c.as_str()).map(String::from), None)
-                                    }
+                    lines.push(Line::from(""));
+
+                    // Show content — prefer clean toolUseResult over block content
+                    let (result_str, file_path) =
+                        if let Some(ref tool_use_result) = node.node.tool_use_result {
+                            if let Ok(result) = serde_json::from_value::<
+                                crate::parser::models::ToolResult,
+                            >(tool_use_result.clone())
+                            {
+                                if let Some(ref file) = result.file {
+                                    (file.content.clone(), file.file_path.clone())
                                 } else {
-                                    // No toolUseResult, use message content
-                                    (item.get("content").and_then(|c| c.as_str()).map(String::from), None)
-                                };
-
-                                if let Some(result_content) = content {
-                                    if !result_content.is_empty() {
-                                        lines.push(Line::from(Span::styled(
-                                            "Output:",
-                                            Style::default().fg(Color::Cyan),
-                                        )));
-
-                                        // Detect language from file path
-                                        let language = file_path.as_ref().and_then(|path| code_render::detect_language(path));
-
-                                        // Apply syntax highlighting
-                                        let highlighted_lines = code_render::highlight_code(&result_content, language);
-                                        lines.extend(highlighted_lines);
-                                    } else {
-                                        lines.push(Line::from(Span::styled(
-                                            "(no output)",
-                                            Style::default().fg(Color::DarkGray),
-                                        )));
-                                    }
-                                } else {
-                                    lines.push(Line::from(Span::styled(
-                                        "(no output)",
-                                        Style::default().fg(Color::DarkGray),
-                                    )));
+                                    (result.content.clone(), None)
                                 }
+                            } else {
+                                // Fallback: extract string from block content
+                                let s = content
+                                    .as_ref()
+                                    .and_then(|c| c.as_str())
+                                    .map(String::from);
+                                (s, None)
                             }
+                        } else {
+                            let s = content
+                                .as_ref()
+                                .and_then(|c| c.as_str())
+                                .map(String::from);
+                            (s, None)
+                        };
+
+                    if let Some(result_content) = result_str {
+                        if !result_content.is_empty() {
+                            lines.push(Line::from(Span::styled(
+                                "Output:",
+                                Style::default().fg(Color::Cyan),
+                            )));
+
+                            let language = file_path
+                                .as_ref()
+                                .and_then(|path| code_render::detect_language(path));
+                            let highlighted_lines =
+                                code_render::highlight_code(&result_content, language);
+                            lines.extend(highlighted_lines);
+                        } else {
+                            lines.push(Line::from(Span::styled(
+                                "(no output)",
+                                Style::default().fg(Color::DarkGray),
+                            )));
                         }
+                    } else {
+                        lines.push(Line::from(Span::styled(
+                            "(no output)",
+                            Style::default().fg(Color::DarkGray),
+                        )));
                     }
                 }
             }
@@ -198,24 +192,24 @@ fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
         // Regular user message with icon
         lines.push(Line::from(Span::styled(
             format!("{}  User Message", icons::USER),
-            Style::default().fg(colors::USER_MSG).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(colors::USER_MSG)
+                .add_modifier(Modifier::BOLD),
         )));
         lines.push(Line::from(""));
 
-        // Extract text from message.content array
+        // Extract text from message using typed helper
         if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                let text = extract_text_content(content);
-                if !text.is_empty() {
-                    for line in text.lines() {
-                        lines.push(Line::from(line.to_string()));
-                    }
-                } else {
-                    lines.push(Line::from(Span::styled(
-                        "(empty message)",
-                        Style::default().fg(Color::DarkGray),
-                    )));
+            let text = msg.text_content();
+            if !text.is_empty() {
+                for line in text.lines() {
+                    lines.push(Line::from(line.to_string()));
                 }
+            } else {
+                lines.push(Line::from(Span::styled(
+                    "(empty message)",
+                    Style::default().fg(Color::DarkGray),
+                )));
             }
         }
     }
@@ -224,97 +218,125 @@ fn render_user(node: &TreeNode) -> Vec<Line<'static>> {
 }
 
 /// Render assistant message (with separate thinking and text)
-fn render_assistant(node: &TreeNode) -> Vec<Line<'static>> {
+fn render_assistant(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
     if let Some(ref msg) = node.node.message {
-        if let Some(ref content) = msg.content {
-            // Check if content is an array
-            if let Some(arr) = content.as_array() {
-                // Separate thinking and text
-                let mut has_thinking = false;
-                let mut has_text = false;
-                let mut has_tools = false;
+        let blocks = msg.content_blocks();
 
-                // First pass: render thinking blocks
-                for item in arr {
-                    if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                        if item_type == "thinking" {
-                            if !has_thinking {
-                                lines.push(Line::from(Span::styled(
-                                    "  Thinking",
-                                    Style::default().fg(Color::Blue).add_modifier(Modifier::BOLD),
-                                )));
-                                lines.push(Line::from(""));
-                                has_thinking = true;
-                            }
+        if !blocks.is_empty() {
+            let mut has_thinking = false;
+            let mut has_text = false;
+            let mut has_tools = false;
 
-                            if let Some(thinking) = item.get("thinking").and_then(|t| t.as_str()) {
-                                for line in thinking.lines() {
-                                    lines.push(Line::from(line.to_string()));
-                                }
-                            }
-                        }
+            // First pass: render thinking blocks (always expanded)
+            for block in blocks {
+                if let ContentBlock::Thinking { thinking, .. } = block {
+                    if !has_thinking {
+                        lines.push(Line::from(Span::styled(
+                            "  Extended Thinking",
+                            Style::default()
+                                .fg(Color::Blue)
+                                .add_modifier(Modifier::BOLD),
+                        )));
+                        lines.push(Line::from(""));
+                        has_thinking = true;
                     }
-                }
-
-                // Add spacing if we had thinking
-                if has_thinking {
-                    lines.push(Line::from(""));
-                }
-
-                // Second pass: render text content
-                for item in arr {
-                    if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                        if item_type == "text" {
-                            if !has_text {
-                                lines.push(Line::from(Span::styled(
-                                    "  Response",
-                                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
-                                )));
-                                lines.push(Line::from(""));
-                                has_text = true;
-                            }
-
-                            if let Some(text) = item.get("text").and_then(|t| t.as_str()) {
-                                for line in text.lines() {
-                                    lines.push(Line::from(line.to_string()));
-                                }
-                            }
-                        } else if item_type == "tool_use" {
-                            if !has_tools {
-                                if has_text {
-                                    lines.push(Line::from(""));
-                                }
-                                lines.push(Line::from(Span::styled(
-                                    "  Tool Calls",
-                                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-                                )));
-                                lines.push(Line::from(""));
-                                has_tools = true;
-                            }
-
-                            if let Some(name) = item.get("name").and_then(|n| n.as_str()) {
-                                lines.push(Line::from(vec![
-                                    Span::styled("  • ", Style::default().fg(Color::Yellow)),
-                                    Span::raw(name.to_string()),
-                                ]));
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Fallback for non-array content
-                let text = extract_text_content(content);
-                if !text.is_empty() {
-                    lines.push(Line::from(Span::styled(
-                        "  Response",
-                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
-                    )));
-                    lines.push(Line::from(""));
-                    for line in text.lines() {
+                    for line in thinking.lines() {
                         lines.push(Line::from(line.to_string()));
                     }
+                }
+            }
+
+            if has_thinking {
+                lines.push(Line::from(""));
+            }
+
+            // Second pass: render text and tool_use blocks
+            for block in blocks {
+                match block {
+                    ContentBlock::Text { text } => {
+                        if !has_text {
+                            lines.push(Line::from(Span::styled(
+                                "  Response",
+                                Style::default()
+                                    .fg(Color::Green)
+                                    .add_modifier(Modifier::BOLD),
+                            )));
+                            lines.push(Line::from(""));
+                            has_text = true;
+                        }
+                        for line in text.lines() {
+                            lines.push(Line::from(line.to_string()));
+                        }
+                    }
+                    ContentBlock::ToolUse { id, name, input } => {
+                        if !has_tools {
+                            if has_text {
+                                lines.push(Line::from(""));
+                            }
+                            lines.push(Line::from(Span::styled(
+                                "  Tool Calls",
+                                Style::default()
+                                    .fg(Color::Yellow)
+                                    .add_modifier(Modifier::BOLD),
+                            )));
+                            lines.push(Line::from(""));
+                            has_tools = true;
+                        }
+                        lines.push(Line::from(vec![
+                            Span::styled(
+                                format!("{}  Tool: {}", icons::TOOL_USE, name),
+                                Style::default().fg(colors::TOOL_USE).add_modifier(Modifier::BOLD),
+                            ),
+                        ]));
+                        lines.push(Line::from(vec![
+                            Span::styled("ID: ", Style::default().fg(Color::Cyan)),
+                            Span::styled(id.clone(), Style::default().fg(Color::DarkGray)),
+                        ]));
+                        lines.push(Line::from(""));
+                        if name == "Edit" {
+                            if let Some(rendered) = code_render::render_edit_result(&input.to_string()) {
+                                lines.extend(rendered);
+                            } else {
+                                render_parameters(&mut lines, input);
+                            }
+                        } else {
+                            render_parameters(&mut lines, input);
+                        }
+                        // Brief result summary
+                        if let Some(summary) = ctx.tool_result_map.get(id.as_str()) {
+                            lines.push(Line::from(""));
+                            let is_err = summary.starts_with('✗');
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    "Result: ",
+                                    Style::default().fg(Color::DarkGray),
+                                ),
+                                Span::styled(
+                                    summary.clone(),
+                                    Style::default().fg(if is_err { Color::Red } else { Color::Green }),
+                                ),
+                            ]));
+                        }
+                        lines.push(Line::from(""));
+                    }
+                    _ => {}
+                }
+            }
+        } else {
+            // Fallback for legacy string content
+            let text = msg.text_content();
+            if !text.is_empty() {
+                lines.push(Line::from(Span::styled(
+                    "  Response",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                )));
+                lines.push(Line::from(""));
+                for line in text.lines() {
+                    lines.push(Line::from(line.to_string()));
                 }
             }
         }
@@ -334,59 +356,55 @@ fn render_assistant(node: &TreeNode) -> Vec<Line<'static>> {
 fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
-    // Check if this is an assistant message with tool_use content
+    // Check if this is an assistant message with tool_use content blocks
     if node.node.node_type == "assistant" {
         if let Some(ref msg) = node.node.message {
-            if let Some(ref content) = msg.content {
-                if let Some(arr) = content.as_array() {
-                    for item in arr {
-                        if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                            if item_type == "tool_use" {
-                                let tool_name = item.get("name").and_then(|n| n.as_str()).unwrap_or("Unknown");
+            for block in msg.content_blocks() {
+                if let ContentBlock::ToolUse { id, name, input } = block {
+                    lines.push(Line::from(Span::styled(
+                        format!("{}  Tool: {}", icons::TOOL_USE, name),
+                        Style::default()
+                            .fg(colors::TOOL_USE)
+                            .add_modifier(Modifier::BOLD),
+                    )));
+                    lines.push(Line::from(""));
 
-                                lines.push(Line::from(Span::styled(
-                                    format!("{}  Tool: {}", icons::TOOL_USE, tool_name),
-                                    Style::default().fg(colors::TOOL_USE).add_modifier(Modifier::BOLD),
-                                )));
-                                lines.push(Line::from(""));
+                    // Show tool ID
+                    lines.push(Line::from(vec![
+                        Span::styled("ID: ", Style::default().fg(Color::Cyan)),
+                        Span::styled(id.clone(), Style::default().fg(Color::DarkGray)),
+                    ]));
 
-                                // Show tool ID
-                                if let Some(tool_id) = item.get("id").and_then(|id| id.as_str()) {
-                                    lines.push(Line::from(vec![
-                                        Span::styled("ID: ", Style::default().fg(Color::Cyan)),
-                                        Span::styled(tool_id.to_string(), Style::default().fg(Color::DarkGray)),
-                                    ]));
-                                }
+                    // Show input parameters with smart rendering for Edit tool
+                    lines.push(Line::from(""));
 
-                                // Show input parameters with smart rendering for Edit tool
-                                if let Some(input) = item.get("input") {
-                                    lines.push(Line::from(""));
-
-                                    // Check if this is Edit tool - use smart rendering
-                                    if tool_name == "Edit" {
-                                        if let Some(rendered) = code_render::render_edit_result(&input.to_string()) {
-                                            lines.extend(rendered);
-                                        } else {
-                                            // Fallback to regular rendering
-                                            render_parameters(&mut lines, input);
-                                        }
-                                    } else if tool_name == "Read" {
-                                        // For Read tool, show file path prominently
-                                        if let Some(obj) = input.as_object() {
-                                            if let Some(file_path) = obj.get("file_path").and_then(|v| v.as_str()) {
-                                                lines.push(Line::from(vec![
-                                                    Span::styled(" Reading: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),  // nf-fa-file_code
-                                                    Span::styled(file_path.to_string(), Style::default().fg(Color::Yellow)),
-                                                ]));
-                                            }
-                                        }
-                                    } else {
-                                        // Regular parameter rendering
-                                        render_parameters(&mut lines, input);
-                                    }
-                                }
-                            }
+                    if name == "Edit" {
+                        if let Some(rendered) =
+                            code_render::render_edit_result(&input.to_string())
+                        {
+                            lines.extend(rendered);
+                        } else {
+                            render_parameters(&mut lines, input);
                         }
+                    } else if name == "Read" {
+                        if let Some(file_path) =
+                            input.get("file_path").and_then(|v| v.as_str())
+                        {
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    " Reading: ",
+                                    Style::default()
+                                        .fg(Color::Cyan)
+                                        .add_modifier(Modifier::BOLD),
+                                ),
+                                Span::styled(
+                                    file_path.to_string(),
+                                    Style::default().fg(Color::Yellow),
+                                ),
+                            ]));
+                        }
+                    } else {
+                        render_parameters(&mut lines, input);
                     }
                 }
             }
@@ -395,7 +413,9 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
         // Legacy tool_use node
         lines.push(Line::from(Span::styled(
             format!("  Tool: {}", tool_use.name),
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
         )));
         lines.push(Line::from(""));
 
@@ -429,13 +449,14 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
     // Try to parse toolUseResult from JSON value (if it's an object, not error string)
-    let tool_use_result: Option<crate::parser::models::ToolResult> =
-        node.node.tool_use_result.as_ref()
-            .and_then(|v| serde_json::from_value(v.clone()).ok());
+    let tool_use_result: Option<crate::parser::models::ToolResult> = node
+        .node
+        .tool_use_result
+        .as_ref()
+        .and_then(|v| serde_json::from_value(v.clone()).ok());
 
     // Prefer toolUseResult (clean content) over tool_result (has line numbers)
-    let result = tool_use_result.as_ref()
-        .or(node.node.tool_result.as_ref());
+    let result = tool_use_result.as_ref().or(node.node.tool_result.as_ref());
 
     if let Some(result) = result {
         let is_error = result.is_error.unwrap_or(false);
@@ -458,7 +479,9 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
         } else {
             lines.push(Line::from(Span::styled(
                 "  Success",
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
             )));
             lines.push(Line::from(""));
 
@@ -473,11 +496,10 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
                 // Detect language from file path if available
                 let language = file_path.and_then(|path| code_render::detect_language(path));
 
-                // Try smart rendering for Edit tool results (JSON with file_path, old_string, new_string)
+                // Try smart rendering for Edit tool results
                 if let Some(rendered) = code_render::render_edit_result(content) {
                     lines.extend(rendered);
                 } else {
-                    // Render with syntax highlighting if we detected a language
                     let highlighted_lines = code_render::highlight_code(content, language);
                     lines.extend(highlighted_lines);
                 }
@@ -494,7 +516,9 @@ fn render_thinking(node: &TreeNode) -> Vec<Line<'static>> {
 
     lines.push(Line::from(Span::styled(
         format!("{}  Thinking", icons::THINKING),
-        Style::default().fg(colors::THINKING).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(colors::THINKING)
+            .add_modifier(Modifier::BOLD),
     )));
     lines.push(Line::from(""));
 
@@ -513,7 +537,9 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
 
     lines.push(Line::from(Span::styled(
         format!("{}  Progress", icons::PROGRESS),
-        Style::default().fg(colors::PROGRESS).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(colors::PROGRESS)
+            .add_modifier(Modifier::BOLD),
     )));
     lines.push(Line::from(""));
 
@@ -528,7 +554,9 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
             // Show type-specific fields
             match progress_type {
                 "bash_progress" => {
-                    if let Some(elapsed) = data.get("elapsedTimeSeconds").and_then(|e| e.as_f64()) {
+                    if let Some(elapsed) =
+                        data.get("elapsedTimeSeconds").and_then(|e| e.as_f64())
+                    {
                         lines.push(Line::from(vec![
                             Span::styled("Elapsed: ", Style::default().fg(Color::Cyan)),
                             Span::raw(format!("{:.1}s", elapsed)),
@@ -542,7 +570,6 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
                     }
                 }
                 "agent_progress" => {
-                    // Show agent ID
                     if let Some(agent_id) = data.get("agentId").and_then(|a| a.as_str()) {
                         lines.push(Line::from(vec![
                             Span::styled("Agent ID: ", Style::default().fg(Color::Cyan)),
@@ -550,7 +577,6 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
                         ]));
                     }
 
-                    // Show the task/prompt
                     if let Some(prompt) = data.get("prompt").and_then(|p| p.as_str()) {
                         lines.push(Line::from(""));
                         lines.push(Line::from(Span::styled(
@@ -576,7 +602,9 @@ fn render_file_snapshot(node: &TreeNode) -> Vec<Line<'static>> {
 
     lines.push(Line::from(Span::styled(
         "  File Snapshot",
-        Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(Color::Magenta)
+            .add_modifier(Modifier::BOLD),
     )));
     lines.push(Line::from(""));
 
@@ -586,7 +614,7 @@ fn render_file_snapshot(node: &TreeNode) -> Vec<Line<'static>> {
                 lines.push(Line::from(format!("{} tracked files:", files_obj.len())));
                 lines.push(Line::from(""));
 
-                for (file_path, _) in files_obj.iter().take(15) {
+                for (file_path, _) in files_obj.iter() {
                     lines.push(Line::from(vec![
                         Span::styled("  • ", Style::default().fg(Color::Cyan)),
                         Span::raw(file_path.clone()),
@@ -612,18 +640,32 @@ fn render_system(node: &TreeNode) -> Vec<Line<'static>> {
 
     lines.push(Line::from(Span::styled(
         "   System",
-        Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD),
+        Style::default()
+            .fg(Color::Gray)
+            .add_modifier(Modifier::BOLD),
     )));
     lines.push(Line::from(""));
 
-    if let Some(subtype) = node.node.extra.as_ref().and_then(|e| e.get("subtype")).and_then(|s| s.as_str()) {
+    if let Some(subtype) = node
+        .node
+        .extra
+        .as_ref()
+        .and_then(|e| e.get("subtype"))
+        .and_then(|s| s.as_str())
+    {
         lines.push(Line::from(vec![
             Span::styled("Type: ", Style::default().fg(Color::Cyan)),
             Span::raw(subtype.to_string()),
         ]));
 
         if subtype == "turn_duration" {
-            if let Some(duration_ms) = node.node.extra.as_ref().and_then(|e| e.get("durationMs")).and_then(|d| d.as_i64()) {
+            if let Some(duration_ms) = node
+                .node
+                .extra
+                .as_ref()
+                .and_then(|e| e.get("durationMs"))
+                .and_then(|d| d.as_i64())
+            {
                 lines.push(Line::from(vec![
                     Span::styled("Duration: ", Style::default().fg(Color::Cyan)),
                     Span::raw(format!("{:.2}s", duration_ms as f64 / 1000.0)),
@@ -637,34 +679,8 @@ fn render_system(node: &TreeNode) -> Vec<Line<'static>> {
 
 /// Render unknown node type
 fn render_unknown(node: &TreeNode) -> Vec<Line<'static>> {
-    vec![
-        Line::from(Span::styled(
-            format!("Unknown: {}", node.node.node_type),
-            Style::default().fg(Color::DarkGray),
-        )),
-    ]
-}
-
-/// Extract text content from message.content (handles array and string)
-fn extract_text_content(content: &serde_json::Value) -> String {
-    match content {
-        serde_json::Value::String(s) => s.clone(),
-        serde_json::Value::Array(arr) => {
-            arr.iter()
-                .filter_map(|item| {
-                    if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                        match item_type {
-                            "text" => item.get("text").and_then(|t| t.as_str()).map(String::from),
-                            _ => None,
-                        }
-                    } else {
-                        // Fallback: try direct text field
-                        item.get("text").and_then(|t| t.as_str()).map(String::from)
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("\n\n")
-        }
-        _ => String::new(),
-    }
+    vec![Line::from(Span::styled(
+        format!("Unknown: {}", node.node.node_type),
+        Style::default().fg(Color::DarkGray),
+    ))]
 }
