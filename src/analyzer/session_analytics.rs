@@ -2,6 +2,7 @@
 //!
 //! Calculates metrics and statistics for a single session
 
+use crate::parser::models::ContentBlock;
 use crate::parser::Session;
 use std::collections::HashMap;
 
@@ -18,11 +19,17 @@ pub struct SessionAnalytics {
     /// Tool usage breakdown (tool name -> count)
     pub tool_usage: Vec<(String, usize)>,
 
-    /// Total input tokens
+    /// Total input tokens (includes cache tokens)
     pub input_tokens: u64,
 
     /// Total output tokens
     pub output_tokens: u64,
+
+    /// Total cache creation tokens
+    pub cache_creation_tokens: u64,
+
+    /// Total cache read tokens
+    pub cache_read_tokens: u64,
 
     /// Session duration in seconds (None if timestamps missing)
     pub duration_seconds: Option<i64>,
@@ -35,6 +42,15 @@ pub struct SessionAnalytics {
 
     /// Number of thinking blocks
     pub thinking_count: usize,
+
+    /// Detected model (date suffix stripped)
+    pub model: Option<String>,
+
+    /// Total number of tool calls (ToolUse blocks in assistant messages)
+    pub tool_call_count: usize,
+
+    /// Number of tool calls that returned an error (tool_result with is_error=true)
+    pub tool_result_error_count: usize,
 }
 
 impl SessionAnalytics {
@@ -49,16 +65,20 @@ impl SessionAnalytics {
 
         let mut input_tokens = 0u64;
         let mut output_tokens = 0u64;
+        let mut cache_creation_tokens = 0u64;
+        let mut cache_read_tokens = 0u64;
         let mut error_count = 0;
         let mut has_subagents = false;
         let mut thinking_count = 0;
+        let mut tool_call_count = 0;
+        let mut tool_result_error_count = 0;
 
         for node in &session.nodes {
             // Count by node type
             *node_counts.entry(node.node_type.clone()).or_insert(0) += 1;
 
             // Check for subagents
-            if let Some(ref extra) = node.extra.as_ref().and_then(|e| e.get("isSidechain")) {
+            if let Some(extra) = node.extra.as_ref().and_then(|e| e.get("isSidechain")) {
                 if let Some(is_sidechain) = extra.as_bool() {
                     if is_sidechain {
                         has_subagents = true;
@@ -66,57 +86,38 @@ impl SessionAnalytics {
                 }
             }
 
-            // Count thinking blocks (avoid double-counting)
-            let mut has_thinking = false;
-
-            // Check top-level thinking field
-            if node.thinking.is_some() {
-                has_thinking = true;
-            }
-
-            // Check node type
-            if node.node_type == "thinking" {
-                has_thinking = true;
-            }
-
-            // Check message.content for thinking blocks
-            if let Some(ref message) = node.message {
-                if let Some(ref content) = message.content {
-                    if let Some(content_array) = content.as_array() {
-                        for content_item in content_array {
-                            if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
-                                if content_type == "thinking" {
-                                    has_thinking = true;
-                                    break; // Found thinking, no need to continue
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Count thinking blocks using typed ContentBlock matching
+            let has_thinking = node.thinking.is_some()
+                || node.node_type == "thinking"
+                || node
+                    .message
+                    .as_ref()
+                    .map(|m| {
+                        m.content_blocks()
+                            .iter()
+                            .any(|b| matches!(b, ContentBlock::Thinking { .. }))
+                    })
+                    .unwrap_or(false);
 
             if has_thinking {
                 thinking_count += 1;
             }
 
-            // Count tool usage (check both top-level and message.content)
+            // Count tool usage — top-level tool_use field
             if let Some(ref tool_use) = node.tool_use {
                 *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
             }
 
-            if let Some(ref message) = node.message {
-                if let Some(ref content) = message.content {
-                    if let Some(content_array) = content.as_array() {
-                        for content_item in content_array {
-                            if let Some(content_type) = content_item.get("type").and_then(|v| v.as_str()) {
-                                if content_type == "tool_use" {
-                                    if let Some(tool_name) = content_item.get("name").and_then(|v| v.as_str()) {
-                                        *tool_counts.entry(tool_name.to_string()).or_insert(0) += 1;
-                                    }
-                                }
-                            }
-                        }
-                    }
+            // Count tool usage — ToolUse blocks inside assistant message content
+            for block in node
+                .message
+                .as_ref()
+                .map(|m| m.content_blocks())
+                .unwrap_or(&[])
+            {
+                if let ContentBlock::ToolUse { name, .. } = block {
+                    *tool_counts.entry(name.clone()).or_insert(0) += 1;
+                    tool_call_count += 1;
                 }
             }
 
@@ -127,21 +128,18 @@ impl SessionAnalytics {
 
             // Check tool results for errors
             if let Some(ref tool_result) = node.tool_result {
-                if let Some(ref is_error) = tool_result.is_error {
-                    if *is_error {
-                        error_count += 1;
-                    }
+                if tool_result.is_error == Some(true) {
+                    error_count += 1;
+                    tool_result_error_count += 1;
                 }
             }
 
-            // Collect token usage
-            if let Some(ref token_usage) = node.token_usage {
-                if let Some(input) = token_usage.input_tokens {
-                    input_tokens += input as u64;
-                }
-                if let Some(output) = token_usage.output_tokens {
-                    output_tokens += output as u64;
-                }
+            // Collect token usage — use typed helpers to include cache tokens
+            if let Some(tu) = node.effective_token_usage() {
+                input_tokens += tu.total_input() as u64;
+                output_tokens += tu.total_output() as u64;
+                cache_creation_tokens += tu.cache_creation_input_tokens.unwrap_or(0) as u64;
+                cache_read_tokens += tu.cache_read_input_tokens.unwrap_or(0) as u64;
             }
 
             // Collect timestamps
@@ -149,6 +147,15 @@ impl SessionAnalytics {
                 timestamps.push(ts);
             }
         }
+
+        // Model detection: first assistant message with a model field
+        let model = session
+            .nodes
+            .iter()
+            .filter_map(|n| n.message.as_ref())
+            .filter_map(|m| m.model_short())
+            .next()
+            .map(str::to_string);
 
         // Calculate duration
         let duration_seconds = if timestamps.len() >= 2 {
@@ -170,10 +177,15 @@ impl SessionAnalytics {
             tool_usage,
             input_tokens,
             output_tokens,
+            cache_creation_tokens,
+            cache_read_tokens,
             duration_seconds,
             error_count,
             has_subagents,
             thinking_count,
+            model,
+            tool_call_count,
+            tool_result_error_count,
         }
     }
 

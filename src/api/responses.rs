@@ -47,7 +47,7 @@ pub struct SessionStatsResponse {
 impl NodeResponse {
     /// Convert TreeNode to API response
     pub fn from_tree_node(node: &TreeNode) -> Self {
-        let (label, color) = crate::analyzer::smart_label::get_node_label(node);
+        let (label, color) = crate::analyzer::smart_label::get_node_label(node, None);
 
         Self {
             uuid: node.node.uuid.clone(),
