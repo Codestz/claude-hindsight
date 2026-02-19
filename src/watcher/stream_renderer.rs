@@ -69,11 +69,10 @@ pub fn render_node(node: &ExecutionNode) {
         "user" => {
             println!("  [{}] USER", timestamp);
             if let Some(ref message) = node.message {
-                if let Some(ref content) = message.content {
-                    if let Some(text) = content.as_str() {
-                        let preview = truncate(text, 80);
-                        println!("    {}", preview);
-                    }
+                let text = message.text_content();
+                if !text.is_empty() {
+                    let preview = truncate(&text, 80);
+                    println!("    {}", preview);
                 }
             }
         }
@@ -81,9 +80,23 @@ pub fn render_node(node: &ExecutionNode) {
         "assistant" => {
             println!("  [{}] ASSISTANT", timestamp);
             if let Some(ref message) = node.message {
-                if let Some(ref content) = message.content {
-                    if let Some(text) = content.as_str() {
-                        let preview = truncate(text, 80);
+                // Show tool calls if present
+                let tool_names: Vec<&str> = message
+                    .content_blocks()
+                    .iter()
+                    .filter_map(|b| match b {
+                        crate::parser::models::ContentBlock::ToolUse { name, .. } => {
+                            Some(name.as_str())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if !tool_names.is_empty() {
+                    println!("    [Tools: {}]", tool_names.join(", "));
+                } else {
+                    let text = message.text_content();
+                    if !text.is_empty() {
+                        let preview = truncate(&text, 80);
                         println!("    {}", preview);
                     }
                 }
