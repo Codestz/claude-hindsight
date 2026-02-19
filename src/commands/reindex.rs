@@ -1,39 +1,81 @@
 //! Implementation of the `reindex` command
 //!
-//! Reindexes all sessions to populate the tool_usage analytics table.
-//! This is useful after upgrading to a version with the new SQLite schema.
+//! Syncs the session index with what's actually on disk:
+//!   1. Prune sessions whose files have been deleted
+//!   2. Discover and add any new sessions not yet in the index
+//!   3. Re-parse every remaining session to refresh all analytics
 
 use crate::error::Result;
-use crate::storage::SessionIndex;
+use crate::storage::{discover_sessions, SessionIndex};
 
 pub fn run(verbose: bool) -> Result<()> {
-    println!("🔄 Reindexing sessions...\n");
+    println!("Syncing session index...\n");
 
     let mut index = SessionIndex::new()?;
 
-    // Get all sessions from the database
+    // ── Step 1: prune sessions that no longer exist on disk ──────────────
+    print!("  [1/3] Removing stale entries... ");
+    let pruned = index.prune_missing()?;
+    if pruned == 0 {
+        println!("none found");
+    } else {
+        println!("{} removed", pruned);
+    }
+
+    // ── Step 2: discover sessions on disk and add any that are new ───────
+    print!("  [2/3] Scanning for new sessions... ");
+    let discovered = match discover_sessions() {
+        Ok(sessions) => sessions,
+        Err(crate::error::HindsightError::NoSessionsFound) => {
+            println!("no sessions found on disk");
+            vec![]
+        }
+        Err(e) => return Err(e),
+    };
+
+    let existing_ids: std::collections::HashSet<String> = index
+        .list_sessions()?
+        .into_iter()
+        .map(|s| s.session_id)
+        .collect();
+
+    let new_sessions: Vec<_> = discovered
+        .iter()
+        .filter(|s| !existing_ids.contains(&s.session_id))
+        .collect();
+
+    let new_count = new_sessions.len();
+    if new_count == 0 {
+        println!("none found");
+    } else {
+        println!("{} new session(s)", new_count);
+        for session in &new_sessions {
+            if verbose {
+                println!("     + {} ({})", session.session_id, session.project_name);
+            }
+            index.index_session(session)?;
+        }
+    }
+
+    // ── Step 3: re-parse every session for fresh analytics ───────────────
     let sessions = index.list_sessions()?;
     let total = sessions.len();
 
     if total == 0 {
-        println!("   No sessions found to reindex.");
-        println!("\n   Run 'hindsight init' to discover and index sessions first.");
+        println!("  [3/3] No sessions to reparse.");
+        println!("\nSync complete — index is empty. Run 'hindsight init' if you have Claude Code sessions.");
         return Ok(());
     }
 
-    println!("   Found {} session(s) to reindex", total);
+    println!("  [3/3] Refreshing analytics for {} session(s)...", total);
 
-    if verbose {
-        println!("\n   Progress:");
-    }
-
-    let mut reindexed = 0;
+    let mut updated = 0;
     let mut errors = 0;
 
     for (i, session) in sessions.iter().enumerate() {
         if verbose {
             println!(
-                "   [{}/{}] {} ({})",
+                "     [{}/{}] {} ({})",
                 i + 1,
                 total,
                 session.session_id,
@@ -41,28 +83,27 @@ pub fn run(verbose: bool) -> Result<()> {
             );
         }
 
-        // Re-index the session (this will update tool_usage table)
         match index.index_session(session) {
-            Ok(_) => reindexed += 1,
+            Ok(_) => updated += 1,
             Err(e) => {
                 if verbose {
-                    eprintln!("      ⚠️  Error: {}", e);
+                    eprintln!("     Warning: {}", e);
                 }
                 errors += 1;
             }
         }
     }
 
-    println!("\n✅ Reindexing complete!\n");
-    println!("   Summary:");
-    println!("   • Successfully reindexed: {}", reindexed);
-
+    // ── Summary ───────────────────────────────────────────────────────────
+    println!("\nSync complete!\n");
+    println!("  Summary:");
+    println!("   Pruned (deleted from disk): {}", pruned);
+    println!("   New sessions added:         {}", new_count);
+    println!("   Analytics refreshed:        {}", updated);
     if errors > 0 {
-        println!("   • Errors: {}", errors);
+        println!("   Parse errors:               {}", errors);
     }
-
-    println!("\n   The tool_usage analytics table is now populated.");
-    println!("   Analytics queries (hindsight list, stats) will now be faster!");
+    println!("\n  Total sessions in index: {}", updated);
 
     Ok(())
 }

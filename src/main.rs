@@ -113,9 +113,9 @@ enum Commands {
         action: ConfigAction,
     },
 
-    /// Reindex all sessions to populate tool_usage analytics
+    /// Sync index with disk: remove deleted sessions, add new ones, refresh analytics
     Reindex {
-        /// Show detailed progress
+        /// Show each session being processed
         #[arg(short, long)]
         verbose: bool,
     },
