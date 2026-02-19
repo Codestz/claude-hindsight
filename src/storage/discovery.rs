@@ -21,11 +21,29 @@ pub struct SessionFile {
     /// File size in bytes
     pub file_size: u64,
 
+    /// Session creation timestamp (seconds since epoch, from first node's timestamp)
+    pub created_at: i64,
+
     /// Last modified timestamp (seconds since epoch)
     pub modified_at: i64,
 
     /// Whether this session has subagents (folder with subagents/ directory)
     pub has_subagents: bool,
+
+    /// Total tokens (input + output) for the session
+    pub total_tokens: u64,
+
+    /// Estimated cost in USD
+    pub estimated_cost: f64,
+
+    /// Model used (short name, e.g. "sonnet-4-5")
+    pub model: Option<String>,
+
+    /// Number of errors (tool result errors + error nodes)
+    pub error_count: usize,
+
+    /// First user message preview (up to 80 chars)
+    pub first_message: Option<String>,
 }
 
 /// Discover all Claude Code sessions in configured directories
@@ -98,8 +116,14 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
                         session_id,
                         project_name: project_name.clone(),
                         file_size: metadata.len(),
+                        created_at: modified_at, // refined during indexing from first node timestamp
                         modified_at,
                         has_subagents,
+                        total_tokens: 0,
+                        estimated_cost: 0.0,
+                        model: None,
+                        error_count: 0,
+                        first_message: None,
                     });
                 }
             }
