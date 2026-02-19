@@ -4,6 +4,7 @@
 
 pub mod app;
 pub mod code_render;
+pub mod dashboard_view;
 pub mod events;
 pub mod projects_view;
 pub mod render;
