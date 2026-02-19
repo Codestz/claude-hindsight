@@ -5,6 +5,7 @@
 use crate::analyzer::{build_simple_tree, TreeNode, SessionAnalytics};
 use crate::error::Result;
 use crate::parser::Session;
+use crate::parser::models::ContentBlock;
 use crate::tui::search::SearchState;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
@@ -90,11 +91,45 @@ pub struct App {
     /// Session-level analytics
     pub analytics: SessionAnalytics,
 
+    /// tool_use_id → tool_name (for ToolResult correlation in detail panel and tree labels)
+    pub tool_correlation: HashMap<String, String>,
+
+    /// tool_use_id → brief result summary ("✓ 42 lines" / "✗ error msg")
+    pub tool_result_map: HashMap<String, String>,
+
     /// Last time search input was modified (for debouncing)
     pub last_search_input_time: Option<std::time::Instant>,
 
     /// Last executed search query (to avoid re-executing same query)
     pub last_search_query: Option<String>,
+
+    // ── #7: Error navigation ──────────────────────────────────────────────
+    /// UUIDs of error nodes in session order (for E-key cycling)
+    pub error_node_uuids: Vec<String>,
+    /// Current position in error_node_uuids
+    pub current_error_idx: usize,
+
+    // ── #9: Raw JSON view ────────────────────────────────────────────────
+    /// When true, details panel shows raw JSON of selected node (J to toggle)
+    pub show_raw_json: bool,
+
+    // ── #14: Error summary overlay ────────────────────────────────────────
+    /// When true, show the error summary popup
+    pub show_error_summary: bool,
+    /// Selected row inside the error summary popup
+    pub error_summary_selection: usize,
+    /// (uuid, node_type, short description) for each error node
+    pub error_nodes_info: Vec<(String, String, String)>,
+
+    // ── #17: Replay mode ─────────────────────────────────────────────────
+    /// Auto-advance through nodes when true (P to toggle)
+    pub replay_mode: bool,
+    /// Timestamp of last replay advance
+    pub last_replay_tick: Option<std::time::Instant>,
+
+    // ── #18: Diff view ───────────────────────────────────────────────────
+    /// Show old/new diff for Edit tool calls (d to toggle)
+    pub show_diff: bool,
 }
 
 impl App {
@@ -104,6 +139,79 @@ impl App {
 
         // Calculate session analytics
         let analytics = SessionAnalytics::from_session(&session);
+
+        // Build tool correlation map: tool_use_id → tool_name
+        let mut tool_correlation: HashMap<String, String> = HashMap::new();
+        for node in &session.nodes {
+            if let Some(ref msg) = node.message {
+                for block in msg.content_blocks() {
+                    if let ContentBlock::ToolUse { id, name, .. } = block {
+                        tool_correlation.insert(id.clone(), name.clone());
+                    }
+                }
+            }
+        }
+
+        // Build tool result map: tool_use_id → brief summary
+        let mut tool_result_map: HashMap<String, String> = HashMap::new();
+        for node in &session.nodes {
+            // Path 1: ToolResult content blocks inside user messages
+            if let Some(ref msg) = node.message {
+                for block in msg.content_blocks() {
+                    if let ContentBlock::ToolResult { tool_use_id, content, is_error } = block {
+                        let is_err = is_error.unwrap_or(false);
+                        let prefix = if is_err { "✗" } else { "✓" };
+                        let text = content.as_ref().and_then(|v| {
+                            if let Some(s) = v.as_str() {
+                                Some(s.to_string())
+                            } else if let Some(arr) = v.as_array() {
+                                arr.iter()
+                                    .find_map(|b| b.get("text").and_then(|t| t.as_str()))
+                                    .map(str::to_string)
+                            } else {
+                                None
+                            }
+                        });
+                        let summary = match text.as_deref() {
+                            None | Some("") => format!("{} ok", prefix),
+                            Some(t) => {
+                                let lines = t.lines().count();
+                                let first = t.lines().next().unwrap_or("").trim();
+                                let short: String = first.chars().take(60).collect();
+                                if lines > 1 { format!("{} {} ({} lines)", prefix, short, lines) }
+                                else { format!("{} {}", prefix, short) }
+                            }
+                        };
+                        tool_result_map.insert(tool_use_id.clone(), summary);
+                    }
+                }
+            }
+            // Path 2: top-level tool_result field
+            if let Some(ref result) = node.tool_result {
+                if let Some(ref id) = result.tool_use_id {
+                    let summary = if result.is_error == Some(true) {
+                        let err = result.error.as_deref().or(result.content.as_deref()).unwrap_or("error");
+                        let first = err.lines().next().unwrap_or("").trim();
+                        format!("✗ {}", &first.chars().take(60).collect::<String>())
+                    } else if let Some(ref file) = result.file {
+                        let name = file.file_path.as_deref()
+                            .and_then(|p| p.rsplit('/').next()).unwrap_or("file");
+                        let lines = file.content.as_deref().map(|c| c.lines().count()).unwrap_or(0);
+                        if lines > 0 { format!("✓ {} ({} lines)", name, lines) }
+                        else { format!("✓ {}", name) }
+                    } else if let Some(ref content) = result.content {
+                        let lines = content.lines().count();
+                        let first = content.lines().next().unwrap_or("").trim();
+                        let short: String = first.chars().take(60).collect();
+                        if lines > 1 { format!("✓ {} ({} lines)", short, lines) }
+                        else { format!("✓ {}", short) }
+                    } else {
+                        "✓ ok".to_string()
+                    };
+                    tool_result_map.insert(id.clone(), summary);
+                }
+            }
+        }
 
         // Build simple hierarchical tree from parent_uuid relationships
         let tree_roots = build_simple_tree(session.nodes.clone());
@@ -115,10 +223,39 @@ impl App {
         }
 
         // Build tree items for tui-tree-widget (using UUIDs as identifiers)
-        let tree_items = build_tree_items(&tree_roots, &None);
+        let tree_items = build_tree_items(&tree_roots, &None, &tool_correlation);
 
         let mut tree_state = tui_tree_widget::TreeState::default();
         tree_state.select_first();
+
+        // ── #7 / #14: collect error nodes ───────────────────────────────
+        let (error_node_uuids, error_nodes_info) = {
+            let mut uuids = vec![];
+            let mut info = vec![];
+            for node in &session.nodes {
+                let is_err = node.node_type == "error"
+                    || node.tool_result.as_ref().map(|r| r.is_error == Some(true)).unwrap_or(false);
+                if is_err {
+                    if let Some(ref uuid) = node.uuid {
+                        let desc: String = if node.node_type == "error" {
+                            node.extra.as_ref()
+                                .and_then(|e| e.get("error"))
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("Unknown error")
+                                .chars().take(50).collect()
+                        } else {
+                            node.tool_result.as_ref()
+                                .and_then(|r| r.error.as_ref())
+                                .map(|e| e.chars().take(50).collect::<String>())
+                                .unwrap_or_else(|| "Tool error".to_string())
+                        };
+                        uuids.push(uuid.clone());
+                        info.push((uuid.clone(), node.node_type.clone(), desc));
+                    }
+                }
+            }
+            (uuids, info)
+        };
 
         App {
             session,
@@ -135,9 +272,165 @@ impl App {
             should_quit: false,
             status_message: String::new(),
             analytics,
+            tool_correlation,
+            tool_result_map,
             last_search_input_time: None,
             last_search_query: None,
+            error_node_uuids,
+            current_error_idx: 0,
+            show_raw_json: false,
+            show_error_summary: false,
+            error_summary_selection: 0,
+            error_nodes_info,
+            replay_mode: false,
+            last_replay_tick: None,
+            show_diff: false,
         }
+    }
+
+    // ── #7: Error navigation ─────────────────────────────────────────────
+
+    /// Jump to the next error node in the session
+    pub fn jump_to_next_error(&mut self) {
+        if self.error_node_uuids.is_empty() {
+            self.status_message = "No errors in this session".to_string();
+            return;
+        }
+        self.current_error_idx = (self.current_error_idx + 1) % self.error_node_uuids.len();
+        let uuid = self.error_node_uuids[self.current_error_idx].clone();
+        self.tree_state.select(vec![uuid]);
+        self.details_scroll = 0;
+        self.status_message = format!(
+            "Error {}/{}", self.current_error_idx + 1, self.error_node_uuids.len()
+        );
+    }
+
+    /// Jump to the previous error node in the session
+    pub fn jump_to_prev_error(&mut self) {
+        if self.error_node_uuids.is_empty() {
+            self.status_message = "No errors in this session".to_string();
+            return;
+        }
+        if self.current_error_idx == 0 {
+            self.current_error_idx = self.error_node_uuids.len() - 1;
+        } else {
+            self.current_error_idx -= 1;
+        }
+        let uuid = self.error_node_uuids[self.current_error_idx].clone();
+        self.tree_state.select(vec![uuid]);
+        self.details_scroll = 0;
+        self.status_message = format!(
+            "Error {}/{}", self.current_error_idx + 1, self.error_node_uuids.len()
+        );
+    }
+
+    // ── #8: Clipboard ────────────────────────────────────────────────────
+
+    /// Copy the rendered content of the selected node to the OS clipboard
+    pub fn copy_node_to_clipboard(&mut self) {
+        let text = if let Some(node) = self.selected_node() {
+            let ctx = crate::tui::render::RenderContext {
+                tool_correlation: &self.tool_correlation,
+                tool_result_map: &self.tool_result_map,
+            };
+            let lines = crate::tui::render::render_node_content(node, &ctx);
+            lines.iter()
+                .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect::<String>())
+                .collect::<Vec<_>>()
+                .join("\n")
+        } else {
+            self.status_message = "Nothing selected".to_string();
+            return;
+        };
+
+        match arboard::Clipboard::new() {
+            Ok(mut cb) => match cb.set_text(text) {
+                Ok(_) => self.status_message = "Copied to clipboard".to_string(),
+                Err(_) => self.status_message = "Copy failed".to_string(),
+            },
+            Err(_) => self.status_message = "Clipboard unavailable".to_string(),
+        }
+    }
+
+    // ── #9: Raw JSON view ────────────────────────────────────────────────
+
+    /// Toggle raw JSON display for the selected node
+    pub fn toggle_raw_json(&mut self) {
+        self.show_raw_json = !self.show_raw_json;
+        self.show_diff = false;
+        self.status_message = if self.show_raw_json {
+            "Raw JSON (J: off)".to_string()
+        } else {
+            "Rendered view".to_string()
+        };
+    }
+
+    // ── #14: Error summary overlay ────────────────────────────────────────
+
+    /// Toggle the error summary popup
+    pub fn toggle_error_summary(&mut self) {
+        self.show_error_summary = !self.show_error_summary;
+        if self.show_error_summary {
+            self.error_summary_selection = 0;
+        }
+    }
+
+    /// Handle keys when error summary overlay is open
+    fn handle_error_summary_key(&mut self, key: crossterm::event::KeyEvent) -> Result<()> {
+        use crossterm::event::KeyCode;
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('x') | KeyCode::Char('X') => {
+                self.show_error_summary = false;
+            }
+            KeyCode::Char('j') | KeyCode::Down => {
+                let max = self.error_nodes_info.len().saturating_sub(1);
+                if self.error_summary_selection < max {
+                    self.error_summary_selection += 1;
+                }
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                if self.error_summary_selection > 0 {
+                    self.error_summary_selection -= 1;
+                }
+            }
+            KeyCode::Enter => {
+                if let Some((uuid, _, _)) = self.error_nodes_info.get(self.error_summary_selection) {
+                    let uuid = uuid.clone();
+                    self.tree_state.select(vec![uuid]);
+                    self.details_scroll = 0;
+                    self.show_error_summary = false;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    // ── #17: Replay mode ─────────────────────────────────────────────────
+
+    /// Toggle auto-replay through tree nodes
+    pub fn toggle_replay(&mut self) {
+        self.replay_mode = !self.replay_mode;
+        if self.replay_mode {
+            self.last_replay_tick = Some(std::time::Instant::now());
+            self.status_message = "▶ Replay — press P or any key to stop".to_string();
+        } else {
+            self.last_replay_tick = None;
+            self.status_message = "■ Replay stopped".to_string();
+        }
+    }
+
+    // ── #18: Diff view ───────────────────────────────────────────────────
+
+    /// Toggle diff view for Edit tool calls
+    pub fn toggle_diff(&mut self) {
+        self.show_diff = !self.show_diff;
+        self.show_raw_json = false;
+        self.status_message = if self.show_diff {
+            "Diff view (d: off)".to_string()
+        } else {
+            "Rendered view".to_string()
+        };
     }
 
     /// Update scroll info (called by UI during rendering)
@@ -250,7 +543,20 @@ impl App {
     ///
     /// Handles debounced search execution - waits 150ms after last keystroke
     /// before executing the search to avoid rebuilding tree on every character.
+    /// Also advances replay mode every 800ms.
     pub fn tick(&mut self) {
+        // ── #17: Replay advance ──────────────────────────────────────────
+        if self.replay_mode {
+            let should_advance = self.last_replay_tick
+                .map(|t| t.elapsed() >= std::time::Duration::from_millis(800))
+                .unwrap_or(true);
+            if should_advance {
+                self.tree_state.key_down();
+                self.details_scroll = 0;
+                self.last_replay_tick = Some(std::time::Instant::now());
+            }
+        }
+
         // Check if we should execute a debounced search
         if let Some(last_input) = self.last_search_input_time {
             if last_input.elapsed() > std::time::Duration::from_millis(150) {
@@ -315,7 +621,7 @@ impl App {
 
     /// Rebuild tree items (used when search state changes)
     pub fn rebuild_tree_items(&mut self) {
-        self.tree_items = build_tree_items(&self.tree_roots, &self.search_state);
+        self.tree_items = build_tree_items(&self.tree_roots, &self.search_state, &self.tool_correlation);
     }
 
     /// Handle keyboard input
@@ -323,6 +629,19 @@ impl App {
         // Handle input mode separately
         if self.input_mode {
             return self.handle_input_key(key);
+        }
+
+        // ── #14: Error summary overlay intercepts keys ────────────────────
+        if self.show_error_summary {
+            return self.handle_error_summary_key(key);
+        }
+
+        // ── #17: Any key (except P) exits replay mode ────────────────────
+        if self.replay_mode && !matches!(key.code, KeyCode::Char('p')) {
+            self.replay_mode = false;
+            self.last_replay_tick = None;
+            self.status_message = "■ Replay stopped".to_string();
+            return Ok(());
         }
 
         match (key.code, key.modifiers) {
@@ -436,6 +755,27 @@ impl App {
                 self.status_message = "↓ Bottom".to_string();
             }
 
+            // ── #7: Error navigation ──────────────────────────────────────
+            (KeyCode::Char('e'), KeyModifiers::NONE) => self.jump_to_next_error(),
+            (KeyCode::Char('E'), KeyModifiers::SHIFT) => self.jump_to_prev_error(),
+
+            // ── #8: Clipboard ─────────────────────────────────────────────
+            (KeyCode::Char('y'), KeyModifiers::NONE) => self.copy_node_to_clipboard(),
+
+            // ── #9: Raw JSON view ─────────────────────────────────────────
+            (KeyCode::Char('J'), KeyModifiers::SHIFT) => self.toggle_raw_json(),
+
+            // ── #14: Error summary overlay ────────────────────────────────
+            (KeyCode::Char('x'), KeyModifiers::NONE) | (KeyCode::Char('X'), KeyModifiers::SHIFT) => {
+                self.toggle_error_summary();
+            }
+
+            // ── #17: Replay mode ──────────────────────────────────────────
+            (KeyCode::Char('p'), KeyModifiers::NONE) => self.toggle_replay(),
+
+            // ── #18: Diff view ────────────────────────────────────────────
+            (KeyCode::Char('d'), KeyModifiers::NONE) => self.toggle_diff(),
+
             _ => {}
         }
 
@@ -502,16 +842,36 @@ fn collect_uuid_mapping(node: &TreeNode, mapping: &mut HashMap<String, TreeNode>
     }
 }
 
+/// Compact token count formatter for tree badges (e.g. 1234 → "1k", 1500000 → "1.5M")
+fn fmt_compact(n: i64) -> String {
+    match n {
+        n if n < 1_000 => format!("{}", n),
+        n if n < 1_000_000 => format!("{:.0}k", n as f64 / 1_000.0),
+        n => format!("{:.1}M", n as f64 / 1_000_000.0),
+    }
+}
+
 /// Build tree items for tui-tree-widget using UUIDs as identifiers
-fn build_tree_items(roots: &[TreeNode], search_state: &Option<SearchState>) -> Vec<TreeItem<'static, String>> {
+fn build_tree_items(
+    roots: &[TreeNode],
+    search_state: &Option<SearchState>,
+    correlation: &HashMap<String, String>,
+) -> Vec<TreeItem<'static, String>> {
+    // Use the first root node's timestamp as session start for latency deltas
+    let session_start = roots.iter().filter_map(|n| n.node.timestamp).next();
     roots.iter()
-        .filter_map(|root| build_tree_item(root, search_state))
+        .filter_map(|root| build_tree_item(root, search_state, correlation, session_start))
         .collect()
 }
 
 /// Recursively build a tree item using UUID as identifier
 /// Returns None if the node and all its children are filtered out
-fn build_tree_item(node: &TreeNode, search_state: &Option<SearchState>) -> Option<TreeItem<'static, String>> {
+fn build_tree_item(
+    node: &TreeNode,
+    search_state: &Option<SearchState>,
+    correlation: &HashMap<String, String>,
+    parent_timestamp: Option<i64>,
+) -> Option<TreeItem<'static, String>> {
     use ratatui::style::{Color, Style};
     use ratatui::text::{Line, Span};
 
@@ -521,11 +881,11 @@ fn build_tree_item(node: &TreeNode, search_state: &Option<SearchState>) -> Optio
         .map(|s| s.matches_node(node))
         .unwrap_or(true);
 
-    // Build children first (recursively)
+    // Build children with this node's timestamp as their parent reference
     let children: Vec<TreeItem<String>> = node
         .children
         .iter()
-        .filter_map(|child| build_tree_item(child, search_state))
+        .filter_map(|child| build_tree_item(child, search_state, correlation, node.node.timestamp))
         .collect();
 
     // If this node doesn't match AND has no matching children, filter it out
@@ -540,8 +900,8 @@ fn build_tree_item(node: &TreeNode, search_state: &Option<SearchState>) -> Optio
         .clone()
         .unwrap_or_else(|| format!("no-uuid-{}", node.node.node_type));
 
-    // Get smart label with color
-    let (label_text, color_name) = crate::analyzer::smart_label::get_node_label(node);
+    // Get smart label with color (pass correlation so ToolResult shows tool name)
+    let (label_text, color_name) = crate::analyzer::smart_label::get_node_label(node, Some(correlation));
 
     // Map color name to ratatui Color
     let color = match color_name {
@@ -555,8 +915,40 @@ fn build_tree_item(node: &TreeNode, search_state: &Option<SearchState>) -> Optio
         _ => Color::White,
     };
 
-    // Create styled text
-    let styled_line = Line::from(Span::styled(label_text, Style::default().fg(color)));
+    // Start with the label span
+    let mut spans = vec![Span::styled(label_text, Style::default().fg(color))];
+
+    // Latency delta badge: show +Xs gap from parent/session-start (only if >= 500ms)
+    if let (Some(node_ts), Some(parent_ts)) = (node.node.timestamp, parent_timestamp) {
+        let delta_ms = node_ts.saturating_sub(parent_ts);
+        if delta_ms >= 500 {
+            spans.push(Span::styled(
+                format!(" +{:.1}s", delta_ms as f64 / 1000.0),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
+    }
+
+    // Token badge if this node has usage data
+    if let Some(tu) = node.node.effective_token_usage() {
+        let total = tu.total();
+        if total > 0 {
+            spans.push(Span::styled(
+                format!("  {}↑ {}↓", fmt_compact(tu.total_input()), fmt_compact(tu.total_output())),
+                Style::default().fg(Color::DarkGray),
+            ));
+        }
+    }
+
+    // Model badge for assistant messages that carry a model field
+    if let Some(model_name) = node.node.message.as_ref().and_then(|m| m.model_short()) {
+        spans.push(Span::styled(
+            format!(" [{}]", model_name),
+            Style::default().fg(Color::DarkGray),
+        ));
+    }
+
+    let styled_line = Line::from(spans);
 
     Some(TreeItem::new(identifier, styled_line, children).expect("Failed to create tree item"))
 }
