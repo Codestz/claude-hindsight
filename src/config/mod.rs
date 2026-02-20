@@ -43,6 +43,7 @@ pub struct ClaudeDirConfig {
 }
 
 impl ClaudeDirConfig {
+    #[allow(dead_code)]
     pub fn display_name(&self) -> &str {
         self.name.as_deref().unwrap_or(&self.path)
     }
