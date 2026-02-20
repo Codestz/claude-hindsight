@@ -1,161 +1,96 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  type ColumnDef,
-  type SortingState,
-  flexRender,
-} from "@tanstack/react-table";
 import { api } from "@/lib/api";
 import type { ProjectStats } from "@/lib/types";
-import { formatBytes, timeAgo } from "@/lib/utils";
-import { Header } from "@/components/layout/Header";
+import { formatBytes } from "@/lib/utils";
+import { StatCard } from "@/components/ui/StatCard";
+import { ProjectTable } from "@/components/projects/ProjectTable";
 
-const columns: ColumnDef<ProjectStats>[] = [
-  {
-    accessorKey: "project_name",
-    header: "Project",
-    cell: ({ row }) => (
-      <Link
-        href={`/projects/detail?name=${encodeURIComponent(row.original.project_name)}`}
-        className="hover:underline mono text-sm"
-        style={{ color: "var(--accent)", fontWeight: 600 }}
-      >
-        {row.original.project_name}
-      </Link>
-    ),
-  },
-  {
-    accessorKey: "session_count",
-    header: "Sessions",
-    cell: ({ getValue }) => (
-      <span className="mono tabular" style={{ color: "var(--text-1)" }}>{(getValue() as number).toLocaleString()}</span>
-    ),
-    size: 90,
-  },
-  {
-    accessorKey: "total_size",
-    header: "Size",
-    cell: ({ getValue }) => (
-      <span className="mono text-sm tabular" style={{ color: "var(--text-2)" }}>{formatBytes(getValue() as number)}</span>
-    ),
-    size: 90,
-  },
-  {
-    accessorKey: "last_activity",
-    header: "Last active",
-    cell: ({ getValue }) => {
-      const v = getValue() as number | null;
-      return v ? (
-        <span className="mono text-sm" style={{ color: "var(--text-2)" }}>{timeAgo(v)}</span>
-      ) : (
-        <span className="mono text-xs" style={{ color: "var(--text-3)" }}>—</span>
-      );
-    },
-    size: 110,
-  },
-];
+const MAX_W = "1400px";
+const PAGE_PAD = "0 28px";
+const SECTION_GAP = "20px";
 
 export default function ProjectsPage() {
+  return <ProjectList />;
+}
+
+function ProjectList() {
   const [projects, setProjects] = useState<ProjectStats[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sorting, setSorting] = useState<SortingState>([{ id: "last_activity", desc: true }]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.projects()
+    api
+      .projects()
       .then(setProjects)
-      .catch(console.error)
+      .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const table = useReactTable({
-    data: projects,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  if (loading) return <PageShell><LoadingState /></PageShell>;
+  if (error)   return <PageShell><ErrorState message={error} /></PageShell>;
+
+  const totalSessions = projects.reduce((s, p) => s + p.session_count, 0);
+  const totalSize     = projects.reduce((s, p) => s + p.total_size, 0);
 
   return (
-    <div className="flex flex-col flex-1">
-      <Header
-        title="Projects"
-        subtitle={`${projects.length} project${projects.length !== 1 ? "s" : ""}`}
-      />
-
-      <div className="flex-1 p-4">
-        {/* Section header */}
-        <div className="flex items-center gap-4 mb-4">
-          <span className="label" style={{ color: "var(--accent)", fontSize: "10px" }}>PROJECTS</span>
-          <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+    <PageShell>
+      <Card>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
+          <div style={{ borderRight: "1px solid var(--border-1)" }}>
+            <StatCard label="Projects" value={projects.length.toLocaleString()} sub="tracked workspaces" accent />
+          </div>
+          <div style={{ borderRight: "1px solid var(--border-1)" }}>
+            <StatCard label="Total Sessions" value={totalSessions.toLocaleString()} sub="across all projects" valueColor="var(--cyan)" />
+          </div>
+          <StatCard label="Total Size" value={formatBytes(totalSize)} sub="JSONL transcript data" valueColor="var(--amber)" />
         </div>
+      </Card>
+      <Card>
+        <ProjectTable projects={projects} />
+      </Card>
+    </PageShell>
+  );
+}
 
-        <div style={{ background: "var(--border)" }}>
-          {loading ? (
-            <div className="mono text-center py-16 animate-pulse" style={{ color: "var(--text-3)", background: "var(--bg)" }}>Loading projects…</div>
-          ) : (
-            <table className="w-full text-sm" style={{ borderCollapse: "collapse", background: "var(--bg)" }}>
-              <thead>
-                {table.getHeaderGroups().map((hg) => (
-                  <tr key={hg.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                    {hg.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="text-left px-5 py-2 mono cursor-pointer select-none"
-                        style={{
-                          width: header.getSize(),
-                          color: "var(--text-3)",
-                          fontSize: "9px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.12em",
-                          fontWeight: 700,
-                        }}
-                        onClick={header.column.getToggleSortingHandler()}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-2)"; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
-                      >
-                        <div className="flex items-center gap-1">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() === "asc" && " ↑"}
-                          {header.column.getIsSorted() === "desc" && " ↓"}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="group transition-colors"
-                    style={{ borderBottom: "1px solid var(--border)" }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-2)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-5 py-3">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+function PageShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      maxWidth: MAX_W, margin: "0 auto",
+      padding: `36px ${PAGE_PAD.split(" ")[1]}`,
+      display: "flex", flexDirection: "column", gap: SECTION_GAP,
+    }}>
+      {children}
+    </div>
+  );
+}
 
-          {!loading && projects.length === 0 && (
-            <div className="text-center py-16" style={{ background: "var(--bg)" }}>
-              <div className="mono text-sm mb-2" style={{ color: "var(--text-2)" }}>No projects indexed yet</div>
-              <div className="mono text-xs" style={{ color: "var(--text-3)" }}>Run hindsight init to discover sessions</div>
-            </div>
-          )}
-        </div>
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: "var(--bg-1)", border: "1px solid var(--border-1)",
+      borderRadius: "var(--radius-lg)", overflow: "hidden",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div style={{ height: "60vh", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", color: "var(--text-3)", fontFamily: "var(--font-sans)" }}>
+      Loading…
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string | null }) {
+  return (
+    <div style={{ height: "60vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "10px", textAlign: "center" }}>
+      <div style={{ fontSize: "14px", color: "var(--red)" }}>{message ?? "Failed to load projects"}</div>
+      <div style={{ fontSize: "13px", color: "var(--text-3)" }}>
+        Is <code style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>hindsight serve</code> running on :7227?
       </div>
     </div>
   );

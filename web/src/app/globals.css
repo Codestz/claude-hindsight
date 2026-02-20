@@ -2,64 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   HINDSIGHT — Design System
+   Palette: Near-black + Green accent
+   Mirrors site/src/styles/global.css
+   ============================================================ */
+
 @layer base {
   :root {
     color-scheme: dark;
 
-    /* ── Palette ─────────────────────────────── */
-    --bg:       #050505;
-    --bg-2:     #090909;
-    --bg-3:     #0E0E0E;
-    --border:   #1C1C1C;
+    /* ── Backgrounds ──────────────────────────────────────────
+       bg-0  canvas / page base
+       bg-1  slightly lifted (nav, sidebars)
+       bg-2  cards, panels
+       bg-3  hover / active overlay
+    ────────────────────────────────────────────────────────── */
+    --bg-0: #050505;
+    --bg-1: #090909;
+    --bg-2: #0E0E0E;
+    --bg-3: #141414;
+
+    /* ── Borders ──────────────────────────────────────────────
+       border-1  hairline — dividers inside panels
+       border-2  default  — card edges, inputs
+       border-3  emphasis — active outlines, focus rings
+    ────────────────────────────────────────────────────────── */
+    --border-1: #1C1C1C;
     --border-2: #282828;
     --border-3: #383838;
 
-    --text-1:   #E8E8E8;
-    --text-2:   #909090;
-    --text-3:   #606060;
+    /* ── Text ─────────────────────────────────────────────────
+       text-1  primary content, headings
+       text-2  secondary / labels (contrast ≥ 4.5:1)
+       text-3  dim — placeholders, decorative, disabled
+    ────────────────────────────────────────────────────────── */
+    --text-1: #E8E8E8;
+    --text-2: #B0B0B0;
+    --text-3: #707070;
 
-    --accent:   #00FF88;
-    --amber:    #FFB547;
-    --cyan:     #00C8FF;
-    --purple:   #A78BFA;
-    --red:      #FF4545;
-    --green:    #3FB950;
+    /* ── Accent palette ───────────────────────────────────────
+       green   primary action, active states, CTAs
+       amber   cost, warnings, time values
+       cyan    token counts, info links
+       purple  AI nodes, thinking, model outputs
+       red     errors, destructive actions
+    ────────────────────────────────────────────────────────── */
+    --green:  #00FF88;
+    --amber:  #FFB547;
+    --cyan:   #00C8FF;
+    --purple: #A78BFA;
+    --red:    #FF4545;
 
-    /* ── Backward-compat aliases ─────────────── */
-    --surface-1:      var(--bg-2);
-    --surface-2:      var(--bg-3);
-    --border-1:       var(--border);
-    --text-primary:   var(--text-1);
-    --text-muted:     var(--text-2);
-    --accent-cyan:    var(--accent);
-    --accent-green:   var(--accent);
-    --accent-yellow:  var(--amber);
-    --accent-red:     var(--red);
-    --accent-purple:  var(--purple);
-    --accent-magenta: var(--purple);
-    --tool:           var(--amber);
-    --subagent:       var(--purple);
-    --yellow:         var(--amber);
+    /* ── Semantic shortcuts ───────────────────────────────────
+       Use these in components so the intent is legible.
+    ────────────────────────────────────────────────────────── */
+    --accent: var(--green);
+    --warn:   var(--amber);
+    --info:   var(--cyan);
+    --error:  var(--red);
+
+    /* ── Typography ───────────────────────────────────────────
+       font-sans  all UI text, headings (Inter)
+       font-mono  data, IDs, code, badges (JetBrains Mono)
+       CSS vars injected by next/font in layout.tsx
+    ────────────────────────────────────────────────────────── */
+    --font-sans: var(--font-inter, "Inter"), system-ui, sans-serif;
+    --font-mono: var(--font-jetbrains, "JetBrains Mono"), monospace;
+
+    /* ── Radii ────────────────────────────────────────────────
+       Subtle rounding — not aggressively rounded, not sharp.
+    ────────────────────────────────────────────────────────── */
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-lg: 8px;
   }
 
-  *, *::before, *::after { box-sizing: border-box; }
+  /* ── Reset ──────────────────────────────────────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
 
   html {
     color-scheme: dark;
-    background: var(--bg);
-    margin: 0;
-    padding: 0;
+    background: var(--bg-0);
+    font-size: 16px;
   }
 
   body {
-    background: var(--bg);
+    background: var(--bg-0);
     color: var(--text-1);
-    font-family: var(--font-sans, "Inter"), system-ui, sans-serif;
+    font-family: var(--font-sans);
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
     padding: 0;
-    height: 100%;
+    min-height: 100vh;
   }
 
   ::selection {
@@ -67,94 +106,21 @@
     color: var(--text-1);
   }
 
-  ::-webkit-scrollbar { width: 3px; height: 3px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border-2); }
+  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: var(--border-2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-3); }
 
   a { color: inherit; text-decoration: none; }
 }
 
-/* ── Bento system (gap = border) ──────────── */
-.bento     { display: grid; gap: 1px; background: var(--border); }
-.bento > * { background: var(--bg); }
-
-/* ── Status dot ───────────────────────────── */
-.dot {
-  display: inline-block;
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
-.dot--pulse { animation: dot-pulse 2.4s ease infinite; }
-.dot--red   { background: var(--red); }
-.dot--amber { background: var(--amber); }
-
-@keyframes dot-pulse {
-  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.45); }
-  50%      { opacity: 0.8; box-shadow: 0 0 0 5px rgba(0,255,136,0); }
+/* ── Thinking animations ─────────────────────────────────────── */
+@keyframes thinking-breathe {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 1; }
 }
 
-/* ── Typography utilities ─────────────────── */
-.label {
-  font-family: var(--font-sans, "Inter"), system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-2);
+@keyframes thinking-pulse-dot {
+  0%, 100% { transform: scale(1);    opacity: 0.4; }
+  50%       { transform: scale(1.4); opacity: 1; }
 }
-.mono {
-  font-family: "JetBrains Mono", monospace;
-  font-variant-numeric: tabular-nums;
-}
-.tabular { font-variant-numeric: tabular-nums; }
-.text-2xs { font-size: 0.625rem; line-height: 1rem; }
-
-/* ── Legacy card — kept for backward compat, no rounded corners ── */
-.card {
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-}
-.card:hover { background: var(--bg-3); }
-
-/* ── Tree badges ──────────────────────────── */
-.tbadge {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 1px 5px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-}
-.tbadge-user   { background: rgba(222,222,222,0.05); color: #777; }
-.tbadge-asst   { background: rgba(222,222,222,0.05); color: #777; }
-.tbadge-think  { background: rgba(0,255,136,0.10);   color: #00FF88; }
-.tbadge-tool   { background: rgba(255,181,71,0.10);  color: #FFB547; }
-.tbadge-result { background: rgba(0,200,255,0.08);   color: #00C8FF; }
-.tbadge-sub    { background: rgba(167,139,250,0.10); color: #A78BFA; }
-.tbadge-ok     { background: rgba(0,255,136,0.10);   color: #00FF88; }
-.tbadge-err    { background: rgba(255,69,69,0.10);   color: #FF4545; }
-
-/* ── Badge aliases (used by existing components) ── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.1rem 0.425rem;
-  font-size: 0.6rem;
-  font-family: "JetBrains Mono", monospace;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  white-space: nowrap;
-}
-.badge-tool     { background: rgba(255,181,71,0.10);  color: #FFB547; }
-.badge-thinking { background: rgba(0,255,136,0.10);   color: #00FF88; }
-.badge-subagent { background: rgba(167,139,250,0.10); color: #A78BFA; }
-.badge-model    { background: rgba(144,144,144,0.10); color: #909090; }
-.badge-user     { background: rgba(222,222,222,0.05); color: #777; }
-.badge-live     { background: rgba(0,255,136,0.10);   color: #00FF88; }
