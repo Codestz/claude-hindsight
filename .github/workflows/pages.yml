@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - "site/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-and-deploy:

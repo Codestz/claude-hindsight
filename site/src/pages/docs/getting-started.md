@@ -1,7 +1,7 @@
 ---
 layout: "../../layouts/Docs.astro"
 title: "Getting Started — Hindsight"
-description: "Install and run Hindsight in under a minute."
+description: "Install and run Hindsight in under a minute. v1.0.0"
 ---
 
 # Getting Started
