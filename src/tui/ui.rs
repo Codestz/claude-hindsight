@@ -512,7 +512,7 @@ fn draw_timeline(f: &mut Frame, area: Rect, timings: &[(String, u64)]) {
 fn draw_error_summary_overlay(f: &mut Frame, app: &App) {
     let area = f.area();
     let w = 72u16;
-    let h = (app.error_nodes_info.len() as u16 + 4).min(20).max(5);
+    let h = (app.error_nodes_info.len() as u16 + 4).clamp(5, 20);
     let x = area.width.saturating_sub(w) / 2;
     let y = area.height.saturating_sub(h) / 2;
     let rect = Rect { x, y, width: w, height: h };
@@ -615,7 +615,7 @@ fn draw_search_overlay(f: &mut Frame, app: &App) {
         .map(|s| s.query.as_str())
         .unwrap_or("");
 
-    let widget = Paragraph::new(format!("{}", query))
+    let widget = Paragraph::new(query.to_string())
         .style(Style::default().fg(Color::Yellow).bg(Color::DarkGray))
         .block(Block::default().borders(Borders::ALL).title("Filter by node type (user,assistant,tool_use) - Enter: apply | Esc: cancel"));
 

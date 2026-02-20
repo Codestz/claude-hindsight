@@ -1,8 +1,7 @@
 //! Search engine for Claude Code sessions
 //!
 //! Provides fast metadata-based search using the SQLite index.
-//! Phase 1: Metadata search only (tool names, errors, project)
-//! Phase 2: Full-text content search in JSONL files (future)
+#![allow(dead_code)]
 
 pub mod filters;
 pub mod results;

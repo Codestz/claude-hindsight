@@ -8,7 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Main configuration structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     /// UI preferences
     #[serde(default)]
@@ -147,16 +147,6 @@ fn default_max_sessions() -> usize {
     100
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            ui: UiConfig::default(),
-            keybindings: KeyBindings::default(),
-            analytics: AnalyticsConfig::default(),
-            performance: PerformanceConfig::default(),
-        }
-    }
-}
 
 impl Default for UiConfig {
     fn default() -> Self {

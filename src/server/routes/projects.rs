@@ -6,7 +6,7 @@ use crate::server::dto::ProjectStatsDto;
 use crate::storage::SessionIndex;
 
 pub async fn list_projects(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
 ) -> Result<Json<Vec<ProjectStatsDto>>, ApiError> {
     let result = tokio::task::spawn_blocking(move || {
         let index = SessionIndex::new()?;

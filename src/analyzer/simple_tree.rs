@@ -74,12 +74,12 @@ pub fn build_simple_tree(nodes: Vec<ExecutionNode>) -> Vec<TreeNode> {
     }
 
     // Second pass: build parent-child relationships
-    for (_uuid, rc_node) in &node_map {
+    for rc_node in node_map.values() {
         if let Some(ref parent_uuid) = rc_node.parent_uuid {
             // Has parent - add to children map (Rc::clone is just a pointer increment)
             children_map
                 .entry(parent_uuid.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(Rc::clone(rc_node));
         } else {
             // No parent - this is a root

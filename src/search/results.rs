@@ -1,4 +1,5 @@
 //! Search result types and ranking
+#![allow(dead_code)]
 
 use crate::storage::SessionFile;
 use chrono::{Local, TimeZone};

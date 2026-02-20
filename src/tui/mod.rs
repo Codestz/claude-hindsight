@@ -57,7 +57,7 @@ pub fn run(app: &mut App) -> Result<()> {
     loop {
         terminal.draw(|f| ui::draw(f, app))?;
 
-        if let Event::Key(key) = event_handler.next()? {
+        if let Event::Key(key) = event_handler.poll()? {
             app.handle_key(key)?;
         }
 

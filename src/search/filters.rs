@@ -1,4 +1,5 @@
 //! Search filter types
+#![allow(dead_code)]
 
 /// Search filters for querying sessions
 #[derive(Debug, Clone, Default)]

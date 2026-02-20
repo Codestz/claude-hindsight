@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use tui_tree_widget::TreeItem;
 
 /// Scroll position information for displaying scroll indicators
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ScrollInfo {
     pub offset: usize,
     pub total_lines: usize,
@@ -825,7 +825,7 @@ impl App {
         let selected = self.tree_state.selected();
         if let Some(uuid) = selected.first() {
             // Look up node by UUID
-            self.uuid_to_node.get(uuid).map(|n| n)
+            self.uuid_to_node.get(uuid)
         } else {
             None
         }

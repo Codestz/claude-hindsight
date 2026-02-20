@@ -1,6 +1,7 @@
 //! API response DTOs for web dashboard
 //!
 //! These types are optimized for JSON serialization and frontend consumption.
+#![allow(dead_code)]
 
 use serde::{Serialize, Deserialize};
 use crate::analyzer::TreeNode;
