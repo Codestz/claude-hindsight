@@ -18,8 +18,8 @@
 ### Homebrew (macOS & Linux)
 
 ```bash
-brew tap Codestz/hindsight
-brew install hindsight
+brew tap Codestz/claude-hindsight
+brew install claude-hindsight
 ```
 
 ### Cargo
@@ -40,7 +40,7 @@ Download from the [GitHub Releases](https://github.com/Codestz/claude-hindsight/
 git clone https://github.com/Codestz/claude-hindsight
 cd claude-hindsight
 make build            # builds frontend + Rust binary
-# binary -> target/release/hindsight
+# binary -> target/release/claude-hindsight
 ```
 
 **Requirements:** Rust 1.75+, Node.js 20+
@@ -52,9 +52,9 @@ Pre-built binaries and Homebrew bottles have **no external dependencies** — th
 ## Quick Start
 
 ```bash
-hindsight init          # discover Claude Code sessions & build index
-hindsight serve --open  # open web dashboard in browser
-hindsight               # launch interactive terminal UI
+claude-hindsight init          # discover Claude Code sessions & build index
+claude-hindsight serve --open  # open web dashboard in browser
+claude-hindsight               # launch interactive terminal UI
 ```
 
 ---
@@ -62,9 +62,9 @@ hindsight               # launch interactive terminal UI
 ## Web Dashboard
 
 ```bash
-hindsight serve                 # start on http://localhost:7227
-hindsight serve --open          # start and open browser
-hindsight serve --port 8080     # custom port
+claude-hindsight serve                 # start on http://localhost:7227
+claude-hindsight serve --open          # start and open browser
+claude-hindsight serve --port 8080     # custom port
 ```
 
 A self-contained web dashboard with:
@@ -80,9 +80,9 @@ A self-contained web dashboard with:
 ## Terminal UI
 
 ```bash
-hindsight                       # launch TUI (default)
-hindsight show <session-id>     # open a specific session
-hindsight watch                 # watch active session live
+claude-hindsight                       # launch TUI (default)
+claude-hindsight show <session-id>     # open a specific session
+claude-hindsight watch                 # watch active session live
 ```
 
 **Keyboard shortcuts:**
@@ -101,17 +101,17 @@ hindsight watch                 # watch active session live
 
 | Command | Description |
 |---|---|
-| `hindsight` | Launch terminal UI (configurable default view) |
-| `hindsight init` | Discover sessions and build the SQLite index |
-| `hindsight serve` | Start the web dashboard server |
-| `hindsight list` | List sessions with filters (`--project`, `--errors`, `--today`, `--last N`, `--with-subagents`) |
-| `hindsight show <id>` | Open a session in the TUI or web dashboard (`--dashboard`) |
-| `hindsight watch` | Tail the active session in real time |
-| `hindsight search <query>` | Search session content (`--tool`, `--errors`) |
-| `hindsight export <id>` | Export a session to an HTML report |
-| `hindsight reindex` | Sync the SQLite index with disk (prune deleted, discover new) |
-| `hindsight config show\|edit\|reset\|validate` | Manage `~/.config/hindsight/config.toml` |
-| `hindsight paths list\|add\|remove` | Manage scan directories for Claude session files |
+| `claude-hindsight` | Launch terminal UI (configurable default view) |
+| `claude-hindsight init` | Discover sessions and build the SQLite index |
+| `claude-hindsight serve` | Start the web dashboard server |
+| `claude-hindsight list` | List sessions with filters (`--project`, `--errors`, `--today`, `--last N`, `--with-subagents`) |
+| `claude-hindsight show <id>` | Open a session in the TUI or web dashboard (`--dashboard`) |
+| `claude-hindsight watch` | Tail the active session in real time |
+| `claude-hindsight search <query>` | Search session content (`--tool`, `--errors`) |
+| `claude-hindsight export <id>` | Export a session to an HTML report |
+| `claude-hindsight reindex` | Sync the SQLite index with disk (prune deleted, discover new) |
+| `claude-hindsight config show\|edit\|reset\|validate` | Manage `~/.config/hindsight/config.toml` |
+| `claude-hindsight paths list\|add\|remove` | Manage scan directories for Claude session files |
 
 ---
 
@@ -165,10 +165,10 @@ hindsight watch                 # watch active session live
 Configuration lives at `~/.config/hindsight/config.toml`. Manage it with:
 
 ```bash
-hindsight config show       # print current config
-hindsight config edit       # open in $EDITOR
-hindsight config validate   # check for errors
-hindsight config reset      # restore defaults
+claude-hindsight config show       # print current config
+claude-hindsight config edit       # open in $EDITOR
+claude-hindsight config validate   # check for errors
+claude-hindsight config reset      # restore defaults
 ```
 
 Configurable options include: color themes, key bindings, default startup view, analytics display preferences, cache settings, and scan directories.
@@ -176,10 +176,10 @@ Configurable options include: color themes, key bindings, default startup view, 
 ### Scan directories
 
 ```bash
-hindsight paths list                          # show all scan dirs
-hindsight paths add ~/work/.claude/projects   # add a new directory
-hindsight paths add ~/personal --name Personal # with a display name
-hindsight paths remove ~/old-projects         # remove a directory
+claude-hindsight paths list                          # show all scan dirs
+claude-hindsight paths add ~/work/.claude/projects   # add a new directory
+claude-hindsight paths add ~/personal --name Personal # with a display name
+claude-hindsight paths remove ~/old-projects         # remove a directory
 ```
 
 ---

@@ -1,12 +1,12 @@
 ---
 layout: "../../layouts/Docs.astro"
-title: "Getting Started — Hindsight"
-description: "Install and run Hindsight in under a minute. v1.0.0"
+title: "Getting Started — Claude Hindsight"
+description: "Install and run Claude Hindsight in under a minute."
 ---
 
 # Getting Started
 
-Hindsight is a single binary that indexes your Claude Code session JSONL files and lets you explore them via a web dashboard, terminal UI, or CLI.
+Claude Hindsight is a single binary that indexes your Claude Code session JSONL files and lets you explore them via a web dashboard, terminal UI, or CLI.
 
 ## Prerequisites
 
@@ -21,14 +21,14 @@ Hindsight is a single binary that indexes your Claude Code session JSONL files a
 ### Homebrew (recommended)
 
 ```bash
-brew tap Codestz/hindsight
-brew install hindsight
+brew tap Codestz/claude-hindsight
+brew install claude-hindsight
 ```
 
 ### cargo install
 
 ```bash
-cargo install hindsight
+cargo install claude-hindsight
 ```
 
 ### Prebuilt binary
@@ -41,8 +41,8 @@ Download the latest binary for your platform from the [GitHub releases page](htt
 git clone https://github.com/Codestz/claude-hindsight
 cd claude-hindsight
 cargo build --release
-# binary is at ./target/release/hindsight
-cp target/release/hindsight /usr/local/bin/
+# binary is at ./target/release/claude-hindsight
+cp target/release/claude-hindsight /usr/local/bin/
 ```
 
 ## First run
@@ -50,20 +50,20 @@ cp target/release/hindsight /usr/local/bin/
 ### 1. Initialize the index
 
 ```bash
-hindsight init
+claude-hindsight init
 ```
 
-Hindsight scans `~/.claude/projects/` for JSONL session files and builds a local SQLite index. This is fast even for hundreds of sessions.
+Claude Hindsight scans `~/.claude/projects/` for JSONL session files and builds a local SQLite index. This is fast even for hundreds of sessions.
 
 ### 2. Start the web dashboard
 
 ```bash
-hindsight serve
+claude-hindsight serve
 ```
 
 Opens the dashboard at [http://localhost:7227](http://localhost:7227). You'll see:
 
-- **Dashboard** — global stats, token usage, cost totals, activity chart
+- **Dashboard** — global stats, activity chart, error tracking
 - **Projects** — per-project session counts and analytics
 - **Sessions** — full session list with search and filtering
 - **Search** — full-text search across all session content
@@ -71,7 +71,7 @@ Opens the dashboard at [http://localhost:7227](http://localhost:7227). You'll se
 ### 3. Use the terminal UI (optional)
 
 ```bash
-hindsight list
+claude-hindsight list
 ```
 
 Browse sessions in an interactive TUI inside your terminal.
@@ -79,34 +79,34 @@ Browse sessions in an interactive TUI inside your terminal.
 ### 4. Watch a live session
 
 ```bash
-hindsight watch
+claude-hindsight watch
 ```
 
 Tail the most recent active session in real time, showing each tool call and response as it arrives.
 
 ## Configuration
 
-By default Hindsight reads from `~/.claude/projects/` and stores its index at `~/.local/share/hindsight/`. You can override the project directory:
+By default Claude Hindsight reads from `~/.claude/projects/` and stores its index at `~/.local/share/claude-hindsight/`. You can override the project directory:
 
 ```bash
-hindsight init --dir /path/to/custom/claude/projects
+claude-hindsight init --dir /path/to/custom/claude/projects
 ```
 
 ## Keeping the index fresh
 
-Run `hindsight reindex` after long Claude Code sessions to pick up new files:
+Run `claude-hindsight reindex` after long Claude Code sessions to pick up new files:
 
 ```bash
-hindsight reindex
+claude-hindsight reindex
 ```
 
 Or add it as a shell alias:
 
 ```bash
-alias hs-refresh='hindsight reindex && hindsight serve'
+alias ch-refresh='claude-hindsight reindex && claude-hindsight serve'
 ```
 
 ## Next steps
 
 - [CLI Commands reference](/docs/commands) — all available subcommands and flags
-- [Architecture](/docs/architecture) — how Hindsight stores and queries data
+- [Architecture](/docs/architecture) — how Claude Hindsight stores and queries data

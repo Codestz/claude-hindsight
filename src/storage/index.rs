@@ -21,7 +21,7 @@ impl SessionIndex {
             HindsightError::Config("Could not determine config directory".to_string())
         })?;
 
-        let hindsight_dir = config_dir.join("hindsight");
+        let hindsight_dir = config_dir.join("claude-hindsight");
         std::fs::create_dir_all(&hindsight_dir)?;
 
         let db_path = hindsight_dir.join("sessions.db");

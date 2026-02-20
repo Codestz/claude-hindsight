@@ -127,7 +127,7 @@ chore: bump lucide-react to 0.470
 
 Use [GitHub Issues](https://github.com/Codestz/claude-hindsight/issues). Please include:
 
-- Hindsight version (`hindsight --version`)
+- Claude Hindsight version (`claude-hindsight --version`)
 - OS and architecture
 - Steps to reproduce
 - Expected vs actual behavior

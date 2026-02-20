@@ -1,7 +1,7 @@
 ---
 layout: "../../layouts/Docs.astro"
-title: "Architecture — Hindsight"
-description: "How Hindsight stores and queries Claude Code session data."
+title: "Architecture — Claude Hindsight"
+description: "How Claude Hindsight stores and queries Claude Code session data."
 ---
 
 # Architecture
@@ -32,7 +32,7 @@ Hindsight parses these files using a streaming JSONL reader so even very large s
 
 ## SQLite index
 
-On `hindsight init`, Hindsight scans the project directories and builds a local SQLite database (default: `~/.local/share/hindsight/index.db`).
+On `claude-hindsight init`, Claude Hindsight scans the project directories and builds a local SQLite database (default: `~/.local/share/claude-hindsight/index.db`).
 
 The schema includes:
 
@@ -44,7 +44,7 @@ The index is kept deliberately flat (not deeply normalized) to allow fast single
 
 ### Incremental updates
 
-`hindsight reindex` uses file modification timestamps to skip sessions that haven't changed since the last index pass. Only new or modified JSONL files are re-parsed.
+`claude-hindsight reindex` uses file modification timestamps to skip sessions that haven't changed since the last index pass. Only new or modified JSONL files are re-parsed.
 
 ## Single-binary embed
 
@@ -54,7 +54,7 @@ At runtime, the embedded HTTP server (built with [`axum`](https://github.com/tok
 
 ```
 ┌─────────────────────────────────┐
-│         hindsight binary        │
+│     claude-hindsight binary     │
 │                                 │
 │  ┌───────────┐ ┌─────────────┐  │
 │  │ axum HTTP │ │ rust-embed  │  │

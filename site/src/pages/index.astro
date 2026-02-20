@@ -406,20 +406,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             num: "02", title: "INDEX",
             desc: "Scan ~/.claude/projects/ and build a local SQLite index. Takes seconds even for hundreds of sessions.",
             lines: [
-              { t: "prompt",  text: "hindsight init"                       },
+              { t: "prompt",  text: "claude-hindsight init"                       },
               { t: "dim",     text: "Scanning ~/.claude/projects/"          },
               { t: "success", text: "✓  Indexed 142 sessions, 8 projects"  },
-              { t: "success", text: "✓  Index → ~/.local/share/hindsight/" },
+              { t: "success", text: "✓  Index → ~/.local/share/claude-hindsight/" },
             ],
           },
           {
             num: "03", title: "EXPLORE",
             desc: "Launch the web dashboard, fire up the TUI, or watch an active session stream live. Your sessions, your way.",
             lines: [
-              { t: "prompt",  text: "hindsight serve --open" },
+              { t: "prompt",  text: "claude-hindsight serve --open" },
               { t: "cyan",    text: "→  http://localhost:7227" },
               { t: "dim",     text: "Press Ctrl+C to stop"    },
-              { t: "prompt",  text: "hindsight watch"         },
+              { t: "prompt",  text: "claude-hindsight watch"         },
             ],
           },
         ].map((step) => (

@@ -226,7 +226,7 @@ function ErrorState({ message }: { message: string | null }) {
       <div style={{ fontSize: "13px", color: "var(--text-3)" }}>
         Is{" "}
         <code style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>
-          hindsight serve
+          claude-hindsight serve
         </code>{" "}
         running on :7227?
       </div>

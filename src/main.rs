@@ -21,7 +21,7 @@ mod watcher;
 use error::Result;
 
 #[derive(Parser)]
-#[command(name = "hindsight")]
+#[command(name = "claude-hindsight")]
 #[command(version, about, long_about = None)]
 #[command(author = "Codestz <est.estrada@outlook.com>")]
 struct Cli {

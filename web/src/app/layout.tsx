@@ -18,7 +18,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hindsight — Claude Code Observer",
+  title: "Claude Hindsight — Claude Code Observer",
   description: "20/20 hindsight for your Claude Code sessions",
 };
 

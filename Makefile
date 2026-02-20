@@ -37,7 +37,7 @@ check:
 	@sleep 2
 	@curl -s http://localhost:7227/api/health | python3 -m json.tool || echo "Server not responding"
 	@curl -sI http://localhost:7227/ | head -5 || echo "Static serve not responding"
-	@pkill -f "hindsight serve" 2>/dev/null || true
+	@pkill -f "claude-hindsight serve" 2>/dev/null || true
 
 # Publish to crates.io (requires CRATES_IO_TOKEN or prior `cargo login`)
 publish: web-build
