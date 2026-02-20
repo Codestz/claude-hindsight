@@ -1,0 +1,21 @@
+---
+interface Props {
+  num: string;
+  title: string;
+  description: string;
+  badge?: string;
+}
+const { num, title, description, badge = "badge-model" } = Astro.props;
+---
+<div style="padding: 1.75rem; border: 1px solid var(--border-1); margin: -1px 0 0 -1px; transition: background 0.15s;"
+  onmouseover="this.style.background='var(--surface-1)'"
+  onmouseout="this.style.background='transparent'"
+>
+  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.875rem;">
+    <span class={`badge ${badge}`}>{num}</span>
+  </div>
+  <h3 style="font-size: 1rem; font-weight: 600; color: var(--text-1); margin: 0 0 0.5rem; letter-spacing: -0.01em;">
+    {title}
+  </h3>
+  <p style="font-size: 0.875rem; color: var(--text-2); line-height: 1.65; margin: 0;">{description}</p>
+</div>

@@ -1,0 +1,10 @@
+# Astro build output
+dist/
+.astro/
+
+# Dependencies
+node_modules/
+
+# Editor
+.DS_Store
+*.swp
