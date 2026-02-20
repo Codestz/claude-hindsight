@@ -59,7 +59,7 @@ pub fn parse_subagents(session_path: &Path) -> Vec<super::models::Session> {
         .into_iter()
         .flatten()
         .filter_map(|e| e.ok())
-        .filter(|e| e.path().extension().map_or(false, |x| x == "jsonl"))
+        .filter(|e| e.path().extension().is_some_and(|x| x == "jsonl"))
         .filter_map(|e| parse_session(&e.path()).ok())
         .collect()
 }
