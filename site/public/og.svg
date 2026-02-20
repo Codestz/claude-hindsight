@@ -1,0 +1,54 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#050505"/>
+      <stop offset="100%" style="stop-color:#0a0a0a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00ff88;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:#00ff88;stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle top glow -->
+  <ellipse cx="600" cy="0" rx="600" ry="200" fill="url(#glow)"/>
+
+  <!-- Border -->
+  <rect x="0" y="0" width="1200" height="630" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+
+  <!-- Accent line top -->
+  <rect x="60" y="60" width="80" height="3" fill="#00ff88" rx="1"/>
+
+  <!-- Tag line -->
+  <text x="60" y="110" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#888" letter-spacing="0.12em">THE OBSERVABILITY LAYER FOR CLAUDE CODE</text>
+
+  <!-- Main title -->
+  <text x="60" y="200" font-family="system-ui, -apple-system, sans-serif" font-size="82" font-weight="900" fill="#f0f0f0" letter-spacing="-0.04em">CLAUDE</text>
+  <text x="60" y="290" font-family="system-ui, -apple-system, sans-serif" font-size="82" font-weight="900" fill="#f0f0f0" letter-spacing="-0.04em">HINDSIGHT.</text>
+
+  <!-- Description -->
+  <text x="60" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#999" font-weight="400">Transform opaque AI coding sessions into crystal-clear insights.</text>
+  <text x="60" y="392" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#999" font-weight="400">Every tool call, thinking block, and subagent — exposed.</text>
+
+  <!-- Features row -->
+  <text x="60" y="470" font-family="monospace" font-size="14" fill="#00ff88" font-weight="600" letter-spacing="0.08em">SINGLE BINARY</text>
+  <text x="240" y="470" font-family="monospace" font-size="14" fill="#444">|</text>
+  <text x="265" y="470" font-family="monospace" font-size="14" fill="#00ff88" font-weight="600" letter-spacing="0.08em">ZERO DEPENDENCIES</text>
+  <text x="510" y="470" font-family="monospace" font-size="14" fill="#444">|</text>
+  <text x="535" y="470" font-family="monospace" font-size="14" fill="#00ff88" font-weight="600" letter-spacing="0.08em">LOCAL FIRST</text>
+  <text x="700" y="470" font-family="monospace" font-size="14" fill="#444">|</text>
+  <text x="725" y="470" font-family="monospace" font-size="14" fill="#00ff88" font-weight="600" letter-spacing="0.08em">MIT LICENSE</text>
+
+  <!-- Install snippet -->
+  <rect x="60" y="510" width="440" height="70" rx="4" fill="#0d0d0d" stroke="#1a1a1a" stroke-width="1"/>
+  <text x="80" y="538" font-family="monospace" font-size="14" fill="#00ff88">$</text>
+  <text x="100" y="538" font-family="monospace" font-size="14" fill="#e0e0e0">brew install claude-hindsight</text>
+  <text x="80" y="564" font-family="monospace" font-size="14" fill="#00ff88">$</text>
+  <text x="100" y="564" font-family="monospace" font-size="14" fill="#e0e0e0">claude-hindsight serve --open</text>
+
+  <!-- GitHub -->
+  <text x="1060" y="580" font-family="monospace" font-size="13" fill="#555" text-anchor="end">github.com/Codestz/claude-hindsight</text>
+</svg>
