@@ -1,6 +1,6 @@
-# Contributing to Claude Hindsight 🔭
+# Contributing to Claude Hindsight
 
-Thank you for your interest in contributing to Claude Hindsight! This document provides guidelines and best practices for contributors.
+Thank you for your interest in contributing! This document covers setup, standards, and the PR process.
 
 ## Table of Contents
 
@@ -12,232 +12,237 @@ Thank you for your interest in contributing to Claude Hindsight! This document p
 - [Pull Request Process](#pull-request-process)
 - [Areas for Contribution](#areas-for-contribution)
 
+---
+
 ## Getting Started
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
+1. Fork the repository on GitHub
+2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/observatory.git
-   cd observatory
+   git clone https://github.com/YOUR-USERNAME/claude-hindsight.git
+   cd claude-hindsight
    ```
-3. **Set up development environment** (see below)
-4. **Create a feature branch**:
+3. Set up your development environment (see below)
+4. Create a feature branch:
    ```bash
    git checkout -b feature/your-feature-name
    ```
+
+---
 
 ## Development Setup
 
 ### Prerequisites
 
-- **Rust** 1.75+ ([Install Rust](https://rustup.rs/))
+- **Rust** 1.75+ ([rustup.rs](https://rustup.rs/))
+- **Node.js** 20+ ([nodejs.org](https://nodejs.org/)) — for the web dashboard
 - **Git**
-- **Claude Code** (for testing)
+- **Claude Code** — for testing against real sessions
 
-### Build Project
+### Backend (Rust)
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/hindsight
-cd hindsight
-
-# Build
-cargo build
-
-# Run tests
-cargo test
-
-# Run locally
-cargo run -- init
-cargo run -- list
-cargo run -- watch
+cargo build           # debug build (uses web/out/ from disk if present)
+cargo build --release # release build (embeds web/out/ into binary)
+cargo test            # run all tests
+cargo clippy -- -D warnings
+cargo fmt
 ```
+
+### Frontend (Next.js)
+
+```bash
+cd web
+npm install
+npm run dev    # dev server on http://localhost:3000
+npm run build  # static export to web/out/
+npm run lint
+```
+
+### Full build (what CI does)
+
+```bash
+make build     # npm run build → cargo build --release
+```
+
+### Running in development
+
+Run both servers separately — the Rust server serves the API, Next.js serves the UI with hot reload:
+
+```bash
+# Terminal 1
+make dev-rust          # cargo run -- serve --port 7227
+
+# Terminal 2
+make dev-web           # cd web && npm run dev (port 3000)
+```
+
+Point your browser at `http://localhost:3000`. The Next.js dev server proxies `/api/*` to the Rust backend.
+
+---
 
 ## Project Structure
 
 ```
-hindsight/
-├── src/                      # Rust source code
-│   ├── main.rs              # CLI entry point
-│   ├── parser/              # JSONL parser
+claude-hindsight/
+├── src/
+│   ├── main.rs                   # CLI entry point
+│   ├── lib.rs                    # library root
+│   ├── error.rs                  # shared error types
+│   ├── commands/                 # CLI subcommands
 │   │   ├── mod.rs
-│   │   ├── transcript.rs    # Parse transcript files
-│   │   └── models.rs        # Data structures
-│   ├── storage/             # Session indexing
+│   │   ├── init.rs               # discover sessions
+│   │   ├── list.rs               # list sessions
+│   │   ├── show.rs               # TUI session viewer
+│   │   ├── watch.rs              # live session monitor
+│   │   ├── serve.rs              # web server launcher
+│   │   ├── reindex.rs            # rebuild SQLite index
+│   │   ├── search.rs
+│   │   ├── export.rs
+│   │   └── config.rs
+│   ├── parser/                   # JSONL parsing
 │   │   ├── mod.rs
-│   │   ├── index.rs         # Session index
-│   │   └── cache.rs         # Caching layer
-│   ├── analysis/            # Analysis engine
+│   │   ├── transcript.rs
+│   │   └── models.rs             # ExecutionNode and related types
+│   ├── storage/                  # session discovery + SQLite index
 │   │   ├── mod.rs
-│   │   ├── tree.rs          # Execution tree builder
-│   │   ├── costs.rs         # Cost calculation
-│   │   └── insights.rs      # Pattern detection
-│   ├── ui/                  # Terminal UI (ratatui)
+│   │   ├── index.rs
+│   │   └── discovery.rs
+│   ├── analyzer/                 # tree building + analytics
 │   │   ├── mod.rs
-│   │   ├── tree_view.rs     # Tree widget
-│   │   ├── details.rs       # Detail panels
-│   │   └── live.rs          # Live monitoring
-│   ├── commands/            # CLI commands
+│   │   ├── tree.rs
+│   │   ├── simple_tree.rs
+│   │   ├── session_analytics.rs
+│   │   └── smart_label.rs
+│   ├── server/                   # axum HTTP server
+│   │   ├── mod.rs                # router + embedded asset handler
+│   │   ├── dto.rs                # request/response types
+│   │   ├── error.rs
+│   │   └── routes/
+│   │       ├── analytics.rs
+│   │       ├── events.rs         # SSE live feed
+│   │       ├── projects.rs
+│   │       ├── search.rs
+│   │       └── sessions.rs
+│   ├── tui/                      # ratatui terminal UI
 │   │   ├── mod.rs
-│   │   ├── init.rs
-│   │   ├── watch.rs
-│   │   ├── show.rs
-│   │   ├── list.rs
-│   │   └── stats.rs
-│   └── dashboard/           # Web dashboard (Phase 2)
+│   │   ├── app.rs
+│   │   ├── router.rs
+│   │   ├── render.rs
+│   │   ├── ui.rs
+│   │   ├── events.rs
+│   │   ├── theme.rs
+│   │   ├── dashboard_view.rs
+│   │   ├── sessions_view.rs
+│   │   ├── projects_view.rs
+│   │   ├── search_modal.rs
+│   │   ├── search.rs
+│   │   └── code_render.rs
+│   ├── watcher/                  # file watching + streaming
+│   │   ├── mod.rs
+│   │   └── stream_renderer.rs
+│   ├── api/                      # shared response formatting
+│   │   ├── mod.rs
+│   │   ├── responses.rs
+│   │   └── formatting.rs
+│   ├── search/                   # search engine
+│   │   ├── mod.rs
+│   │   ├── filters.rs
+│   │   └── results.rs
+│   └── config/
 │       └── mod.rs
-├── tests/                   # Integration tests
-├── examples/                # Example usage
-├── docs/                    # Documentation
+├── web/                          # Next.js 15 frontend
+│   ├── src/
+│   │   ├── app/                  # Next.js App Router pages
+│   │   ├── components/           # React components
+│   │   └── lib/                  # API client, types, utils
+│   ├── package.json
+│   └── next.config.ts
+├── build.rs                      # auto-builds frontend before rustc
 ├── Cargo.toml
+├── Makefile
 └── README.md
 ```
+
+---
 
 ## Coding Standards
 
 ### Rust
 
-We follow the [Apollo GraphQL Rust Best Practices Handbook](https://github.com/apollographql/rust-best-practices).
+We follow the [Apollo GraphQL Rust Best Practices Handbook](https://github.com/apollographql/rust-best-practices). Use the `/rust-best-practices` skill when writing or reviewing Rust code.
 
-**Reference:** Use `/rust-best-practices` skill when writing or reviewing Rust code.
+**Key principles:**
+- Borrow over clone — prefer `&str`, `&Path`, `as_deref()` over `.clone()`
+- Use `thiserror` for errors; avoid `unwrap()` in production paths
+- Propagate errors with `?`; no panics outside tests
+- Prefer iterator combinators over manual loops
+- Run `cargo clippy -- -D warnings` before committing — CI enforces it
 
-**Key principles**:
-- **Borrowing over cloning**: Use `&str`, `&Path`, `as_deref()` instead of unnecessary `.clone()`
-- **Proper error handling**: Use `thiserror`, avoid `unwrap()` in production code
-- **No panics**: Use `Result<T, E>` and `?` operator for error propagation
-- **Iterator patterns**: Prefer `.iter()` and combinators over manual loops
-- **Clean up**: Use `Drop` trait for automatic resource cleanup
-- **Performance**: Always benchmark with `--release`, run `cargo clippy -- -D clippy::perf`
-
-**Before committing**:
+**Before committing:**
 ```bash
-cargo fmt              # Format code
-cargo clippy --all-targets -- -D warnings  # Lint
-cargo test             # Run tests
+cargo fmt
+cargo clippy --all-targets -- -D warnings
+cargo test
 ```
 
-### Terminal UI (ratatui)
+### Web (Next.js / React)
 
-We use [ratatui](https://github.com/ratatui-org/ratatui) for the terminal UI.
+We follow [Vercel React Best Practices](https://github.com/vercel-labs/react-best-practices). Use the `/vercel-react-best-practices`, `/vercel-composition-patterns`, `/frontend-design`, and `/web-design-guidelines` skills when working on the frontend.
 
-**Key principles**:
-- **Responsive rendering**: 60 FPS, smooth updates
-- **Keyboard-first**: Vim-style navigation (j/k, gg/G)
-- **State management**: Clean separation of UI state and data
-- **Accessibility**: Clear visual hierarchy, color-coded nodes
-- **Performance**: Lazy rendering for large trees
+**Key principles:**
+- Direct imports, no barrel files — keeps bundles small
+- Compound components over boolean props
+- `React.memo` for expensive renders; functional `setState` for correctness
+- Distinctive design — avoid generic AI design patterns
 
-**Before committing**:
+**Before committing:**
 ```bash
-cargo clippy --all-targets -- -D warnings
-cargo fmt
-cargo test
+npm run build    # must succeed cleanly
+npm run lint
 ```
 
 ---
 
-### React & Web Dashboard (Phase 2)
-
-We follow [Vercel React Best Practices](https://github.com/vercel-labs/react-best-practices) and [Composition Patterns](https://github.com/vercel-labs/composition-patterns).
-
-**Reference:** Use `/vercel-react-best-practices`, `/vercel-composition-patterns`, `/frontend-design`, and `/web-design-guidelines` skills when building the web dashboard.
-
-**Key principles**:
-- **Bundle optimization**: Direct imports (no barrel files), dynamic imports for heavy components
-- **Server-side performance**: React.cache() for deduplication, minimize client serialization
-- **Re-render optimization**: memo for expensive components, functional setState
-- **Composition over boolean props**: Avoid boolean prop proliferation, use compound components
-- **Distinctive design**: Bold aesthetic choices, avoid generic AI design patterns
-
-**Before committing**:
-```bash
-npm run typecheck      # Type checking
-npm run build          # Verify build works
-npm run lint           # ESLint
-```
-
-### Code Review Checklist
-
-- [ ] Code follows project conventions
-- [ ] Tests added for new functionality
-- [ ] Documentation updated (README, code comments)
-- [ ] No console.log in production code
-- [ ] Error handling is comprehensive
-- [ ] Performance considered (avoid N+1 queries, unnecessary re-renders)
-
 ## Testing
 
-### Unit Tests
+### Rust unit tests
 
 ```bash
-cargo test                    # Run all tests
-cargo test --                 # Run with output
-cargo test test_name          # Run specific test
-cargo test -- --nocapture     # Show print! output
+cargo test                        # run all tests
+cargo test watcher                # run tests matching "watcher"
+cargo test -- --nocapture         # show println! output
 ```
 
-**Writing tests**:
-- Use descriptive names: `test_parse_tool_use_creates_correct_node()`
-- One assertion per test when possible
-- Use test fixtures in `tests/fixtures/` directory
-- Clean up test files in `Drop` implementations
+**Writing tests:**
+- Descriptive names: `test_read_new_nodes_returns_only_appended_lines()`
+- Use `tempfile::NamedTempFile` for file-based tests
+- One assertion per logical behavior
 
-**Example**:
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
+### Integration tests
 
-    #[test]
-    fn test_parse_user_message() {
-        let json = r#"{"type": "user", "message": {"content": "Hello"}}"#;
-        let node = parse_line(json).unwrap();
-        assert_eq!(node.node_type, NodeType::UserMessage);
-    }
-}
+```bash
+cargo test --test '*'             # run tests/ directory
 ```
 
-### Integration Tests
+Place integration tests in `tests/` with real-world JSONL fixtures in `tests/fixtures/`.
 
-Place integration tests in `tests/`:
-
-```rust
-// tests/session_analysis.rs
-use hindsight::parser::parse_session;
-use std::path::Path;
-
-#[test]
-fn test_parse_real_session() {
-    let session = parse_session(Path::new("tests/fixtures/session.jsonl")).unwrap();
-    assert_eq!(session.total_tools, 128);
-}
-```
+---
 
 ## Pull Request Process
 
-1. **Update documentation**: README, code comments, CHANGELOG
-2. **Run all checks**:
+1. **Run all checks** before pushing:
    ```bash
    cargo fmt && cargo clippy --all-targets -- -D warnings && cargo test
+   cd web && npm run build && npm run lint
    ```
-3. **Write clear commit messages**:
-   ```
-   feat(collector): add support for token usage tracking
-   
-   - Parse token_usage field from transcript
-   - Store in execution_tree table
-   - Add tests for token parsing
-   
-   Closes #42
-   ```
-4. **Create pull request** with:
-   - Clear description of changes
-   - Screenshots for UI changes
-   - Link to related issues
-5. **Address review feedback** promptly
-6. **Squash commits** if requested before merge
+2. **Write a clear PR description** — what changed and why
+3. **Link related issues** with `Closes #N`
+4. **Add tests** for new behaviour
+5. **Update this README** if commands or architecture change
+6. Address review feedback; squash commits if asked before merge
 
-### Commit Message Format
+### Commit message format
 
 ```
 <type>(<scope>): <subject>
@@ -247,61 +252,59 @@ fn test_parse_real_session() {
 <footer>
 ```
 
-**Types**:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation only
-- `refactor`: Code restructuring
-- `perf`: Performance improvement
-- `test`: Adding tests
-- `chore`: Maintenance
+**Types:** `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `chore`
 
-## Areas for Contribution
-
-### Good First Issues
-
-- [ ] Add syntax highlighting to JSON viewer in terminal UI
-- [ ] Support filtering sessions by date range
-- [ ] Add export to CSV format
-- [ ] Improve error messages with suggestions
-- [ ] Add progress bars for parsing large sessions
-- [ ] Create example JSONL fixtures for testing
-
-### Medium Difficulty
-
-- [ ] Implement session search functionality
-- [ ] Add keyboard shortcuts help screen (press `?`)
-- [ ] Create session comparison view
-- [ ] Add cost breakdown visualization in terminal
-- [ ] Implement file watcher for live mode
-- [ ] Add pagination for large execution trees
-
-### Advanced Features
-
-- [ ] Web dashboard (Phase 2)
-- [ ] OpenTelemetry integration (optional)
-- [ ] Pattern detection and insights engine
-- [ ] Export to HTML/PDF reports
-- [ ] Session replay mode (step through execution)
-- [ ] Cross-session analytics and trends
-
-## Questions?
-
-- Open an issue for discussion
-- Join discussions in existing issues/PRs
-- Check the README for architecture details
-
-## Code of Conduct
-
-- Be respectful and inclusive
-- Provide constructive feedback
-- Help others learn and grow
-- Assume positive intent
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the MIT License.
+**Examples:**
+```
+feat(serve): add --open flag to launch browser on start
+fix(watcher): start position at end of file instead of beginning
+perf(storage): add index on session_id column
+```
 
 ---
 
-Thank you for contributing to Claude Hindsight! 🔭✨
+## Areas for Contribution
+
+### Good first issues
+
+- [ ] Add keyboard shortcut help screen in TUI (press `?`)
+- [ ] Add syntax highlighting to JSON viewer in terminal UI
+- [ ] Support filtering `hindsight list` by date range (`--since`, `--until`)
+- [ ] Add `--json` output flag to `hindsight list` for scripting
+- [ ] Create example JSONL fixtures for integration tests
+- [ ] Improve error messages with actionable suggestions
+
+### Medium difficulty
+
+- [ ] Session comparison view (diff two sessions side-by-side)
+- [ ] Cost breakdown chart in the web dashboard
+- [ ] Export session to HTML report
+- [ ] Add pagination to the TUI execution tree for very large sessions
+- [ ] Dark/light theme toggle in the web dashboard
+
+### Advanced
+
+- [ ] Pattern detection — flag repeated tool failures, excessive retries
+- [ ] Cross-session analytics — trends over time, per-project cost history
+- [ ] Session replay mode — step through execution with timeline scrubber
+- [ ] OpenTelemetry export (optional integration)
+
+---
+
+## Questions?
+
+- Open a GitHub issue for bugs or feature requests
+- Start a discussion for broader design questions
+- Check the README for architecture and command reference
+
+## Code of Conduct
+
+Be respectful, provide constructive feedback, assume positive intent, and help others learn and grow.
+
+## License
+
+By contributing, you agree your contributions will be licensed under the MIT License.
+
+---
+
+Thank you for contributing to Claude Hindsight!
