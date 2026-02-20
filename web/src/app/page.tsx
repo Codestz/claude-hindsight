@@ -12,7 +12,7 @@ import { SessionTable } from "@/components/sessions/SessionTable";
 
 // ── Layout constants ──────────────────────────────────────────
 const MAX_W = "1400px";
-const PAGE_PAD = "0 28px";
+const PAGE_PAD_X = "28px";
 const SECTION_GAP = "20px";
 
 // ── MCP extraction: mcp__<server>__<tool> → group by server ──
@@ -73,7 +73,7 @@ export default function DashboardPage() {
     .join(" · ");
 
   const mcpServers = extractMcpServers(analytics.top_tools);
-  const nativeTols = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
+  const nativeTools = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
   const topFilesForChart = topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]);
 
   return (
@@ -116,7 +116,7 @@ export default function DashboardPage() {
             <div style={{ marginBottom: "18px" }}>
               <SectionHeader title="Top Tools" />
             </div>
-            <BarChart data={nativeTols} limit={6} color="var(--cyan)" />
+            <BarChart data={nativeTools} limit={6} color="var(--cyan)" />
           </div>
         </div>
       </Card>
@@ -176,7 +176,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
       style={{
         maxWidth: MAX_W,
         margin: "0 auto",
-        padding: `36px ${PAGE_PAD.split(" ")[1]}`,
+        padding: `36px ${PAGE_PAD_X}`,
         display: "flex",
         flexDirection: "column",
         gap: SECTION_GAP,

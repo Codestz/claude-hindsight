@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { SearchIcon } from "@/components/icons/SearchIcon";
 
 interface Props {
   open: boolean;
@@ -15,34 +18,64 @@ const QUICK_LINKS = [
 
 export function CommandPalette({ open, onClose }: Props) {
   const [query, setQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
-  // Focus when opened, clear on close
+  const filtered = QUICK_LINKS.filter((l) =>
+    l.label.toLowerCase().includes(query.toLowerCase())
+  );
+
+  // Focus input and reset selection when opened; clear query on close
   useEffect(() => {
     if (open) {
-      // Small delay so the element is mounted
-      const t = setTimeout(() => inputRef.current?.focus(), 40);
-      return () => clearTimeout(t);
+      inputRef.current?.focus();
+      setSelectedIndex(0);
     } else {
       setQuery("");
     }
   }, [open]);
 
-  // Escape to close
+  // Reset selection index when filtered results change
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
+  // Keyboard navigation (↑↓ Enter) + Escape to close
   useEffect(() => {
     if (!open) return;
+
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      switch (e.key) {
+        case "Escape":
+          onClose();
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((i) =>
+            filtered.length === 0 ? 0 : (i + 1) % filtered.length
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((i) =>
+            filtered.length === 0 ? 0 : i <= 0 ? filtered.length - 1 : i - 1
+          );
+          break;
+        case "Enter":
+          if (filtered[selectedIndex]) {
+            router.push(filtered[selectedIndex].href);
+            onClose();
+          }
+          break;
+      }
     };
+
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [open, onClose, filtered, selectedIndex, router]);
 
   if (!open) return null;
-
-  const filtered = QUICK_LINKS.filter((l) =>
-    l.label.toLowerCase().includes(query.toLowerCase())
-  );
 
   return (
     // Backdrop
@@ -84,7 +117,7 @@ export function CommandPalette({ open, onClose }: Props) {
             borderBottom: "1px solid var(--border-1)",
           }}
         >
-          <SearchIcon />
+          <SearchIcon size={14} stroke="var(--text-3)" />
           <input
             ref={inputRef}
             value={query}
@@ -121,11 +154,12 @@ export function CommandPalette({ open, onClose }: Props) {
               >
                 {query ? "Results" : "Quick links"}
               </div>
-              {filtered.map((link) => (
-                <a
+              {filtered.map((link, i) => (
+                <Link
                   key={link.href}
                   href={link.href}
                   onClick={onClose}
+                  onMouseEnter={() => setSelectedIndex(i)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -134,14 +168,9 @@ export function CommandPalette({ open, onClose }: Props) {
                     fontSize: "13px",
                     color: "var(--text-1)",
                     cursor: "pointer",
+                    background: i === selectedIndex ? "var(--bg-2)" : "transparent",
                     transition: "background 0.1s",
                     textDecoration: "none",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "var(--bg-2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = "transparent";
                   }}
                 >
                   <span>{link.label}</span>
@@ -154,7 +183,7 @@ export function CommandPalette({ open, onClose }: Props) {
                   >
                     {link.category}
                   </span>
-                </a>
+                </Link>
               ))}
             </>
           ) : (
@@ -195,25 +224,6 @@ export function CommandPalette({ open, onClose }: Props) {
         </div>
       </div>
     </div>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--text-3)"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ flexShrink: 0 }}
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.35-4.35" />
-    </svg>
   );
 }
 

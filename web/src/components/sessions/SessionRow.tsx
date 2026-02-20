@@ -13,9 +13,22 @@ interface SessionRowProps {
   session: SessionFile;
 }
 
+/** Derive a short label from a source_dir path.
+ *  "~/.claudep/projects" → "claudep"
+ *  "~/.claude/projects"  → "claude" (omitted — it's the default, no tag)
+ */
+function sourceLabel(sourceDir: string): string | null {
+  if (!sourceDir || sourceDir === "~/.claude/projects") return null;
+  // Take the second path segment after ~ (e.g. "~/.claudep/projects" → ".claudep" → "claudep")
+  const parts = sourceDir.replace(/^~\//, "").split("/");
+  const segment = parts[0]?.replace(/^\./, "") ?? null;
+  return segment || null;
+}
+
 export function SessionRow({ session: s }: SessionRowProps) {
   const hasErrors = s.error_count > 0;
   const model = shortModel(s.model);
+  const srcLabel = sourceLabel(s.source_dir ?? "");
 
   return (
     <Link
@@ -79,18 +92,41 @@ export function SessionRow({ session: s }: SessionRowProps) {
         {s.first_message ?? "No message"}
       </span>
 
-      {/* Project */}
+      {/* Project + optional source label */}
       <span
         style={{
-          color: "var(--text-2)",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
           overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
           paddingRight: "12px",
-          fontSize: "13px",
         }}
       >
-        {s.project_name}
+        <span
+          style={{
+            color: "var(--text-2)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontSize: "13px",
+          }}
+        >
+          {s.project_name}
+        </span>
+        {srcLabel && (
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "10px",
+              color: "var(--amber)",
+              opacity: 0.75,
+              flexShrink: 0,
+              letterSpacing: "0.04em",
+            }}
+          >
+            [{srcLabel}]
+          </span>
+        )}
       </span>
 
       {/* Model */}

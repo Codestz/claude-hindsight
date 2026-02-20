@@ -76,6 +76,8 @@ export interface SessionFile {
   model: string | null;         // e.g. "claude-sonnet-4-5-20250929"
   error_count: number;
   first_message: string | null; // first user message text, truncated
+  source_dir: string;           // config path e.g. "~/.claude/projects"
+  subagent_models: string[] | null; // unique models used by subagents
 }
 
 // ─────────────────────────────────────────────────────────────
