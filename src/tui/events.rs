@@ -33,12 +33,12 @@ impl EventHandler {
     }
 
     /// Get the next event (blocking with timeout)
-    pub fn next(&mut self) -> Result<Event> {
+    pub fn poll(&mut self) -> Result<Event> {
         if event::poll(self.timeout)? {
             match event::read()? {
                 CrosstermEvent::Key(key) => Ok(Event::Key(key)),
                 CrosstermEvent::Resize(w, h) => Ok(Event::Resize(w, h)),
-                _ => self.next(), // Ignore other events
+                _ => self.poll(), // Ignore other events
             }
         } else {
             // Timeout - return a dummy resize to keep the loop going

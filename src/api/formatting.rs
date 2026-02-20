@@ -1,6 +1,7 @@
 //! Presentation configuration for different output formats
 //!
 //! Separates presentation logic from data structures.
+#![allow(dead_code)]
 
 use serde::{Serialize, Deserialize};
 

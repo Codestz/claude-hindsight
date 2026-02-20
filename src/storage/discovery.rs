@@ -149,7 +149,7 @@ fn decode_project_name(path: &Path) -> String {
         .map(|s| {
             // Try to extract the last meaningful part
             if s.starts_with('-') {
-                s.split('-').last().unwrap_or(s).to_string()
+                s.split('-').next_back().unwrap_or(s).to_string()
             } else {
                 s.to_string()
             }

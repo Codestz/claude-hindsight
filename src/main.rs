@@ -253,7 +253,7 @@ fn run_hub() -> Result<()> {
     loop {
         terminal.draw(|f| router.render(f))?;
 
-        if let tui::Event::Key(key) = event_handler.next()? {
+        if let tui::Event::Key(key) = event_handler.poll()? {
             router.handle_key(key)?;
         }
 
@@ -293,7 +293,7 @@ fn run_last_session() -> Result<()> {
             loop {
                 terminal.draw(|f| router.render(f))?;
 
-                if let tui::Event::Key(key) = event_handler.next()? {
+                if let tui::Event::Key(key) = event_handler.poll()? {
                     router.handle_key(key)?;
                 }
 

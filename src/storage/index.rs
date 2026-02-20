@@ -721,6 +721,7 @@ impl SessionIndex {
     }
 
     /// Check if a session used a specific tool
+    #[allow(dead_code)]
     pub fn has_tool_usage(&self, session_id: &str, tool_name: &str) -> Result<bool> {
         let count: i64 = self.conn.query_row(
             "SELECT COUNT(*) FROM tool_usage WHERE session_id = ?1 AND tool_name = ?2",
@@ -732,6 +733,7 @@ impl SessionIndex {
     }
 
     /// Get sessions that used any of the specified tools
+    #[allow(dead_code)]
     pub fn find_by_tools(&self, tool_names: &[String]) -> Result<Vec<SessionFile>> {
         if tool_names.is_empty() {
             return Ok(Vec::new());
@@ -920,6 +922,7 @@ impl SessionIndex {
     }
 
     /// Search sessions using FTS5 full-text index
+    #[allow(dead_code)]
     pub fn search_sessions_fts(&self, query: &str) -> Result<Vec<SessionFile>> {
         if query.trim().is_empty() {
             return Ok(Vec::new());

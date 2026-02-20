@@ -9,7 +9,7 @@ use ratatui::{
 
 /// Detect language from file extension
 pub fn detect_language(file_path: &str) -> Option<Language> {
-    let extension = file_path.split('.').last()?;
+    let extension = file_path.split('.').next_back()?;
     match extension {
         "rs" => Some(Language::Rust),
         "js" | "jsx" | "ts" | "tsx" => Some(Language::JavaScript),

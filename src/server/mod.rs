@@ -28,6 +28,7 @@ struct WebAssets;
 /// Shared application state — no Connection here; each handler opens its own.
 #[derive(Clone)]
 pub struct AppState {
+    #[allow(dead_code)]
     pub db_path: PathBuf,
 }
 
