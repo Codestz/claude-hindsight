@@ -1,0 +1,128 @@
+<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.BF4DvJBM.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.DOeer7Ps.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.DIke02Rj.css"><script type="module">const t=document.querySelectorAll("#docs-toc .toc-link");if(t.length){const c=Array.from(t).map(e=>document.getElementById(e.dataset.slug??"")).filter(Boolean),r=new IntersectionObserver(e=>{for(const o of e)if(o.isIntersecting){t.forEach(s=>s.classList.remove("toc-link--active")),document.querySelector(`#docs-toc [data-slug="${o.target.id}"]`)?.classList.add("toc-link--active");break}},{rootMargin:"-48px 0px -60% 0px"});c.forEach(e=>r.observe(e))}
+</script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v1.0.0</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> </div> </header>  <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <div class="sb-group"> <div class="sb-group-label">Getting Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a> </div><div class="sb-group"> <div class="sb-group-label">Core Concepts</div> <a href="/claude-hindsight/docs/architecture" class="sb-link sb-link--active"> Architecture </a> </div><div class="sb-group"> <div class="sb-group-label">CLI Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> hindsight serve </a><a href="/claude-hindsight/docs/commands" class="sb-link "> hindsight list </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link "> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Getting Started</span> </nav> <article class="prose-doc"> <h1 id="architecture">Architecture</h1>
+<p>Hindsight is designed around a single key constraint: <strong>zero runtime dependencies</strong>. Everything — the web dashboard, the static assets, and the data layer — ships in one binary.</p>
+<h2 id="session-files-jsonl">Session files (JSONL)</h2>
+<p>Claude Code records every session as a newline-delimited JSON file (JSONL) in:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>~/.claude/projects/&#x3C;project-slug>/&#x3C;session-id>.jsonl</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Each line is a JSON object representing one “node” — a message, tool call, tool result, or system event. Nodes form a tree structure: assistant messages contain tool use, tool results reference the call, sub-agents nest inside the parent session.</p>
+<p><strong>Example node types:</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>human</code></td><td>User message</td></tr><tr><td><code>assistant</code></td><td>Claude response</td></tr><tr><td><code>tool_use</code></td><td>Claude invoking a tool</td></tr><tr><td><code>tool_result</code></td><td>Tool output</td></tr><tr><td><code>summary</code></td><td>Auto-generated session summary</td></tr></tbody></table>
+<p>Hindsight parses these files using a streaming JSONL reader so even very large sessions (tens of thousands of nodes) load quickly.</p>
+<h2 id="sqlite-index">SQLite index</h2>
+<p>On <code>hindsight init</code>, Hindsight scans the project directories and builds a local SQLite database (default: <code>~/.local/share/hindsight/index.db</code>).</p>
+<p>The schema includes:</p>
+<ul>
+<li><strong><code>sessions</code></strong> — one row per JSONL file: session ID, project name, file path, token counts, cost estimate, first message, model, timestamps, error count</li>
+<li><strong><code>tool_uses</code></strong> — denormalized tool call records for fast frequency queries</li>
+<li><strong><code>session_fts</code></strong> — SQLite FTS5 virtual table for full-text search over message content</li>
+</ul>
+<p>The index is kept deliberately flat (not deeply normalized) to allow fast single-query analytics aggregations across hundreds of sessions.</p>
+<h3 id="incremental-updates">Incremental updates</h3>
+<p><code>hindsight reindex</code> uses file modification timestamps to skip sessions that haven’t changed since the last index pass. Only new or modified JSONL files are re-parsed.</p>
+<h2 id="single-binary-embed">Single-binary embed</h2>
+<p>The web dashboard is a Next.js application built to static files (<code>next build</code>). At Rust compile time, <a href="https://github.com/pyros2097/rust-embed"><code>rust-embed</code></a> bundles the entire <code>web/out/</code> directory into the binary as read-only byte slices.</p>
+<p>At runtime, the embedded HTTP server (built with <a href="https://github.com/tokio-rs/axum"><code>axum</code></a>) serves these static assets from memory alongside the JSON API.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────┐</span></span>
+<span class="line"><span>│         hindsight binary        │</span></span>
+<span class="line"><span>│                                 │</span></span>
+<span class="line"><span>│  ┌───────────┐ ┌─────────────┐  │</span></span>
+<span class="line"><span>│  │ axum HTTP │ │ rust-embed  │  │</span></span>
+<span class="line"><span>│  │  server   │ │ web/out/*   │  │</span></span>
+<span class="line"><span>│  └─────┬─────┘ └─────────────┘  │</span></span>
+<span class="line"><span>│        │                        │</span></span>
+<span class="line"><span>│  ┌─────▼─────────────────────┐  │</span></span>
+<span class="line"><span>│  │   JSON API (/api/*)       │  │</span></span>
+<span class="line"><span>│  │   SQLite via rusqlite     │  │</span></span>
+<span class="line"><span>│  └───────────────────────────┘  │</span></span>
+<span class="line"><span>└─────────────────────────────────┘</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="api-surface">API surface</h2>
+<p>The server exposes a minimal JSON API consumed by the dashboard:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Endpoint</th><th>Description</th></tr></thead><tbody><tr><td><code>GET /api/analytics</code></td><td>Global session aggregates</td></tr><tr><td><code>GET /api/sparkline?days=N</code></td><td>Daily session counts for the last N days</td></tr><tr><td><code>GET /api/sessions</code></td><td>Paginated session list</td></tr><tr><td><code>GET /api/sessions/:id</code></td><td>Single session metadata</td></tr><tr><td><code>GET /api/sessions/:id/tree</code></td><td>Full node tree for a session</td></tr><tr><td><code>GET /api/projects</code></td><td>Per-project stats</td></tr><tr><td><code>GET /api/search?q=&#x3C;query></code></td><td>Full-text search results</td></tr></tbody></table>
+<h2 id="rust-crate-structure">Rust crate structure</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>src/</span></span>
+<span class="line"><span>  main.rs          Entry point, CLI dispatch</span></span>
+<span class="line"><span>  server/          HTTP server and API handlers</span></span>
+<span class="line"><span>    mod.rs</span></span>
+<span class="line"><span>    routes.rs</span></span>
+<span class="line"><span>    analytics.rs</span></span>
+<span class="line"><span>  indexer/         JSONL parsing and SQLite writes</span></span>
+<span class="line"><span>    mod.rs</span></span>
+<span class="line"><span>    parser.rs</span></span>
+<span class="line"><span>    db.rs</span></span>
+<span class="line"><span>  tui/             Terminal UI (ratatui)</span></span>
+<span class="line"><span>    mod.rs</span></span>
+<span class="line"><span>  watcher.rs       Live session file tail</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Key dependencies: <code>axum</code>, <code>rusqlite</code>, <code>rust-embed</code>, <code>ratatui</code>, <code>tokio</code>, <code>serde</code>, <code>clap</code>.</p> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/architecture/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
+Edit this page on GitHub →
+</a> </div> </main> <!-- ── Right ToC ─────────────────────────── --> <aside id="docs-toc"> <div class="toc-label">On this page</div> <nav> <a href="#session-files-jsonl" class="toc-link toc-link--h2" data-slug="session-files-jsonl"> Session files (JSONL) </a><a href="#sqlite-index" class="toc-link toc-link--h2" data-slug="sqlite-index"> SQLite index </a><a href="#incremental-updates" class="toc-link toc-link--h3" data-slug="incremental-updates"> Incremental updates </a><a href="#single-binary-embed" class="toc-link toc-link--h2" data-slug="single-binary-embed"> Single-binary embed </a><a href="#api-surface" class="toc-link toc-link--h2" data-slug="api-surface"> API surface </a><a href="#rust-crate-structure" class="toc-link toc-link--h2" data-slug="rust-crate-structure"> Rust crate structure </a> </nav> </aside> </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   </body></html><!-- Active ToC highlight via IntersectionObserver -->

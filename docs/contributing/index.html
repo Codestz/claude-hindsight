@@ -1,0 +1,100 @@
+<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.BF4DvJBM.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.DOeer7Ps.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.DIke02Rj.css"><script type="module">const t=document.querySelectorAll("#docs-toc .toc-link");if(t.length){const c=Array.from(t).map(e=>document.getElementById(e.dataset.slug??"")).filter(Boolean),r=new IntersectionObserver(e=>{for(const o of e)if(o.isIntersecting){t.forEach(s=>s.classList.remove("toc-link--active")),document.querySelector(`#docs-toc [data-slug="${o.target.id}"]`)?.classList.add("toc-link--active");break}},{rootMargin:"-48px 0px -60% 0px"});c.forEach(e=>r.observe(e))}
+</script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v1.0.0</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> </div> </header>  <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <div class="sb-group"> <div class="sb-group-label">Getting Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a> </div><div class="sb-group"> <div class="sb-group-label">Core Concepts</div> <a href="/claude-hindsight/docs/architecture" class="sb-link "> Architecture </a> </div><div class="sb-group"> <div class="sb-group-label">CLI Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> hindsight serve </a><a href="/claude-hindsight/docs/commands" class="sb-link "> hindsight list </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link sb-link--active"> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Getting Started</span> </nav> <article class="prose-doc"> <h1 id="contributing">Contributing</h1>
+<p>Contributions are welcome! This guide covers how to set up your development environment, understand the project structure, and submit a pull request.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li><strong>Rust</strong> 1.75+ (<code>rustup</code> recommended)</li>
+<li><strong>Node.js</strong> 20+ and <strong>npm</strong> 10+ (for the web dashboard)</li>
+<li><strong>Git</strong></li>
+</ul>
+<h2 id="dev-setup">Dev setup</h2>
+<h3 id="1-clone-the-repository">1. Clone the repository</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">git</span><span style="color:#9ECBFF"> clone</span><span style="color:#9ECBFF"> https://github.com/Codestz/claude-hindsight</span></span>
+<span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> claude-hindsight</span></span>
+<span class="line"></span></code></pre>
+<h3 id="2-install-web-dependencies">2. Install web dependencies</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> web</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#B392F0">npm</span><span style="color:#9ECBFF"> install</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> ..</span></span>
+<span class="line"></span></code></pre>
+<h3 id="3-build-the-web-dashboard">3. Build the web dashboard</h3>
+<p>The Rust build script (<code>build.rs</code>) expects <code>web/out/</code> to exist. Run:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> web</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#B392F0">npm</span><span style="color:#9ECBFF"> run</span><span style="color:#9ECBFF"> build</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> ..</span></span>
+<span class="line"></span></code></pre>
+<h3 id="4-build-and-run-hindsight">4. Build and run Hindsight</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> run</span><span style="color:#79B8FF"> --</span><span style="color:#9ECBFF"> serve</span></span>
+<span class="line"></span></code></pre>
+<p>Or, for faster iteration without a full rebuild of the embedded assets:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> run</span><span style="color:#79B8FF"> --</span><span style="color:#9ECBFF"> serve</span></span>
+<span class="line"><span style="color:#6A737D"># In another terminal:</span></span>
+<span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> web</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#B392F0">npm</span><span style="color:#9ECBFF"> run</span><span style="color:#9ECBFF"> dev</span><span style="color:#6A737D">  # Next.js dev server on :3000</span></span>
+<span class="line"></span></code></pre>
+<blockquote>
+<p><strong>Tip:</strong> The Next.js dev server proxies API calls to the Rust backend on <code>:7227</code>. Both can run simultaneously during development.</p>
+</blockquote>
+<h3 id="5-run-tests">5. Run tests</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> test</span></span>
+<span class="line"></span></code></pre>
+<h3 id="6-lint">6. Lint</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> clippy</span><span style="color:#79B8FF"> --</span><span style="color:#79B8FF"> -D</span><span style="color:#9ECBFF"> warnings</span></span>
+<span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> web</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#B392F0">npm</span><span style="color:#9ECBFF"> run</span><span style="color:#9ECBFF"> lint</span></span>
+<span class="line"></span></code></pre>
+<h2 id="project-structure">Project structure</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>claude-hindsight/</span></span>
+<span class="line"><span>  Cargo.toml            Rust workspace manifest</span></span>
+<span class="line"><span>  build.rs              Embeds web/out/ at compile time</span></span>
+<span class="line"><span>  src/                  Rust source</span></span>
+<span class="line"><span>    main.rs</span></span>
+<span class="line"><span>    server/</span></span>
+<span class="line"><span>    indexer/</span></span>
+<span class="line"><span>    tui/</span></span>
+<span class="line"><span>    watcher.rs</span></span>
+<span class="line"><span>  web/                  Next.js dashboard</span></span>
+<span class="line"><span>    src/</span></span>
+<span class="line"><span>      app/              Next.js App Router pages</span></span>
+<span class="line"><span>      components/       React components</span></span>
+<span class="line"><span>      lib/              API client, types, utils</span></span>
+<span class="line"><span>  site/                 Astro docs &#x26; landing page</span></span>
+<span class="line"><span>  tests/                Integration tests</span></span>
+<span class="line"><span>  Formula/              Homebrew formula</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="code-standards">Code standards</h2>
+<h3 id="rust">Rust</h3>
+<ul>
+<li>Follow standard Rust idioms; run <code>cargo clippy</code> before committing</li>
+<li>Use <code>thiserror</code> for error types, <code>anyhow</code> for application-level errors</li>
+<li>No <code>unwrap()</code> in library code — propagate errors with <code>?</code></li>
+<li>Document public items with <code>///</code> doc comments</li>
+</ul>
+<h3 id="typescript--react">TypeScript / React</h3>
+<ul>
+<li>Functional components only</li>
+<li>Minimal dependencies — avoid adding new npm packages unless necessary</li>
+<li>Tailwind for styling; avoid inline style objects except for dynamic values</li>
+<li>No <code>any</code> types</li>
+</ul>
+<h3 id="commit-messages">Commit messages</h3>
+<p>Use conventional commits:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>feat: add session export to CSV</span></span>
+<span class="line"><span>fix: handle empty JSONL files in indexer</span></span>
+<span class="line"><span>docs: update architecture diagram</span></span>
+<span class="line"><span>chore: bump lucide-react to 0.470</span></span>
+<span class="line"><span></span></span></code></pre>
+<h2 id="submitting-a-pull-request">Submitting a pull request</h2>
+<ol>
+<li>Fork the repository and create a branch from <code>main</code></li>
+<li>Make your changes, following the code standards above</li>
+<li>Ensure <code>cargo test</code> and <code>cargo clippy -- -D warnings</code> pass</li>
+<li>Ensure <code>cd web &#x26;&#x26; npm run build</code> succeeds (the rust-embed step requires a clean build)</li>
+<li>Open a pull request with a clear description of the change and why it’s needed</li>
+</ol>
+<h2 id="reporting-issues">Reporting issues</h2>
+<p>Use <a href="https://github.com/Codestz/claude-hindsight/issues">GitHub Issues</a>. Please include:</p>
+<ul>
+<li>Hindsight version (<code>hindsight --version</code>)</li>
+<li>OS and architecture</li>
+<li>Steps to reproduce</li>
+<li>Expected vs actual behavior</li>
+</ul> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/contributing/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
+Edit this page on GitHub →
+</a> </div> </main> <!-- ── Right ToC ─────────────────────────── --> <aside id="docs-toc"> <div class="toc-label">On this page</div> <nav> <a href="#prerequisites" class="toc-link toc-link--h2" data-slug="prerequisites"> Prerequisites </a><a href="#dev-setup" class="toc-link toc-link--h2" data-slug="dev-setup"> Dev setup </a><a href="#1-clone-the-repository" class="toc-link toc-link--h3" data-slug="1-clone-the-repository"> 1. Clone the repository </a><a href="#2-install-web-dependencies" class="toc-link toc-link--h3" data-slug="2-install-web-dependencies"> 2. Install web dependencies </a><a href="#3-build-the-web-dashboard" class="toc-link toc-link--h3" data-slug="3-build-the-web-dashboard"> 3. Build the web dashboard </a><a href="#4-build-and-run-hindsight" class="toc-link toc-link--h3" data-slug="4-build-and-run-hindsight"> 4. Build and run Hindsight </a><a href="#5-run-tests" class="toc-link toc-link--h3" data-slug="5-run-tests"> 5. Run tests </a><a href="#6-lint" class="toc-link toc-link--h3" data-slug="6-lint"> 6. Lint </a><a href="#project-structure" class="toc-link toc-link--h2" data-slug="project-structure"> Project structure </a><a href="#code-standards" class="toc-link toc-link--h2" data-slug="code-standards"> Code standards </a><a href="#rust" class="toc-link toc-link--h3" data-slug="rust"> Rust </a><a href="#typescript--react" class="toc-link toc-link--h3" data-slug="typescript--react"> TypeScript / React </a><a href="#commit-messages" class="toc-link toc-link--h3" data-slug="commit-messages"> Commit messages </a><a href="#submitting-a-pull-request" class="toc-link toc-link--h2" data-slug="submitting-a-pull-request"> Submitting a pull request </a><a href="#reporting-issues" class="toc-link toc-link--h2" data-slug="reporting-issues"> Reporting issues </a> </nav> </aside> </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   </body></html><!-- Active ToC highlight via IntersectionObserver -->
