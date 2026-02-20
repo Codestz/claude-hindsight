@@ -1,16 +1,18 @@
-// Typed fetch wrappers for the Hindsight REST API
+// Typed fetch wrappers for the Hindsight REST API.
+// In dev: next.config.ts proxies /api/* → :7227
+// In prod: Rust server serves both static files and the API on the same origin.
 
 import type {
   GlobalAnalytics,
+  HealthCheck,
   NodeResponse,
   ProjectAnalytics,
   ProjectStats,
   SessionFile,
+  Sparkline,
   TreeResponse,
 } from "./types";
 
-// In production, the Rust server serves both the static files and the API
-// on the same origin. In dev, next.config.ts proxies /api/* to :7227.
 const BASE = "/api";
 
 async function get<T>(path: string): Promise<T> {
@@ -31,8 +33,12 @@ export const api = {
     return get("/analytics/global");
   },
 
-  globalSparkline(days = 14): Promise<number[]> {
+  globalSparkline(days = 14): Promise<Sparkline> {
     return get(`/analytics/global/sparkline?days=${days}`);
+  },
+
+  health(): Promise<HealthCheck> {
+    return get("/health");
   },
 
   projectAnalytics(project: string): Promise<ProjectAnalytics> {
@@ -40,10 +46,10 @@ export const api = {
   },
 
   sessions(opts?: { project?: string; limit?: number }): Promise<SessionFile[]> {
-    const params = new URLSearchParams();
-    if (opts?.project) params.set("project", opts.project);
-    if (opts?.limit) params.set("limit", String(opts.limit));
-    const qs = params.toString();
+    const p = new URLSearchParams();
+    if (opts?.project) p.set("project", opts.project);
+    if (opts?.limit)   p.set("limit", String(opts.limit));
+    const qs = p.toString();
     return get(`/sessions${qs ? `?${qs}` : ""}`);
   },
 
@@ -61,12 +67,20 @@ export const api = {
     tool?: string;
     errors?: boolean;
   }): Promise<SessionFile[]> {
-    const params = new URLSearchParams();
-    if (opts.q) params.set("q", opts.q);
-    if (opts.project) params.set("project", opts.project);
-    if (opts.tool) params.set("tool", opts.tool);
-    if (opts.errors) params.set("errors", "true");
-    return get(`/search?${params.toString()}`);
+    const p = new URLSearchParams();
+    if (opts.q)       p.set("q", opts.q);
+    if (opts.project) p.set("project", opts.project);
+    if (opts.tool)    p.set("tool", opts.tool);
+    if (opts.errors)  p.set("errors", "true");
+    return get(`/search?${p.toString()}`);
+  },
+
+  globalTopFiles(): Promise<[string, number][]> {
+    return get("/analytics/global/files");
+  },
+
+  projectTopFiles(project: string): Promise<[string, number][]> {
+    return get(`/analytics/${encodeURIComponent(project)}/files`);
   },
 
   eventsUrl(sessionId: string): string {
@@ -74,4 +88,4 @@ export const api = {
   },
 };
 
-export type { NodeResponse };
+export type { NodeResponse, Sparkline };

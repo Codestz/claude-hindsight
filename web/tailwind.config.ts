@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
 
+// Every color points to a CSS custom property.
+// The hex lives in globals.css — Tailwind utilities are aliases only.
+
 const config: Config = {
   darkMode: "class",
   content: [
@@ -10,45 +13,57 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: {
-          DEFAULT: "#050505",
-          2:       "#090909",
-          3:       "#0E0E0E",
-          base:    "#050505",
-          card:    "#090909",
-          "card-hover": "#0E0E0E",
-        },
-        border: {
-          DEFAULT: "#1C1C1C",
-          2:       "#282828",
-          3:       "#383838",
-        },
-        surface: { 1: "#090909", 2: "#0E0E0E" },
-        text: {
-          primary: "#E8E8E8",
-          muted:   "#909090",
-          dim:     "#606060",
-          1:       "#E8E8E8",
-          2:       "#909090",
-          3:       "#606060",
-        },
-        accent: {
-          DEFAULT: "#00FF88",
-          cyan:    "#00C8FF",
-          green:   "#00FF88",
-          yellow:  "#FFB547",
-          amber:   "#FFB547",
-          red:     "#FF4545",
-          purple:  "#A78BFA",
-          magenta: "#A78BFA",
-        },
+        // Backgrounds
+        canvas:  "var(--bg-0)",
+        surface: "var(--bg-1)",
+        card:    "var(--bg-2)",
+        overlay: "var(--bg-3)",
+
+        // Borders
+        "border-subtle":   "var(--border-1)",
+        "border-default":  "var(--border-2)",
+        "border-emphasis": "var(--border-3)",
+
+        // Text
+        "text-primary":   "var(--text-1)",
+        "text-secondary": "var(--text-2)",
+        "text-muted":     "var(--text-3)",
+
+        // Accents
+        green:  "var(--green)",
+        amber:  "var(--amber)",
+        cyan:   "var(--cyan)",
+        purple: "var(--purple)",
+        danger: "var(--red)",
+
+        // Semantic
+        accent: "var(--accent)",
+        warn:   "var(--warn)",
+        info:   "var(--info)",
+        error:  "var(--error)",
       },
+
       fontFamily: {
         sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ['"JetBrains Mono"', "monospace"],
+        mono: ["var(--font-mono)", '"JetBrains Mono"', "monospace"],
       },
+
       fontSize: {
-        "2xs": ["0.625rem", { lineHeight: "1rem" }],
+        "2xs": ["0.625rem",  { lineHeight: "1rem" }],    // 10px — badges
+        xs:    ["0.75rem",   { lineHeight: "1rem" }],    // 12px — captions
+        sm:    ["0.8125rem", { lineHeight: "1.25rem" }], // 13px — table rows
+        base:  ["0.875rem",  { lineHeight: "1.5rem" }],  // 14px — body
+        md:    ["1rem",      { lineHeight: "1.5rem" }],  // 16px — subheadings
+        lg:    ["1.125rem",  { lineHeight: "1.5rem" }],  // 18px
+        xl:    ["1.25rem",   { lineHeight: "1.75rem" }], // 20px — section titles
+        "2xl": ["1.5rem",    { lineHeight: "2rem" }],    // 24px
+        "3xl": ["1.875rem",  { lineHeight: "2.25rem" }], // 30px — stat numbers
+      },
+
+      borderRadius: {
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
       },
     },
   },

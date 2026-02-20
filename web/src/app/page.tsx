@@ -1,329 +1,235 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
 import type { GlobalAnalytics, SessionFile } from "@/lib/types";
-import { formatCost, formatTokens, formatBytes, shortId, timeAgo } from "@/lib/utils";
-import { Header } from "@/components/layout/Header";
-import { Sparkline } from "@/components/charts/Sparkline";
-import { ToolBarChart } from "@/components/charts/ToolBarChart";
+import { formatCost, formatTokens } from "@/lib/utils";
+import { StatCard } from "@/components/ui/StatCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { DayChart } from "@/components/charts/DayChart";
+import { BarChart } from "@/components/charts/BarChart";
+import { SessionTable } from "@/components/sessions/SessionTable";
+
+// ── Layout constants ──────────────────────────────────────────
+const MAX_W = "1400px";
+const PAGE_PAD = "0 28px";
+const SECTION_GAP = "20px";
+
+// ── MCP extraction: mcp__<server>__<tool> → group by server ──
+function extractMcpServers(topTools: [string, number][]): [string, number][] {
+  const servers: Record<string, number> = {};
+  for (const [name, count] of topTools) {
+    if (name.startsWith("mcp__")) {
+      const parts = name.split("__");
+      const server = parts[1] ?? name;
+      servers[server] = (servers[server] ?? 0) + count;
+    }
+  }
+  return Object.entries(servers)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6) as [string, number][];
+}
+
+// ── File path shortener: show last 2 segments ────────────────
+function shortPath(path: string): string {
+  const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
+  if (parts.length <= 2) return parts.join("/");
+  return `.../${parts.slice(-2).join("/")}`;
+}
 
 export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<GlobalAnalytics | null>(null);
   const [sparkline, setSparkline] = useState<number[]>([]);
   const [recent, setRecent] = useState<SessionFile[]>([]);
+  const [topFiles, setTopFiles] = useState<[string, number][]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       api.globalAnalytics(),
       api.globalSparkline(14),
       api.sessions({ limit: 10 }),
+      api.globalTopFiles().catch(() => [] as [string, number][]),
     ])
-      .then(([a, spark, sessions]) => {
+      .then(([a, spark, sessions, files]) => {
         setAnalytics(a);
         setSparkline(spark);
         setRecent(sessions);
+        setTopFiles(files);
       })
-      .catch(console.error)
+      .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingState />;
-  if (!analytics) return <ErrorState />;
+  if (loading) return <PageShell><LoadingState /></PageShell>;
+  if (error || !analytics) return <PageShell><ErrorState message={error} /></PageShell>;
+
+  const sessionsSub = [
+    analytics.sessions_today > 0 && `+${analytics.sessions_today} today`,
+    `${analytics.sessions_this_week} this week`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const mcpServers = extractMcpServers(analytics.top_tools);
+  const nativeTols = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
+  const topFilesForChart = topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]);
 
   return (
-    <div className="flex flex-col flex-1" style={{ background: "var(--bg)" }}>
-      <Header title="Dashboard" subtitle="Global session overview" />
-
-      <div className="flex-1 p-4 space-y-1">
-
-        {/* ── Top stats bento (3 cols) ── */}
-        <div
-          className="bento"
-          style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-        >
-          <BentoStat
-            label="Total Sessions"
-            value={analytics.total_sessions.toLocaleString()}
-            sub={`${analytics.sessions_today} today · ${analytics.sessions_this_week} this week`}
-            accent
-          />
-          <BentoStat
-            label="Total Tokens"
-            value={formatTokens(analytics.total_tokens)}
-            sub="cumulative across all sessions"
-          />
-          <BentoStat
+    <PageShell>
+      {/* ── Hero stats ───────────────────────────────────── */}
+      <Card>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
+          <div style={{ borderRight: "1px solid var(--border-1)" }}>
+            <StatCard
+              label="Total Sessions"
+              value={analytics.total_sessions.toLocaleString()}
+              sub={sessionsSub}
+              accent
+            />
+          </div>
+          <div style={{ borderRight: "1px solid var(--border-1)" }}>
+            <StatCard
+              label="Total Tokens"
+              value={formatTokens(analytics.total_tokens)}
+              sub="across all sessions"
+              valueColor="var(--cyan)"
+            />
+          </div>
+          <StatCard
             label="Estimated Cost"
             value={formatCost(analytics.total_cost)}
             sub="based on model pricing"
             valueColor="var(--amber)"
           />
         </div>
+      </Card>
 
-        {/* ── Secondary bento (4 cols) ── */}
-        <div
-          className="bento"
-          style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
-        >
-          <BentoMini label="Projects" value={analytics.total_projects.toLocaleString()} />
-          <BentoMini label="Today" value={analytics.sessions_today.toLocaleString()} />
-          <BentoMini label="Errors" value={analytics.total_errors.toLocaleString()} alert={analytics.total_errors > 0} />
-          <BentoMini label="Avg Size" value={formatBytes(analytics.avg_session_size)} />
+      {/* ── Charts row 1: sparkline + top tools ──────────── */}
+      <Card>
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr" }}>
+          <div style={{ padding: "24px 28px", borderRight: "1px solid var(--border-1)" }}>
+            <DayChart data={sparkline} />
+          </div>
+          <div style={{ padding: "24px 28px" }}>
+            <div style={{ marginBottom: "18px" }}>
+              <SectionHeader title="Top Tools" />
+            </div>
+            <BarChart data={nativeTols} limit={6} color="var(--cyan)" />
+          </div>
         </div>
+      </Card>
 
-        {/* ── Activity + Tools bento ── */}
-        <div
-          className="bento"
-          style={{ gridTemplateColumns: "2fr 1fr" }}
-        >
-          <div className="p-5" style={{ background: "var(--bg)" }}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-1)" }}>
-                  Session Activity
+      {/* ── Charts row 2: MCPs + Top Files ───────────────── */}
+      {(mcpServers.length > 0 || topFilesForChart.length > 0) && (
+        <Card>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr" }}>
+            {/* Top MCPs */}
+            {mcpServers.length > 0 ? (
+              <div style={{ padding: "24px 28px", borderRight: "1px solid var(--border-1)" }}>
+                <div style={{ marginBottom: "18px" }}>
+                  <SectionHeader title="Top MCP Servers" />
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: "var(--text-2)" }}>
-                  Last 14 days
+                <BarChart data={mcpServers} limit={6} color="var(--purple)" />
+              </div>
+            ) : (
+              <div style={{ padding: "24px 28px", borderRight: "1px solid var(--border-1)" }}>
+                <div style={{ marginBottom: "18px" }}>
+                  <SectionHeader title="Top MCP Servers" />
+                </div>
+                <div style={{ fontSize: "13px", color: "var(--text-3)", fontFamily: "var(--font-sans)" }}>
+                  No MCP tools detected
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="dot dot--pulse" aria-hidden="true" />
-                <span className="label" style={{ fontSize: "9px" }}>LIVE</span>
+            )}
+
+            {/* Top Files */}
+            {topFilesForChart.length > 0 && (
+              <div style={{ padding: "24px 28px" }}>
+                <div style={{ marginBottom: "18px" }}>
+                  <SectionHeader title="Most Accessed Files" />
+                </div>
+                <BarChart data={topFilesForChart} limit={8} color="var(--amber)" countLabel="accesses" />
               </div>
-            </div>
-            <Sparkline data={sparkline} color="#00FF88" height={90} showLabels />
+            )}
           </div>
-
-          <div className="p-5" style={{ background: "var(--bg)" }}>
-            <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-1)", marginBottom: "1rem" }}>
-              Top Tools
-            </div>
-            <ToolBarChart tools={analytics.top_tools} />
-          </div>
-        </div>
-
-        {/* ── Recent Sessions bento ── */}
-        <div style={{ background: "var(--border)" }}>
-          {/* Table header bar */}
-          <div
-            className="flex items-center justify-between px-5 py-3"
-            style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}
-          >
-            <div className="flex items-center gap-2">
-              <span style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-1)" }}>
-                Recent Sessions
-              </span>
-              <span
-                className="mono"
-                style={{
-                  fontSize: "10px",
-                  padding: "1px 6px",
-                  background: "var(--bg-2)",
-                  color: "var(--text-2)",
-                  border: "1px solid var(--border)",
-                }}
-              >
-                {recent.length}
-              </span>
-            </div>
-            <Link
-              href="/projects"
-              className="flex items-center gap-1 text-xs transition-colors duration-100 outline-none"
-              style={{ color: "var(--accent)", fontSize: "11px" }}
-            >
-              View all <ArrowRight size={11} aria-hidden="true" />
-            </Link>
-          </div>
-
-          {/* Column headers */}
-          <div
-            className="grid px-5 py-2 mono"
-            style={{
-              gridTemplateColumns: "5.5rem 1fr 8rem 6rem 5rem 5rem 8rem 5rem",
-              borderBottom: "1px solid var(--border)",
-              color: "var(--text-3)",
-              fontSize: "9px",
-              textTransform: "uppercase",
-              letterSpacing: "0.12em",
-              background: "var(--bg)",
-            }}
-          >
-            <span>Session</span>
-            <span>Message</span>
-            <span>Project</span>
-            <span>Tokens</span>
-            <span>Cost</span>
-            <span>Errors</span>
-            <span>Model</span>
-            <span className="text-right">When</span>
-          </div>
-
-          <div role="list" aria-label="Recent sessions" style={{ background: "var(--bg)" }}>
-            {recent.map((s) => (
-              <SessionRow key={s.session_id} session={s} />
-            ))}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-/* ── Bento stat cells ── */
-
-function BentoStat({
-  label, value, sub, accent, valueColor,
-}: {
-  label: string; value: string; sub: string; accent?: boolean; valueColor?: string;
-}) {
-  return (
-    <div
-      className="p-5 relative"
-      style={{ background: "var(--bg)" }}
-    >
-      {accent && (
-        <div
-          style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px", background: "var(--accent)" }}
-          aria-hidden="true"
-        />
+        </Card>
       )}
-      <div
-        className="label mb-3"
-        style={{ color: accent ? "var(--accent)" : "var(--text-3)" }}
-      >
-        {label}
-      </div>
-      <div
-        className="mono tabular"
-        style={{
-          fontSize: "1.875rem",
-          fontWeight: 700,
-          color: valueColor ?? "var(--text-1)",
-          letterSpacing: "-0.03em",
-          lineHeight: 1,
-          marginBottom: "0.375rem",
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: "11px", color: "var(--text-3)" }}>{sub}</div>
-    </div>
+
+      {/* ── Recent sessions ──────────────────────────────── */}
+      <Card>
+        <SessionTable
+          sessions={recent}
+          action={{ label: "All projects", href: "/projects" }}
+        />
+      </Card>
+    </PageShell>
   );
 }
 
-function BentoMini({
-  label, value, alert,
-}: {
-  label: string; value: string; alert?: boolean;
-}) {
+// ── Local layout components ───────────────────────────────────
+
+function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="px-4 py-3"
-      style={{ background: "var(--bg)" }}
+      style={{
+        maxWidth: MAX_W,
+        margin: "0 auto",
+        padding: `36px ${PAGE_PAD.split(" ")[1]}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: SECTION_GAP,
+      }}
     >
-      <div className="label mb-1" style={{ color: "var(--text-3)" }}>{label}</div>
-      <div
-        className="mono tabular"
-        style={{
-          fontSize: "1.125rem",
-          fontWeight: 700,
-          color: alert ? "var(--red)" : "var(--text-1)",
-        }}
-      >
-        {value}
-      </div>
+      {children}
     </div>
   );
 }
 
-function SessionRow({ session }: { session: SessionFile }) {
+function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div role="listitem">
-      <Link href={`/sessions?id=${session.session_id}`}>
-        <div
-          className="grid items-center px-5 mono text-xs tabular cursor-pointer transition-colors duration-75"
-          style={{
-            gridTemplateColumns: "5.5rem 1fr 8rem 6rem 5rem 5rem 8rem 5rem",
-            height: "40px",
-            borderBottom: "1px solid var(--border)",
-            color: "var(--text-2)",
-          }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-2)"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-        >
-          {/* Session ID */}
-          <span style={{ color: "var(--accent)" }}>{shortId(session.session_id)}</span>
-
-          {/* Message */}
-          <span
-            className="truncate pr-4"
-            style={{ fontFamily: "var(--font-sans, Inter)", color: "var(--text-1)", fontSize: "0.8125rem", fontVariantNumeric: "normal" }}
-          >
-            {session.first_message ?? <em style={{ color: "var(--text-3)" }}>No message</em>}
-          </span>
-
-          {/* Project */}
-          <span className="truncate pr-3">{session.project_name}</span>
-
-          {/* Tokens */}
-          <span style={{ color: "var(--cyan)" }}>{formatTokens(session.total_tokens)}</span>
-
-          {/* Cost */}
-          <span style={{ color: "var(--amber)" }}>{formatCost(session.estimated_cost)}</span>
-
-          {/* Errors */}
-          <span>
-            {session.error_count > 0 ? (
-              <span className="tbadge tbadge-err">{session.error_count}</span>
-            ) : (
-              <span style={{ color: "var(--text-3)" }}>—</span>
-            )}
-          </span>
-
-          {/* Model */}
-          <span>
-            {session.model ? (
-              <span className="tbadge tbadge-asst">
-                {session.model.replace("claude-", "").replace(/-\d{8}$/, "")}
-              </span>
-            ) : (
-              <span style={{ color: "var(--text-3)" }}>—</span>
-            )}
-          </span>
-
-          {/* Time */}
-          <span className="text-right" style={{ color: "var(--text-3)" }}>
-            {timeAgo(session.modified_at)}
-          </span>
-        </div>
-      </Link>
+    <div
+      style={{
+        background: "var(--bg-1)",
+        border: "1px solid var(--border-1)",
+        borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+      }}
+    >
+      {children}
     </div>
   );
 }
 
 function LoadingState() {
   return (
-    <div className="flex-1 flex items-center justify-center" style={{ background: "var(--bg)" }}>
-      <span className="mono text-sm" style={{ color: "var(--text-2)" }}>Loading…</span>
+    <div style={{
+      height: "60vh", display: "flex", alignItems: "center",
+      justifyContent: "center", fontSize: "14px",
+      color: "var(--text-3)", fontFamily: "var(--font-sans)",
+    }}>
+      Loading…
     </div>
   );
 }
 
-function ErrorState() {
+function ErrorState({ message }: { message: string | null }) {
   return (
-    <div className="flex-1 flex items-center justify-center" style={{ background: "var(--bg)" }}>
-      <div className="text-center">
-        <div className="text-sm mb-2" style={{ color: "var(--red)" }}>
-          Failed to load analytics
-        </div>
-        <div className="mono text-xs" style={{ color: "var(--text-2)" }}>
-          Is <code style={{ color: "var(--accent)" }}>hindsight serve</code> running on :7227?
-        </div>
+    <div style={{
+      height: "60vh", display: "flex", alignItems: "center",
+      justifyContent: "center", flexDirection: "column",
+      gap: "10px", textAlign: "center",
+    }}>
+      <div style={{ fontSize: "14px", color: "var(--red)" }}>
+        {message ?? "Failed to load analytics"}
+      </div>
+      <div style={{ fontSize: "13px", color: "var(--text-3)" }}>
+        Is{" "}
+        <code style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>
+          hindsight serve
+        </code>{" "}
+        running on :7227?
       </div>
     </div>
   );

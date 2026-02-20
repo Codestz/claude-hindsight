@@ -1,87 +1,152 @@
-"use client";
-
-import { useState } from "react";
 import type { NodeResponse } from "@/lib/types";
-import { timeAgo } from "@/lib/utils";
-
-const TYPE_BADGES: Record<string, { label: string; cls: string }> = {
-  user:        { label: "USER",   cls: "tbadge-user" },
-  assistant:   { label: "ASST",  cls: "tbadge-asst" },
-  tool_use:    { label: "TOOL",  cls: "tbadge-tool" },
-  tool_result: { label: "RESULT",cls: "tbadge-result" },
-  thinking:    { label: "THINK", cls: "tbadge-think" },
-  error:       { label: "ERR",   cls: "tbadge-err" },
-  subagent:    { label: "SUB",   cls: "tbadge-sub" },
-};
+import type { NodeMeta } from "@/lib/node-meta";
 
 interface NodeRowProps {
   node: NodeResponse;
-  defaultExpanded?: boolean;
+  depth: number;
+  meta: NodeMeta;
+  isSelected: boolean;
+  hasChildren: boolean;
+  isExpanded: boolean;
+  onSelect: () => void;
+  onToggle: () => void;
 }
 
-export function NodeRow({ node, defaultExpanded = false }: NodeRowProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded || node.depth < 2);
+// Milliseconds → HH:MM:SS display
+function formatMs(ms: number): string {
+  const d = new Date(ms);
+  return d.toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
 
-  const hasChildren = node.children.length > 0;
-  const badge = TYPE_BADGES[node.node_type] ?? { label: node.node_type.toUpperCase(), cls: "tbadge-asst" };
+export function NodeRow({
+  node,
+  depth,
+  meta,
+  isSelected,
+  hasChildren,
+  isExpanded,
+  onSelect,
+  onToggle,
+}: NodeRowProps) {
+  const selectedBg = "rgba(0, 255, 136, 0.06)";
 
   return (
-    <div>
-      <div
-        className="flex items-start gap-2 py-1.5 px-3 transition-colors cursor-default"
+    <div
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect(); }}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        height: "40px",
+        paddingLeft: `${10 + depth * 18}px`,
+        paddingRight: "14px",
+        gap: "6px",
+        cursor: "pointer",
+        background: isSelected ? selectedBg : "transparent",
+        borderLeft: isSelected
+          ? "2px solid var(--accent)"
+          : "2px solid transparent",
+        transition: "background 0.1s",
+        userSelect: "none",
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.background = isSelected ? selectedBg : "var(--bg-2)";
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement;
+        el.style.background = isSelected ? selectedBg : "transparent";
+      }}
+    >
+      {/* Expand/collapse toggle */}
+      <button
+        aria-label={isExpanded ? "Collapse" : "Expand"}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (hasChildren) onToggle();
+        }}
         style={{
-          paddingLeft: `${node.depth * 20 + 12}px`,
-          background: node.has_error ? "rgba(255,69,69,0.04)" : "transparent",
+          width: "16px",
+          height: "16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "none",
+          border: "none",
+          cursor: hasChildren ? "pointer" : "default",
+          color: hasChildren ? "var(--text-3)" : "transparent",
+          fontSize: "10px",
+          padding: 0,
+          flexShrink: 0,
+          lineHeight: 1,
         }}
-        onMouseEnter={(e) => {
-          if (!node.has_error) (e.currentTarget as HTMLElement).style.background = "var(--bg-2)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.background = node.has_error ? "rgba(255,69,69,0.04)" : "transparent";
-        }}
-        onClick={() => hasChildren && setExpanded((e) => !e)}
       >
-        {/* Expand toggle */}
+        {hasChildren ? (isExpanded ? "▾" : "▸") : "·"}
+      </button>
+
+      {/* Node type icon */}
+      <span
+        style={{
+          color: meta.color,
+          fontSize: "14px",
+          lineHeight: 1,
+          flexShrink: 0,
+        }}
+      >
+        {meta.icon}
+      </span>
+
+      {/* Badge */}
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "0.07em",
+          textTransform: "uppercase",
+          color: meta.color,
+          flexShrink: 0,
+          opacity: 0.85,
+        }}
+      >
+        {meta.badge}
+      </span>
+
+      {/* Summary or label */}
+      <span
+        style={{
+          fontSize: "13px",
+          color: "var(--text-2)",
+          fontFamily: "var(--font-sans)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          flex: 1,
+        }}
+      >
+        {node.summary || node.label}
+      </span>
+
+      {/* Timestamp */}
+      {node.timestamp != null && (
         <span
-          className="mono flex-shrink-0 mt-0.5 w-4 text-center"
           style={{
-            fontSize: "10px",
+            fontSize: "11px",
             color: "var(--text-3)",
-            opacity: hasChildren ? 1 : 0,
-            cursor: hasChildren ? "pointer" : "default",
+            fontFamily: "var(--font-mono)",
+            fontVariantNumeric: "tabular-nums",
+            flexShrink: 0,
           }}
         >
-          {expanded ? "▾" : "▸"}
+          {formatMs(node.timestamp)}
         </span>
-
-        {/* Badge */}
-        <span className={`tbadge ${badge.cls} flex-shrink-0 mt-0.5`}>
-          {badge.label}
-        </span>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span style={{ color: "var(--text-1)", fontSize: "13px" }}>{node.label}</span>
-            {node.has_error && (
-              <span className="tbadge tbadge-err">error</span>
-            )}
-          </div>
-          {node.timestamp && (
-            <div className="mono text-2xs mt-0.5" style={{ color: "var(--text-3)" }}>
-              {timeAgo(Math.floor(node.timestamp / 1000))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Children */}
-      {hasChildren && expanded && (
-        <div>
-          {node.children.map((child, i) => (
-            <NodeRow key={child.uuid ?? i} node={child} />
-          ))}
-        </div>
       )}
     </div>
   );
