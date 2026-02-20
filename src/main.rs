@@ -149,6 +149,10 @@ enum PathsAction {
     Add {
         /// Path to add (e.g. ~/.claudep/projects)
         path: String,
+
+        /// Optional human-readable name for this directory (e.g., Work, Personal)
+        #[arg(long)]
+        name: Option<String>,
     },
 
     /// Remove a directory (the default ~/.claude/projects cannot be removed)
@@ -241,7 +245,7 @@ fn run() -> Result<()> {
         }
         Commands::Paths { action } => match action {
             PathsAction::List => commands::paths::list()?,
-            PathsAction::Add { path } => commands::paths::add(path)?,
+            PathsAction::Add { path, name } => commands::paths::add(path, name)?,
             PathsAction::Remove { path } => commands::paths::remove(path)?,
         },
         Commands::Config { action } => match action {

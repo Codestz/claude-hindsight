@@ -38,6 +38,32 @@ use std::path::Path;
 /// let session = parse_session(Path::new("session.jsonl"))?;
 /// println!("Found {} tools", session.total_tools);
 /// ```
+/// Parse all subagent JSONL files associated with a session.
+///
+/// Subagent files live at `<parent>/<session_stem>/subagents/*.jsonl`.
+/// Each subagent may use a different model (e.g., haiku spawned from a sonnet session).
+pub fn parse_subagents(session_path: &Path) -> Vec<super::models::Session> {
+    let session_id = session_path.file_stem().unwrap_or_default().to_string_lossy();
+    let subagent_dir = session_path
+        .parent()
+        .map(|p| p.join(session_id.as_ref()).join("subagents"));
+
+    let Some(dir) = subagent_dir else {
+        return vec![];
+    };
+    if !dir.exists() {
+        return vec![];
+    }
+
+    std::fs::read_dir(&dir)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().map_or(false, |x| x == "jsonl"))
+        .filter_map(|e| parse_session(&e.path()).ok())
+        .collect()
+}
+
 pub fn parse_session(path: &Path) -> Result<Session> {
     let file = File::open(path)?;
 

@@ -31,14 +31,54 @@ pub struct Config {
     pub paths: PathsConfig,
 }
 
+/// A single configured Claude session directory with optional display name.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaudeDirConfig {
+    /// Directory path (absolute or `~`-prefixed)
+    pub path: String,
+
+    /// Optional human-readable name (e.g., "Work", "Personal")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+impl ClaudeDirConfig {
+    pub fn display_name(&self) -> &str {
+        self.name.as_deref().unwrap_or(&self.path)
+    }
+}
+
+/// Used for backward-compatible deserialization: old configs use plain strings.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ClaudeDirEntry {
+    Simple(String),
+    Full(ClaudeDirConfig),
+}
+
+fn deserialize_claude_dirs<'de, D>(deserializer: D) -> std::result::Result<Vec<ClaudeDirConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    let entries = Vec::<ClaudeDirEntry>::deserialize(deserializer)?;
+    Ok(entries
+        .into_iter()
+        .map(|e| match e {
+            ClaudeDirEntry::Simple(s) => ClaudeDirConfig { path: s, name: None },
+            ClaudeDirEntry::Full(c) => c,
+        })
+        .collect())
+}
+
 /// Paths configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PathsConfig {
     /// Directories to scan for Claude Code session files.
-    /// Each entry should be an absolute path or use `~` for home directory.
-    /// Default: ["~/.claude/projects"]
-    #[serde(default = "default_claude_dirs")]
-    pub claude_dirs: Vec<String>,
+    /// Each entry can be a plain path string (old format) or a table with `path` + optional `name`.
+    /// Default: [{ path = "~/.claude/projects" }]
+    #[serde(default = "default_claude_dirs", deserialize_with = "deserialize_claude_dirs")]
+    pub claude_dirs: Vec<ClaudeDirConfig>,
 }
 
 impl Default for PathsConfig {
@@ -49,8 +89,11 @@ impl Default for PathsConfig {
     }
 }
 
-fn default_claude_dirs() -> Vec<String> {
-    vec!["~/.claude/projects".to_string()]
+fn default_claude_dirs() -> Vec<ClaudeDirConfig> {
+    vec![ClaudeDirConfig {
+        path: "~/.claude/projects".to_string(),
+        name: None,
+    }]
 }
 
 /// UI configuration
