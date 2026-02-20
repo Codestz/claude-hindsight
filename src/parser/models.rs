@@ -42,7 +42,9 @@ mod timestamp_format {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ContentBlock {
-    Text { text: String },
+    Text {
+        text: String,
+    },
     Thinking {
         thinking: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -410,10 +412,11 @@ impl Session {
         let error_count = nodes
             .iter()
             .filter(|n| {
-                let tool_result_error = n
-                    .tool_result
-                    .as_ref()
-                    .and_then(|r| r.is_error)
+                let tr = n.tool_result.as_ref();
+                let tool_result_error = tr.and_then(|r| r.is_error).unwrap_or(false);
+                let content_tag_error = tr
+                    .and_then(|r| r.content.as_deref())
+                    .map(|c| c.contains("<tool_use_error>"))
                     .unwrap_or(false);
 
                 let tool_use_result_error = n
@@ -426,7 +429,28 @@ impl Session {
                     })
                     .unwrap_or(false);
 
-                tool_result_error || tool_use_result_error
+                // Also check message content blocks for tool_result errors
+                let block_error = n
+                    .message
+                    .as_ref()
+                    .map(|m| {
+                        m.content_blocks().iter().any(|b| match b {
+                            ContentBlock::ToolResult {
+                                content, is_error, ..
+                            } => {
+                                is_error.unwrap_or(false)
+                                    || content
+                                        .as_ref()
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.contains("<tool_use_error>"))
+                                        .unwrap_or(false)
+                            }
+                            _ => false,
+                        })
+                    })
+                    .unwrap_or(false);
+
+                tool_result_error || content_tag_error || tool_use_result_error || block_error
             })
             .count();
 
@@ -514,12 +538,15 @@ mod tests {
     fn test_content_block_thinking_roundtrip() {
         let json = r#"{"type":"thinking","thinking":"deep thoughts"}"#;
         let block: ContentBlock = serde_json::from_str(json).unwrap();
-        assert!(matches!(block, ContentBlock::Thinking { thinking, .. } if thinking == "deep thoughts"));
+        assert!(
+            matches!(block, ContentBlock::Thinking { thinking, .. } if thinking == "deep thoughts")
+        );
     }
 
     #[test]
     fn test_content_block_tool_use_roundtrip() {
-        let json = r#"{"type":"tool_use","id":"tu_123","name":"Read","input":{"file_path":"test.rs"}}"#;
+        let json =
+            r#"{"type":"tool_use","id":"tu_123","name":"Read","input":{"file_path":"test.rs"}}"#;
         let block: ContentBlock = serde_json::from_str(json).unwrap();
         assert!(matches!(block, ContentBlock::ToolUse { name, .. } if name == "Read"));
     }
@@ -528,7 +555,9 @@ mod tests {
     fn test_content_block_tool_result_roundtrip() {
         let json = r#"{"type":"tool_result","tool_use_id":"tu_123","content":"result text","is_error":false}"#;
         let block: ContentBlock = serde_json::from_str(json).unwrap();
-        assert!(matches!(block, ContentBlock::ToolResult { tool_use_id, .. } if tool_use_id == "tu_123"));
+        assert!(
+            matches!(block, ContentBlock::ToolResult { tool_use_id, .. } if tool_use_id == "tu_123")
+        );
     }
 
     #[test]
@@ -576,9 +605,16 @@ mod tests {
     #[test]
     fn test_message_text_content_from_blocks() {
         let blocks = vec![
-            ContentBlock::Text { text: "line one".to_string() },
-            ContentBlock::Thinking { thinking: "hidden".to_string(), signature: None },
-            ContentBlock::Text { text: "line two".to_string() },
+            ContentBlock::Text {
+                text: "line one".to_string(),
+            },
+            ContentBlock::Thinking {
+                thinking: "hidden".to_string(),
+                signature: None,
+            },
+            ContentBlock::Text {
+                text: "line two".to_string(),
+            },
         ];
         let msg = make_message_with_content(MessageContent::Blocks(blocks));
         let text = msg.text_content();
@@ -597,14 +633,26 @@ mod tests {
 
     #[test]
     fn test_strip_date_suffix_removes_8_digit_suffix() {
-        assert_eq!(strip_model_date_suffix("claude-sonnet-4-5-20250929"), "claude-sonnet-4-5");
-        assert_eq!(strip_model_date_suffix("claude-opus-4-6-20260101"), "claude-opus-4-6");
-        assert_eq!(strip_model_date_suffix("claude-haiku-4-5-20251001"), "claude-haiku-4-5");
+        assert_eq!(
+            strip_model_date_suffix("claude-sonnet-4-5-20250929"),
+            "claude-sonnet-4-5"
+        );
+        assert_eq!(
+            strip_model_date_suffix("claude-opus-4-6-20260101"),
+            "claude-opus-4-6"
+        );
+        assert_eq!(
+            strip_model_date_suffix("claude-haiku-4-5-20251001"),
+            "claude-haiku-4-5"
+        );
     }
 
     #[test]
     fn test_strip_date_suffix_no_change_when_no_suffix() {
-        assert_eq!(strip_model_date_suffix("claude-sonnet-4-5"), "claude-sonnet-4-5");
+        assert_eq!(
+            strip_model_date_suffix("claude-sonnet-4-5"),
+            "claude-sonnet-4-5"
+        );
         assert_eq!(strip_model_date_suffix("claude"), "claude");
         assert_eq!(strip_model_date_suffix(""), "");
     }

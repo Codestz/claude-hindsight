@@ -6,8 +6,8 @@
 //! - Borrows where possible to avoid clones
 //! - Iterator-based for memory efficiency
 
-use crate::error::{HindsightError, Result};
 use super::models::{ContentBlock, ExecutionNode, MessageContent, Session, TokenUsage};
+use crate::error::{HindsightError, Result};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -259,11 +259,7 @@ mod tests {
     #[test]
     fn test_parse_user_message() {
         let mut file = NamedTempFile::new().unwrap();
-        writeln!(
-            file,
-            r#"{{"type":"user","message":{{"content":"Hello"}}}}"#
-        )
-        .unwrap();
+        writeln!(file, r#"{{"type":"user","message":{{"content":"Hello"}}}}"#).unwrap();
 
         let session = parse_session(file.path()).unwrap();
         assert_eq!(session.nodes.len(), 1);
@@ -452,7 +448,11 @@ mod tests {
 
         let session = parse_session(file.path()).unwrap();
         assert_eq!(session.nodes.len(), 1, "3 frames should collapse to 1");
-        assert_eq!(session.nodes[0].uuid, Some("uuid-3".to_string()), "last frame kept");
+        assert_eq!(
+            session.nodes[0].uuid,
+            Some("uuid-3".to_string()),
+            "last frame kept"
+        );
     }
 
     #[test]

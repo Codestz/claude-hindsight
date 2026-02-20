@@ -1,13 +1,13 @@
 //! Analytics routes
 
+use crate::server::dto::{GlobalAnalyticsDto, ProjectAnalyticsDto};
+use crate::server::{error::ApiError, AppState};
+use crate::storage::SessionIndex;
 use axum::{
     extract::{Path, Query, State},
     Json,
 };
 use serde::Deserialize;
-use crate::server::{AppState, error::ApiError};
-use crate::server::dto::{GlobalAnalyticsDto, ProjectAnalyticsDto};
-use crate::storage::SessionIndex;
 
 pub async fn global_analytics(
     State(_state): State<AppState>,
@@ -28,7 +28,9 @@ pub struct SparklineQuery {
     pub days: usize,
 }
 
-fn default_days() -> usize { 14 }
+fn default_days() -> usize {
+    14
+}
 
 pub async fn global_sparkline(
     State(_state): State<AppState>,
@@ -56,4 +58,31 @@ pub async fn project_analytics(
     .map_err(|e| ApiError::Internal(e.to_string()))??;
 
     Ok(Json(ProjectAnalyticsDto::from(result)))
+}
+
+pub async fn global_top_files(
+    State(_state): State<AppState>,
+) -> Result<Json<Vec<(String, usize)>>, ApiError> {
+    let result = tokio::task::spawn_blocking(move || {
+        let index = SessionIndex::new()?;
+        index.get_top_files(12)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+
+    Ok(Json(result))
+}
+
+pub async fn project_top_files(
+    State(_state): State<AppState>,
+    Path(project): Path<String>,
+) -> Result<Json<Vec<(String, usize)>>, ApiError> {
+    let result = tokio::task::spawn_blocking(move || {
+        let index = SessionIndex::new()?;
+        index.get_top_files_for_project(&project, 12)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+
+    Ok(Json(result))
 }

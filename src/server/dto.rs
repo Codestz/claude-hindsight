@@ -2,8 +2,8 @@
 //!
 //! Adds Serialize to existing storage structs via wrapper types with From impls.
 
+use crate::storage::{GlobalAnalytics, ProjectAnalytics, ProjectStats, SessionFile};
 use serde::{Deserialize, Serialize};
-use crate::storage::{ProjectStats, GlobalAnalytics, ProjectAnalytics, SessionFile};
 
 /// Serializable project stats
 #[derive(Debug, Serialize, Deserialize)]

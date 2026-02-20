@@ -13,7 +13,7 @@ pub mod storage;
 pub mod tui;
 pub mod watcher;
 
-pub use analyzer::{TreeNode, build_simple_tree};
+pub use analyzer::{build_simple_tree, TreeNode};
 pub use error::{HindsightError, Result};
-pub use parser::{ExecutionNode, Session, parse_session};
-pub use storage::{SessionFile, SessionIndex, discover_sessions, initialize_index, refresh_index};
+pub use parser::{parse_session, ExecutionNode, Session};
+pub use storage::{discover_sessions, initialize_index, refresh_index, SessionFile, SessionIndex};

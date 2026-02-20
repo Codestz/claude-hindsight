@@ -3,11 +3,11 @@
 use crate::error::Result;
 use crate::storage::{GlobalAnalytics, SessionIndex};
 use ratatui::{
-    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Sparkline},
+    Frame,
 };
 
 /// Key actions returned from DashboardView
@@ -45,9 +45,7 @@ impl DashboardView {
     pub fn handle_key(&mut self, key: crossterm::event::KeyEvent) -> Result<DashboardAction> {
         use crossterm::event::KeyCode;
         match key.code {
-            KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
-                Ok(DashboardAction::Quit)
-            }
+            KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => Ok(DashboardAction::Quit),
             KeyCode::Backspace => Ok(DashboardAction::Back),
             _ => Ok(DashboardAction::None),
         }
@@ -68,7 +66,12 @@ impl DashboardView {
 
         // Header
         let header = Paragraph::new(Line::from(vec![
-            Span::styled("  Dashboard", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "  Dashboard",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw("  "),
             Span::styled(
                 format!(
@@ -86,10 +89,7 @@ impl DashboardView {
         // Body: two columns
         let cols = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(50),
-                Constraint::Percentage(50),
-            ])
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(outer[1]);
 
         self.render_left(f, cols[0]);
@@ -100,8 +100,8 @@ impl DashboardView {
         let rows = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(8),  // stats
-                Constraint::Length(8),  // sparkline
+                Constraint::Length(8), // stats
+                Constraint::Length(8), // sparkline
                 Constraint::Min(0),
             ])
             .split(area);
@@ -116,7 +116,9 @@ impl DashboardView {
                 Span::styled("  Sessions  ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     format!("{}", a.total_sessions),
-                    Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!("  (this week: {})", a.sessions_this_week),
@@ -127,21 +129,27 @@ impl DashboardView {
                 Span::styled("  Projects  ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     format!("{}", a.total_projects),
-                    Style::default().fg(Color::White).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::White)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::styled("  Tokens    ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     fmt_tokens(total_tok),
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::styled("  Cost      ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     format!("${:.2}", total_cost),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
@@ -161,13 +169,20 @@ impl DashboardView {
             },
         ];
 
-        let stats_widget = Paragraph::new(stats_lines)
-            .block(Block::default().title(" Global Stats ").borders(Borders::ALL));
+        let stats_widget = Paragraph::new(stats_lines).block(
+            Block::default()
+                .title(" Global Stats ")
+                .borders(Borders::ALL),
+        );
         f.render_widget(stats_widget, rows[0]);
 
         // ── Sparkline (sessions per day, last 14 days) ───────────────────────
         let sparkline_widget = Sparkline::default()
-            .block(Block::default().title(" Sessions / day (14d) ").borders(Borders::ALL))
+            .block(
+                Block::default()
+                    .title(" Sessions / day (14d) ")
+                    .borders(Borders::ALL),
+            )
             .data(&self.sparkline_data)
             .style(Style::default().fg(Color::Cyan));
         f.render_widget(sparkline_widget, rows[1]);
@@ -177,7 +192,7 @@ impl DashboardView {
         let rows = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(9),  // top tools
+                Constraint::Length(9), // top tools
                 Constraint::Min(0),
             ])
             .split(area);
@@ -196,13 +211,13 @@ impl DashboardView {
             let empty = "░".repeat(18usize.saturating_sub(bar_len));
 
             tool_lines.push(Line::from(vec![
-                Span::styled(format!("  {:<14}", truncate(name, 14)), Style::default().fg(Color::White)),
+                Span::styled(
+                    format!("  {:<14}", truncate(name, 14)),
+                    Style::default().fg(Color::White),
+                ),
                 Span::styled(bar, Style::default().fg(Color::Blue)),
                 Span::styled(empty, Style::default().fg(Color::DarkGray)),
-                Span::styled(
-                    format!("  {}", count),
-                    Style::default().fg(Color::DarkGray),
-                ),
+                Span::styled(format!("  {}", count), Style::default().fg(Color::DarkGray)),
             ]));
         }
 

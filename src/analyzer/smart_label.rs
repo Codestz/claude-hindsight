@@ -110,7 +110,9 @@ fn detect_assistant_type(node: &TreeNode) -> (String, String) {
     if let Some(ref msg) = node.node.message {
         let blocks = msg.content_blocks();
 
-        let has_thinking = blocks.iter().any(|b| matches!(b, ContentBlock::Thinking { .. }));
+        let has_thinking = blocks
+            .iter()
+            .any(|b| matches!(b, ContentBlock::Thinking { .. }));
         if has_thinking {
             return ("assistant_thinking".to_string(), String::new());
         }

@@ -147,7 +147,6 @@ fn default_max_sessions() -> usize {
     100
 }
 
-
 impl Default for UiConfig {
     fn default() -> Self {
         UiConfig {
@@ -195,8 +194,9 @@ impl Default for PerformanceConfig {
 impl Config {
     /// Get the path to the config file
     pub fn config_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir()
-            .ok_or_else(|| HindsightError::Config("Could not determine config directory".to_string()))?;
+        let config_dir = dirs::config_dir().ok_or_else(|| {
+            HindsightError::Config("Could not determine config directory".to_string())
+        })?;
 
         let hindsight_dir = config_dir.join("hindsight");
         Ok(hindsight_dir.join("config.toml"))
@@ -267,14 +267,14 @@ impl Config {
         // Validate tools limit
         if self.analytics.tools_limit == 0 || self.analytics.tools_limit > 20 {
             return Err(HindsightError::Config(
-                "tools_limit must be between 1 and 20".to_string()
+                "tools_limit must be between 1 and 20".to_string(),
             ));
         }
 
         // Validate cache size
         if self.performance.max_cache_size_mb > 1000 {
             return Err(HindsightError::Config(
-                "max_cache_size_mb cannot exceed 1000 MB".to_string()
+                "max_cache_size_mb cannot exceed 1000 MB".to_string(),
             ));
         }
 

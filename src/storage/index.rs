@@ -4,7 +4,7 @@
 
 use crate::error::{HindsightError, Result};
 use crate::storage::SessionFile;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
 /// SQLite-based session index for fast lookups
@@ -17,8 +17,9 @@ impl SessionIndex {
     ///
     /// The database is stored at `~/.config/hindsight/sessions.db`
     pub fn new() -> Result<Self> {
-        let config_dir = dirs::config_dir()
-            .ok_or_else(|| HindsightError::Config("Could not determine config directory".to_string()))?;
+        let config_dir = dirs::config_dir().ok_or_else(|| {
+            HindsightError::Config("Could not determine config directory".to_string())
+        })?;
 
         let hindsight_dir = config_dir.join("hindsight");
         std::fs::create_dir_all(&hindsight_dir)?;
@@ -44,10 +45,12 @@ impl SessionIndex {
     /// Initialize the database schema
     fn initialize_schema(&mut self) -> Result<()> {
         // Check schema version
-        let version: i64 = self.conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+        let version: i64 = self
+            .conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
         if version == 0 {
-            // Fresh database: create schema v4 with all columns + FTS5
+            // Fresh database: create schema v5 with all tables
             self.conn.execute_batch(
                 r#"
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -81,6 +84,17 @@ impl SessionIndex {
                 CREATE INDEX IF NOT EXISTS idx_tool_name ON tool_usage(tool_name);
                 CREATE INDEX IF NOT EXISTS idx_usage_count ON tool_usage(usage_count DESC);
 
+                CREATE TABLE IF NOT EXISTS file_usage (
+                    session_id TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    access_count INTEGER NOT NULL,
+                    PRIMARY KEY (session_id, file_path),
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_file_path ON file_usage(file_path);
+                CREATE INDEX IF NOT EXISTS idx_file_access_count ON file_usage(access_count DESC);
+
                 CREATE VIRTUAL TABLE IF NOT EXISTS sessions_fts USING fts5(
                     session_id UNINDEXED,
                     searchable_text,
@@ -88,25 +102,45 @@ impl SessionIndex {
                 );
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 4", [])?;
-        } else if version < 4 {
-            // Migrate v1/v2/v3 → v4: add any missing columns then created_at
-            for stmt in &[
-                "ALTER TABLE sessions ADD COLUMN total_tokens INTEGER NOT NULL DEFAULT 0",
-                "ALTER TABLE sessions ADD COLUMN estimated_cost REAL NOT NULL DEFAULT 0.0",
-                "ALTER TABLE sessions ADD COLUMN model TEXT",
-                "ALTER TABLE sessions ADD COLUMN error_count INTEGER NOT NULL DEFAULT 0",
-                "ALTER TABLE sessions ADD COLUMN first_message TEXT",
-                "ALTER TABLE sessions ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0",
-            ] {
-                let _ = self.conn.execute(stmt, []);
+            self.conn.execute("PRAGMA user_version = 5", [])?;
+        } else {
+            // Incremental migrations
+            if version < 4 {
+                // v1/v2/v3 → v4: add missing columns
+                for stmt in &[
+                    "ALTER TABLE sessions ADD COLUMN total_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN estimated_cost REAL NOT NULL DEFAULT 0.0",
+                    "ALTER TABLE sessions ADD COLUMN model TEXT",
+                    "ALTER TABLE sessions ADD COLUMN error_count INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN first_message TEXT",
+                    "ALTER TABLE sessions ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0",
+                ] {
+                    let _ = self.conn.execute(stmt, []);
+                }
+                let _ = self.conn.execute_batch(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS sessions_fts USING fts5(session_id UNINDEXED, searchable_text, tokenize='porter ascii');"
+                );
+                self.conn.execute("PRAGMA user_version = 4", [])?;
             }
-            let _ = self.conn.execute_batch(
-                "CREATE VIRTUAL TABLE IF NOT EXISTS sessions_fts USING fts5(session_id UNINDEXED, searchable_text, tokenize='porter ascii');"
-            );
-            self.conn.execute("PRAGMA user_version = 4", [])?;
+
+            if version < 5 {
+                // v4 → v5: add file_usage table
+                self.conn.execute_batch(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS file_usage (
+                        session_id TEXT NOT NULL,
+                        file_path TEXT NOT NULL,
+                        access_count INTEGER NOT NULL,
+                        PRIMARY KEY (session_id, file_path),
+                        FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_file_path ON file_usage(file_path);
+                    CREATE INDEX IF NOT EXISTS idx_file_access_count ON file_usage(access_count DESC);
+                    "#,
+                )?;
+                self.conn.execute("PRAGMA user_version = 5", [])?;
+            }
         }
-        // version >= 4: schema is current
 
         Ok(())
     }
@@ -121,56 +155,92 @@ impl SessionIndex {
             .unwrap_or(0);
 
         // Try to parse session for rich analytics; fall back to defaults on failure
-        let (total_tokens, estimated_cost, model, error_count, first_message, tool_counts, created_at) =
-            if let Ok(parsed) = crate::parser::parse_session(&session.path) {
-                let analytics = crate::analyzer::SessionAnalytics::from_session(&parsed);
-                let total_tokens = analytics.input_tokens + analytics.output_tokens;
+        let (
+            total_tokens,
+            estimated_cost,
+            model,
+            error_count,
+            first_message,
+            tool_counts,
+            file_counts,
+            created_at,
+        ) = if let Ok(parsed) = crate::parser::parse_session(&session.path) {
+            let analytics = crate::analyzer::SessionAnalytics::from_session(&parsed);
+            let total_tokens = analytics.input_tokens + analytics.output_tokens;
 
-                // Earliest node timestamp → session creation time (ms → secs)
-                let created_at = parsed.nodes.iter()
-                    .find_map(|n| n.timestamp)
-                    .map(|ms| ms / 1000)
-                    .unwrap_or(session.modified_at);
+            // Earliest node timestamp → session creation time (ms → secs)
+            let created_at = parsed
+                .nodes
+                .iter()
+                .find_map(|n| n.timestamp)
+                .map(|ms| ms / 1000)
+                .unwrap_or(session.modified_at);
 
-                // First user message text preview.
-                // Uses text_content() which handles both legacy plain-string content
-                // ("content": "...") and modern block arrays ({"type":"text","text":"..."}).
-                let first_message: Option<String> = parsed.nodes.iter()
-                    .filter(|n| n.node_type == "user")
-                    .find_map(|n| {
-                        let text = n.message.as_ref()?.text_content();
-                        let trimmed = text.trim().to_string();
-                        if trimmed.is_empty() { return None; }
-                        // Collapse newlines for the single-line preview
-                        let preview = trimmed.replace('\n', " ");
-                        Some(preview.chars().take(80).collect::<String>())
-                    });
-
-                // Build tool counts map
-                let mut tool_counts: HashMap<String, usize> = HashMap::new();
-                for node in &parsed.nodes {
-                    if let Some(ref tool_use) = node.tool_use {
-                        *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
+            // First user message text preview.
+            // Uses text_content() which handles both legacy plain-string content
+            // ("content": "...") and modern block arrays ({"type":"text","text":"..."}).
+            let first_message: Option<String> = parsed
+                .nodes
+                .iter()
+                .filter(|n| n.node_type == "user")
+                .find_map(|n| {
+                    let text = n.message.as_ref()?.text_content();
+                    let trimmed = text.trim().to_string();
+                    if trimmed.is_empty() {
+                        return None;
                     }
-                    for block in node.message.as_ref().map(|m| m.content_blocks()).unwrap_or(&[]) {
-                        if let crate::parser::models::ContentBlock::ToolUse { name, .. } = block {
-                            *tool_counts.entry(name.clone()).or_insert(0) += 1;
+                    // Collapse newlines for the single-line preview
+                    let preview = trimmed.replace('\n', " ");
+                    Some(preview.chars().take(80).collect::<String>())
+                });
+
+            // Build tool counts and file access counts
+            let mut tool_counts: HashMap<String, usize> = HashMap::new();
+            let mut file_counts: HashMap<String, usize> = HashMap::new();
+            for node in &parsed.nodes {
+                if let Some(ref tool_use) = node.tool_use {
+                    *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
+                    if let Some(path) = file_path_from_input(&tool_use.name, &tool_use.input) {
+                        *file_counts.entry(path).or_insert(0) += 1;
+                    }
+                }
+                for block in node
+                    .message
+                    .as_ref()
+                    .map(|m| m.content_blocks())
+                    .unwrap_or(&[])
+                {
+                    if let crate::parser::models::ContentBlock::ToolUse { name, input, .. } = block {
+                        *tool_counts.entry(name.clone()).or_insert(0) += 1;
+                        if let Some(path) = file_path_from_input(name, input) {
+                            *file_counts.entry(path).or_insert(0) += 1;
                         }
                     }
                 }
+            }
 
-                (
-                    total_tokens,
-                    parsed.estimated_cost,
-                    parsed.model.clone(),
-                    analytics.error_count as i64,
-                    first_message,
-                    Some(tool_counts),
-                    created_at,
-                )
-            } else {
-                (0u64, 0.0f64, None::<String>, 0i64, None::<String>, None, session.modified_at)
-            };
+            (
+                total_tokens,
+                parsed.estimated_cost,
+                parsed.model.clone(),
+                analytics.error_count as i64,
+                first_message,
+                Some(tool_counts),
+                Some(file_counts),
+                created_at,
+            )
+        } else {
+            (
+                0u64,
+                0.0f64,
+                None::<String>,
+                0i64,
+                None::<String>,
+                None,
+                None,
+                session.modified_at,
+            )
+        };
 
         // Skip sessions with no meaningful content (file-history-snapshots, abandoned
         // test files, etc.). Remove from index if previously added.
@@ -236,11 +306,27 @@ impl SessionIndex {
             )?;
 
             let mut stmt = tx.prepare(
-                "INSERT INTO tool_usage (session_id, tool_name, usage_count) VALUES (?1, ?2, ?3)"
+                "INSERT INTO tool_usage (session_id, tool_name, usage_count) VALUES (?1, ?2, ?3)",
             )?;
 
             for (tool_name, count) in tool_counts {
                 stmt.execute(params![session.session_id, tool_name, count as i64])?;
+            }
+        }
+
+        // Update file_usage if we successfully parsed
+        if let Some(file_counts) = file_counts {
+            tx.execute(
+                "DELETE FROM file_usage WHERE session_id = ?1",
+                params![session.session_id],
+            )?;
+
+            let mut stmt = tx.prepare(
+                "INSERT INTO file_usage (session_id, file_path, access_count) VALUES (?1, ?2, ?3)",
+            )?;
+
+            for (file_path, count) in file_counts {
+                stmt.execute(params![session.session_id, file_path, count as i64])?;
             }
         }
 
@@ -269,23 +355,24 @@ impl SessionIndex {
              ORDER BY modified_at DESC"
         )?;
 
-        let sessions = stmt.query_map([], |row| {
-            Ok(SessionFile {
-                session_id: row.get(0)?,
-                project_name: row.get(1)?,
-                path: PathBuf::from(row.get::<_, String>(2)?),
-                file_size: row.get::<_, i64>(3)? as u64,
-                created_at: row.get::<_, i64>(4).unwrap_or(0),
-                modified_at: row.get(5)?,
-                has_subagents: row.get::<_, i64>(6)? != 0,
-                total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                model: row.get(9).ok().flatten(),
-                error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                first_message: row.get(11).ok().flatten(),
-            })
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
+        let sessions = stmt
+            .query_map([], |row| {
+                Ok(SessionFile {
+                    session_id: row.get(0)?,
+                    project_name: row.get(1)?,
+                    path: PathBuf::from(row.get::<_, String>(2)?),
+                    file_size: row.get::<_, i64>(3)? as u64,
+                    created_at: row.get::<_, i64>(4).unwrap_or(0),
+                    modified_at: row.get(5)?,
+                    has_subagents: row.get::<_, i64>(6)? != 0,
+                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
+                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
+                    model: row.get(9).ok().flatten(),
+                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
+                    first_message: row.get(11).ok().flatten(),
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
     }
@@ -301,23 +388,24 @@ impl SessionIndex {
              ORDER BY modified_at DESC"
         )?;
 
-        let sessions = stmt.query_map([project], |row| {
-            Ok(SessionFile {
-                session_id: row.get(0)?,
-                project_name: row.get(1)?,
-                path: PathBuf::from(row.get::<_, String>(2)?),
-                file_size: row.get::<_, i64>(3)? as u64,
-                created_at: row.get::<_, i64>(4).unwrap_or(0),
-                modified_at: row.get(5)?,
-                has_subagents: row.get::<_, i64>(6)? != 0,
-                total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                model: row.get(9).ok().flatten(),
-                error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                first_message: row.get(11).ok().flatten(),
-            })
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
+        let sessions = stmt
+            .query_map([project], |row| {
+                Ok(SessionFile {
+                    session_id: row.get(0)?,
+                    project_name: row.get(1)?,
+                    path: PathBuf::from(row.get::<_, String>(2)?),
+                    file_size: row.get::<_, i64>(3)? as u64,
+                    created_at: row.get::<_, i64>(4).unwrap_or(0),
+                    modified_at: row.get(5)?,
+                    has_subagents: row.get::<_, i64>(6)? != 0,
+                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
+                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
+                    model: row.get(9).ok().flatten(),
+                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
+                    first_message: row.get(11).ok().flatten(),
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
     }
@@ -390,7 +478,6 @@ impl SessionIndex {
     }
 
     /// Get the most recently modified session
-    #[allow(dead_code)]
     pub fn get_latest(&self) -> Result<Option<SessionFile>> {
         let mut stmt = self.conn.prepare(
             "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
@@ -425,7 +512,6 @@ impl SessionIndex {
     }
 
     /// Remove sessions that no longer exist on disk
-    #[allow(dead_code)]
     pub fn prune_missing(&mut self) -> Result<usize> {
         let sessions = self.list_sessions()?;
         let mut removed = 0;
@@ -450,22 +536,21 @@ impl SessionIndex {
     /// Get total number of indexed sessions
     #[allow(dead_code)]
     pub fn count(&self) -> Result<usize> {
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM sessions",
-            [],
-            |row| row.get(0),
-        )?;
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM sessions", [], |row| row.get(0))?;
 
         Ok(count as usize)
     }
 
     /// Get all unique project names
     pub fn list_projects(&self) -> Result<Vec<String>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT DISTINCT project_name FROM sessions ORDER BY project_name"
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT DISTINCT project_name FROM sessions ORDER BY project_name")?;
 
-        let projects = stmt.query_map([], |row| row.get(0))?
+        let projects = stmt
+            .query_map([], |row| row.get(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(projects)
@@ -479,7 +564,7 @@ impl SessionIndex {
                 SUM(file_size) as total_size,
                 MAX(modified_at) as last_activity
              FROM sessions
-             WHERE project_name = ?1"
+             WHERE project_name = ?1",
         )?;
 
         let stats = stmt.query_row([project], |row| {
@@ -524,15 +609,16 @@ impl SessionIndex {
             "SELECT COUNT(*), SUM(file_size), COALESCE(SUM(total_tokens),0), COALESCE(SUM(estimated_cost),0), COALESCE(SUM(error_count),0) FROM sessions"
         )?;
 
-        let (total_sessions, total_size, total_tokens, total_cost, total_errors) = stmt.query_row([], |row| {
-            Ok((
-                row.get::<_, i64>(0)? as usize,
-                row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
-                row.get::<_, i64>(2)? as u64,
-                row.get::<_, f64>(3)?,
-                row.get::<_, i64>(4)? as usize,
-            ))
-        })?;
+        let (total_sessions, total_size, total_tokens, total_cost, total_errors) =
+            stmt.query_row([], |row| {
+                Ok((
+                    row.get::<_, i64>(0)? as usize,
+                    row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+                    row.get::<_, i64>(2)? as u64,
+                    row.get::<_, f64>(3)?,
+                    row.get::<_, i64>(4)? as usize,
+                ))
+            })?;
 
         // Sessions this week
         let sessions_this_week: usize = self.conn.query_row(
@@ -566,11 +652,14 @@ impl SessionIndex {
         };
 
         // Most active project
-        let most_active_project = self.conn.query_row(
-            "SELECT project_name FROM sessions ORDER BY modified_at DESC LIMIT 1",
-            [],
-            |row| row.get::<_, String>(0),
-        ).ok();
+        let most_active_project = self
+            .conn
+            .query_row(
+                "SELECT project_name FROM sessions ORDER BY modified_at DESC LIMIT 1",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .ok();
 
         // Top tools - parse recent sessions to extract tool usage
         let top_tools = self.get_top_tools(100)?;
@@ -600,17 +689,15 @@ impl SessionIndex {
             FROM tool_usage
             GROUP BY tool_name
             ORDER BY total_count DESC
-            LIMIT 5
-            "#
+            LIMIT 30
+            "#,
         )?;
 
-        let top_tools = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)? as usize,
-            ))
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
+        let top_tools = stmt
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(top_tools)
     }
@@ -630,15 +717,16 @@ impl SessionIndex {
             "SELECT COUNT(*), SUM(file_size), COALESCE(SUM(total_tokens),0), COALESCE(SUM(estimated_cost),0), COALESCE(SUM(error_count),0) FROM sessions WHERE project_name = ?1"
         )?;
 
-        let (total_sessions, total_size, total_tokens, total_cost, total_errors) = stmt.query_row([project], |row| {
-            Ok((
-                row.get::<_, i64>(0)? as usize,
-                row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
-                row.get::<_, i64>(2)? as u64,
-                row.get::<_, f64>(3)?,
-                row.get::<_, i64>(4)? as usize,
-            ))
-        })?;
+        let (total_sessions, total_size, total_tokens, total_cost, total_errors) =
+            stmt.query_row([project], |row| {
+                Ok((
+                    row.get::<_, i64>(0)? as usize,
+                    row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+                    row.get::<_, i64>(2)? as u64,
+                    row.get::<_, f64>(3)?,
+                    row.get::<_, i64>(4)? as usize,
+                ))
+            })?;
 
         // Sessions this week
         let sessions_this_week: usize = self.conn.query_row(
@@ -695,7 +783,11 @@ impl SessionIndex {
     }
 
     /// Get top tools for a specific project
-    fn get_top_tools_for_project(&self, project: &str, _session_limit: usize) -> Result<Vec<(String, usize)>> {
+    fn get_top_tools_for_project(
+        &self,
+        project: &str,
+        _session_limit: usize,
+    ) -> Result<Vec<(String, usize)>> {
         // Query aggregates tool usage for this project (no file parsing!)
         let mut stmt = self.conn.prepare(
             r#"
@@ -705,31 +797,65 @@ impl SessionIndex {
             WHERE s.project_name = ?1
             GROUP BY t.tool_name
             ORDER BY total_count DESC
-            LIMIT 5
-            "#
+            LIMIT 30
+            "#,
         )?;
 
-        let top_tools = stmt.query_map([project], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)? as usize,
-            ))
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
+        let top_tools = stmt
+            .query_map([project], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(top_tools)
     }
 
-    /// Check if a session used a specific tool
-    #[allow(dead_code)]
-    pub fn has_tool_usage(&self, session_id: &str, tool_name: &str) -> Result<bool> {
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM tool_usage WHERE session_id = ?1 AND tool_name = ?2",
-            params![session_id, tool_name],
-            |row| row.get(0),
+    /// Get top accessed files globally
+    pub fn get_top_files(&self, limit: usize) -> Result<Vec<(String, usize)>> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT file_path, SUM(access_count) as total
+            FROM file_usage
+            GROUP BY file_path
+            ORDER BY total DESC
+            LIMIT ?1
+            "#,
         )?;
 
-        Ok(count > 0)
+        let rows = stmt
+            .query_map([limit as i64], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(rows)
+    }
+
+    /// Get top accessed files for a specific project
+    pub fn get_top_files_for_project(
+        &self,
+        project: &str,
+        limit: usize,
+    ) -> Result<Vec<(String, usize)>> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT f.file_path, SUM(f.access_count) as total
+            FROM file_usage f
+            JOIN sessions s ON f.session_id = s.session_id
+            WHERE s.project_name = ?1
+            GROUP BY f.file_path
+            ORDER BY total DESC
+            LIMIT ?2
+            "#,
+        )?;
+
+        let rows = stmt
+            .query_map(params![project, limit as i64], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(rows)
     }
 
     /// Get sessions that used any of the specified tools
@@ -761,23 +887,24 @@ impl SessionIndex {
             .map(|s| s as &dyn rusqlite::ToSql)
             .collect();
 
-        let sessions = stmt.query_map(params.as_slice(), |row| {
-            Ok(SessionFile {
-                session_id: row.get(0)?,
-                project_name: row.get(1)?,
-                path: PathBuf::from(row.get::<_, String>(2)?),
-                file_size: row.get::<_, i64>(3)? as u64,
-                created_at: row.get::<_, i64>(4).unwrap_or(0),
-                modified_at: row.get(5)?,
-                has_subagents: row.get::<_, i64>(6)? != 0,
-                total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                model: row.get(9).ok().flatten(),
-                error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                first_message: row.get(11).ok().flatten(),
-            })
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
+        let sessions = stmt
+            .query_map(params.as_slice(), |row| {
+                Ok(SessionFile {
+                    session_id: row.get(0)?,
+                    project_name: row.get(1)?,
+                    path: PathBuf::from(row.get::<_, String>(2)?),
+                    file_size: row.get::<_, i64>(3)? as u64,
+                    created_at: row.get::<_, i64>(4).unwrap_or(0),
+                    modified_at: row.get(5)?,
+                    has_subagents: row.get::<_, i64>(6)? != 0,
+                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
+                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
+                    model: row.get(9).ok().flatten(),
+                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
+                    first_message: row.get(11).ok().flatten(),
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
     }
@@ -799,7 +926,7 @@ impl SessionIndex {
         let window_start = today - ((days as i64 - 1) * day_secs);
 
         let mut stmt = self.conn.prepare(
-            "SELECT modified_at FROM sessions WHERE modified_at >= ?1 ORDER BY modified_at"
+            "SELECT modified_at FROM sessions WHERE modified_at >= ?1 ORDER BY modified_at",
         )?;
 
         let rows = stmt.query_map([window_start], |row| row.get::<_, i64>(0))?;
@@ -866,9 +993,7 @@ impl SessionIndex {
             params_storage.push(text.to_string());
         } else if !text.is_empty() {
             let like_val = format!("%{}%", text);
-            conditions.push(
-                "(s.first_message LIKE ? OR s.project_name LIKE ?)".to_string(),
-            );
+            conditions.push("(s.first_message LIKE ? OR s.project_name LIKE ?)".to_string());
             params_storage.push(like_val.clone());
             params_storage.push(like_val);
         }
@@ -895,8 +1020,10 @@ impl SessionIndex {
             conditions.join(" AND "),
         );
 
-        let params_refs: Vec<&dyn rusqlite::ToSql> =
-            params_storage.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params_storage
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
 
         let mut stmt = self.conn.prepare(&sql)?;
         let sessions = stmt
@@ -921,48 +1048,6 @@ impl SessionIndex {
         Ok(sessions)
     }
 
-    /// Search sessions using FTS5 full-text index
-    #[allow(dead_code)]
-    pub fn search_sessions_fts(&self, query: &str) -> Result<Vec<SessionFile>> {
-        if query.trim().is_empty() {
-            return Ok(Vec::new());
-        }
-
-        // FTS5 query: match against searchable_text, join back to sessions for full row
-        let mut stmt = self.conn.prepare(
-            r#"
-            SELECT s.session_id, s.project_name, s.file_path, s.file_size, s.created_at, s.modified_at,
-                   s.has_subagents, s.total_tokens, s.estimated_cost, s.model,
-                   s.error_count, s.first_message
-            FROM sessions s
-            JOIN sessions_fts f ON s.session_id = f.session_id
-            WHERE sessions_fts MATCH ?1
-            ORDER BY rank
-            LIMIT 50
-            "#
-        )?;
-
-        let sessions = stmt.query_map([query], |row| {
-            Ok(SessionFile {
-                session_id: row.get(0)?,
-                project_name: row.get(1)?,
-                path: PathBuf::from(row.get::<_, String>(2)?),
-                file_size: row.get::<_, i64>(3)? as u64,
-                created_at: row.get::<_, i64>(4).unwrap_or(0),
-                modified_at: row.get(5)?,
-                has_subagents: row.get::<_, i64>(6)? != 0,
-                total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                model: row.get(9).ok().flatten(),
-                error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                first_message: row.get(11).ok().flatten(),
-            })
-        })?
-        .collect::<std::result::Result<Vec<_>, _>>()?;
-
-        Ok(sessions)
-    }
-
     /// Get total tokens and cost across all sessions
     pub fn get_global_totals(&self) -> Result<(u64, f64)> {
         let (total_tokens, total_cost) = self.conn.query_row(
@@ -971,6 +1056,18 @@ impl SessionIndex {
             |row| Ok((row.get::<_, i64>(0)? as u64, row.get::<_, f64>(1)?)),
         )?;
         Ok((total_tokens, total_cost))
+    }
+}
+
+/// Extract a file path from a tool's JSON input, if the tool operates on files.
+/// Returns None for tools that don't target specific files (Bash, Task, etc.).
+fn file_path_from_input(tool_name: &str, input: &serde_json::Value) -> Option<String> {
+    match tool_name {
+        "Read" | "Write" | "Edit" | "NotebookEdit" => input
+            .get("file_path")
+            .and_then(|v| v.as_str())
+            .map(str::to_string),
+        _ => None,
     }
 }
 
@@ -1002,7 +1099,6 @@ pub struct GlobalAnalytics {
 
 /// Project-specific analytics
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ProjectAnalytics {
     pub project_name: String,
     pub total_sessions: usize,
@@ -1032,10 +1128,10 @@ mod tests {
 
     #[test]
     fn test_index_session() {
-        use std::fs;
-        use crate::parser::ExecutionNode;
         use crate::parser::models::{Message, MessageContent};
+        use crate::parser::ExecutionNode;
         use std::collections::HashMap;
+        use std::fs;
 
         let temp_dir = TempDir::new().unwrap();
         let session_path = temp_dir.path().join("test-session.jsonl");
@@ -1092,11 +1188,11 @@ mod tests {
 
     #[test]
     fn test_tool_usage_table() {
-        use tempfile::TempDir;
-        use std::fs;
-        use crate::parser::ExecutionNode;
         use crate::parser::models::{Message, MessageContent, ToolUse};
+        use crate::parser::ExecutionNode;
         use std::collections::HashMap;
+        use std::fs;
+        use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
         let session_path = temp_dir.path().join("test-session.jsonl");

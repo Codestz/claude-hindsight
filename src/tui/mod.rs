@@ -23,17 +23,14 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
 /// Initialize the terminal for TUI mode
 pub fn init() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;  // Mouse capture removed for text selection
+    execute!(stdout, EnterAlternateScreen)?; // Mouse capture removed for text selection
     let backend = CrosstermBackend::new(stdout);
     let terminal = Terminal::new(backend)?;
     Ok(terminal)
@@ -42,10 +39,7 @@ pub fn init() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
 /// Restore the terminal to normal mode
 pub fn restore() -> Result<()> {
     disable_raw_mode()?;
-    execute!(
-        io::stdout(),
-        LeaveAlternateScreen
-    )?;  // Mouse capture removed for text selection
+    execute!(io::stdout(), LeaveAlternateScreen)?; // Mouse capture removed for text selection
     Ok(())
 }
 

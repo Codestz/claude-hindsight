@@ -4,21 +4,21 @@
 //!
 //! Streams NodeResponse events as new lines are appended to the JSONL file.
 
+use crate::api::responses::NodeResponse;
+use crate::server::{error::ApiError, AppState};
+use crate::storage::SessionIndex;
 use axum::{
     body::Bytes,
     extract::{Query, State},
-    response::Response,
     http::header,
+    response::Response,
 };
+use futures_util::StreamExt;
 use serde::Deserialize;
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use futures_util::StreamExt;
 use tokio_stream::wrappers::IntervalStream;
-use crate::server::{AppState, error::ApiError};
-use crate::api::responses::NodeResponse;
-use crate::storage::SessionIndex;
 
 #[derive(Deserialize)]
 pub struct EventsQuery {
@@ -51,11 +51,10 @@ pub async fn live_events(
         let offset = Arc::clone(&offset);
         async move {
             let current_offset = *offset.lock().unwrap();
-            let (nodes, new_offset) = tokio::task::spawn_blocking(move || {
-                tail_new_nodes(&path, current_offset)
-            })
-            .await
-            .unwrap_or_else(|_| (vec![], current_offset));
+            let (nodes, new_offset) =
+                tokio::task::spawn_blocking(move || tail_new_nodes(&path, current_offset))
+                    .await
+                    .unwrap_or_else(|_| (vec![], current_offset));
 
             *offset.lock().unwrap() = new_offset;
 
@@ -93,9 +92,9 @@ pub async fn live_events(
 /// Read new JSONL lines starting at `offset` bytes.
 /// Must run inside spawn_blocking — uses Rc internally via TreeNode.
 fn tail_new_nodes(path: &std::path::Path, offset: u64) -> (Vec<NodeResponse>, u64) {
+    use crate::analyzer::TreeNode;
     use std::io::{Read, Seek, SeekFrom};
     use std::rc::Rc;
-    use crate::analyzer::TreeNode;
 
     let Ok(mut file) = std::fs::File::open(path) else {
         return (vec![], offset);
@@ -120,7 +119,9 @@ fn tail_new_nodes(path: &std::path::Path, offset: u64) -> (Vec<NodeResponse>, u6
 
     for line in buf.lines() {
         let line = line.trim();
-        if line.is_empty() { continue; }
+        if line.is_empty() {
+            continue;
+        }
         if let Ok(exec_node) = serde_json::from_str::<crate::parser::ExecutionNode>(line) {
             let tree_node = TreeNode {
                 node: Rc::new(exec_node),

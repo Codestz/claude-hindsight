@@ -254,8 +254,7 @@ impl SearchModal {
     fn search_project_sessions(&mut self, project: &str) -> Result<()> {
         let (text, errors_only, tool) = parse_query(&self.query);
         let index = SessionIndex::new()?;
-        let results =
-            index.search_sessions(&text, Some(project), errors_only, tool.as_deref())?;
+        let results = index.search_sessions(&text, Some(project), errors_only, tool.as_deref())?;
         self.total_results = results.len();
         self.results = results.iter().map(session_to_result_item).collect();
         self.status = format!("{} sessions in {}", self.results.len(), project);
@@ -269,7 +268,8 @@ impl SearchModal {
     fn search_session_content(&mut self, session_id: &str) -> Result<()> {
         // Load the session
         let index = SessionIndex::new()?;
-        let session_file = index.find_by_id(session_id)?
+        let session_file = index
+            .find_by_id(session_id)?
             .ok_or_else(|| crate::error::HindsightError::SessionNotFound(session_id.to_string()))?;
 
         let session = parse_session(&session_file.path)?;
@@ -283,7 +283,10 @@ impl SearchModal {
             session.nodes.iter().enumerate().collect()
         } else {
             // Search in node content
-            session.nodes.iter().enumerate()
+            session
+                .nodes
+                .iter()
+                .enumerate()
                 .filter(|(_, node)| {
                     // Get the actual categorized type (same logic as display)
                     let category = get_node_category(node);
@@ -308,7 +311,8 @@ impl SearchModal {
                         }
                         // Also search tool names in typed blocks
                         for block in message.content_blocks() {
-                            if let crate::parser::models::ContentBlock::ToolUse { name, .. } = block {
+                            if let crate::parser::models::ContentBlock::ToolUse { name, .. } = block
+                            {
                                 if name.to_lowercase().contains(&query_lower) {
                                     return true;
                                 }
@@ -338,7 +342,8 @@ impl SearchModal {
         };
 
         // Convert to search results
-        self.results = matching_nodes.iter()
+        self.results = matching_nodes
+            .iter()
             .take(100) // Limit to 100 results for performance
             .map(|(idx, node)| node_to_result_item(*idx, node))
             .collect();
@@ -369,8 +374,7 @@ impl SearchModal {
 
         // Render background only for modal area (not full screen)
         use ratatui::widgets::Clear;
-        let background = Block::default()
-            .style(Style::default().bg(Color::Rgb(40, 42, 54))); // Dracula-inspired background
+        let background = Block::default().style(Style::default().bg(Color::Rgb(40, 42, 54))); // Dracula-inspired background
         f.render_widget(Clear, modal_area);
         f.render_widget(background, modal_area);
 
@@ -384,12 +388,12 @@ impl SearchModal {
 
         // Split modal into sections
         let chunks = Layout::vertical([
-            Constraint::Length(3),  // Input box
-            Constraint::Length(1),  // Separator
-            Constraint::Min(10),    // Results list
-            Constraint::Length(1),  // Separator
-            Constraint::Length(8),  // Preview pane
-            Constraint::Length(1),  // Status bar
+            Constraint::Length(3), // Input box
+            Constraint::Length(1), // Separator
+            Constraint::Min(10),   // Results list
+            Constraint::Length(1), // Separator
+            Constraint::Length(8), // Preview pane
+            Constraint::Length(1), // Status bar
         ])
         .split(padded_area);
 
@@ -417,20 +421,39 @@ impl SearchModal {
         let title = format!(" {} ", context_name);
 
         let input_text = if self.query.is_empty() {
-            Span::styled("Type to search...", Style::default().fg(Color::DarkGray).add_modifier(Modifier::ITALIC))
+            Span::styled(
+                "Type to search...",
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::ITALIC),
+            )
         } else {
-            Span::styled(&self.query, Style::default().fg(Color::White).add_modifier(Modifier::BOLD))
+            Span::styled(
+                &self.query,
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            )
         };
 
         let input = Paragraph::new(Line::from(vec![
-            Span::styled(" > ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                " > ",
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
+            ),
             input_text,
         ]))
         .block(
             Block::default()
                 .borders(Borders::ALL)
                 .title(title)
-                .border_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+                .border_style(
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
         );
 
         f.render_widget(input, area);
@@ -441,7 +464,9 @@ impl SearchModal {
 
     /// Render the results list
     fn render_results(&mut self, f: &mut Frame, area: Rect) {
-        let items: Vec<ListItem> = self.results.iter()
+        let items: Vec<ListItem> = self
+            .results
+            .iter()
             .map(|result| {
                 // Color-code based on node type
                 let title_color = if result.title.contains("[TOOL]") {
@@ -462,10 +487,15 @@ impl SearchModal {
                     Color::White
                 };
 
-                let title_span = Span::styled(&result.title, Style::default().fg(title_color).add_modifier(Modifier::BOLD));
+                let title_span = Span::styled(
+                    &result.title,
+                    Style::default()
+                        .fg(title_color)
+                        .add_modifier(Modifier::BOLD),
+                );
                 let subtitle_span = Span::styled(
                     format!(" │ {}", result.subtitle),
-                    Style::default().fg(Color::Gray)
+                    Style::default().fg(Color::Gray),
                 );
 
                 ListItem::new(Line::from(vec![title_span, subtitle_span]))
@@ -483,13 +513,13 @@ impl SearchModal {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(title)
-                    .border_style(Style::default().fg(Color::White))
+                    .border_style(Style::default().fg(Color::White)),
             )
             .highlight_style(
                 Style::default()
                     .bg(Color::Rgb(40, 40, 60))
                     .fg(Color::Yellow)
-                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("  ");
 
@@ -513,7 +543,7 @@ impl SearchModal {
                 Block::default()
                     .borders(Borders::ALL)
                     .title(" Preview ")
-                    .border_style(Style::default().fg(Color::White))
+                    .border_style(Style::default().fg(Color::White)),
             )
             .wrap(Wrap { trim: false })
             .style(Style::default().fg(Color::White));
@@ -527,7 +557,13 @@ impl SearchModal {
 
         let status = Paragraph::new(Line::from(vec![
             Span::styled(&self.status, Style::default().fg(Color::Cyan)),
-            Span::raw(" ".repeat(area.width.saturating_sub(self.status.len() as u16 + help_text.len() as u16 + 3) as usize)),
+            Span::raw(
+                " ".repeat(
+                    area.width
+                        .saturating_sub(self.status.len() as u16 + help_text.len() as u16 + 3)
+                        as usize,
+                ),
+            ),
             Span::styled(help_text, Style::default().fg(Color::Gray)),
         ]))
         .alignment(Alignment::Left)
@@ -633,36 +669,44 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
     // Match by actual content, not just type string
     let (title, subtitle) = if node.tool_use.is_some() {
         // This is a tool use node
-        let tool_name = node.tool_use.as_ref()
+        let tool_name = node
+            .tool_use
+            .as_ref()
             .map(|t| t.name.clone())
             .unwrap_or_else(|| "Unknown".to_string());
 
-        let time = node.timestamp
+        let time = node
+            .timestamp
             .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
             format!("#{} [TOOL] {}", index + 1, tool_name),
-            format!("{} • tool use", time)
+            format!("{} • tool use", time),
         )
     } else if node.tool_result.is_some() {
         // This is a tool result node
-        let status = node.tool_result.as_ref()
+        let status = node
+            .tool_result
+            .as_ref()
             .and_then(|r| r.is_error)
             .map(|is_err| if is_err { "ERROR" } else { "OK" })
             .unwrap_or("RESULT");
 
-        let time = node.timestamp
+        let time = node
+            .timestamp
             .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
             format!("#{} [RESULT] {}", index + 1, status),
-            format!("{} • tool result", time)
+            format!("{} • tool result", time),
         )
     } else if node.thinking.is_some() {
         // This is a thinking node
-        let preview = node.thinking.as_ref()
+        let preview = node
+            .thinking
+            .as_ref()
             .map(|t| {
                 let preview: String = t.chars().take(60).collect();
                 if t.len() > 60 {
@@ -673,13 +717,14 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             })
             .unwrap_or_else(|| "Thinking...".to_string());
 
-        let time = node.timestamp
+        let time = node
+            .timestamp
             .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
             format!("#{} [THINKING] {}", index + 1, preview),
-            format!("{} • thinking", time)
+            format!("{} • thinking", time),
         )
     } else if node.message.is_some() && node_type_lower.contains("user") {
         // This is a user message node
@@ -701,33 +746,36 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             })
             .unwrap_or_else(|| "User message".to_string());
 
-        let time = node.timestamp
+        let time = node
+            .timestamp
             .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
             format!("#{} [USER] {}", index + 1, preview),
-            format!("{} • user message", time)
+            format!("{} • user message", time),
         )
     } else if node.message.is_some() && node_type_lower.contains("assistant") {
         // This is an assistant message node
-        let time = node.timestamp
+        let time = node
+            .timestamp
             .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
             format!("#{} [ASSISTANT]", index + 1),
-            format!("{} • assistant response", time)
+            format!("{} • assistant response", time),
         )
     } else {
         // Fallback for other node types
-        let time = node.timestamp
+        let time = node
+            .timestamp
             .map(format_timestamp)
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
             format!("#{} [{}]", index + 1, node_type.to_uppercase()),
-            format!("{} • {}", time, node_type)
+            format!("{} • {}", time, node_type),
         )
     };
 
@@ -760,8 +808,10 @@ fn build_node_preview(node: &ExecutionNode) -> String {
 
     if let Some(ref tool_use) = node.tool_use {
         preview.push_str(&format!("Tool: {}\n", tool_use.name));
-        preview.push_str(&format!("Input: {}\n",
-            serde_json::to_string_pretty(&tool_use.input).unwrap_or_default()));
+        preview.push_str(&format!(
+            "Input: {}\n",
+            serde_json::to_string_pretty(&tool_use.input).unwrap_or_default()
+        ));
     }
 
     if let Some(ref message) = node.message {
@@ -789,7 +839,10 @@ fn build_node_preview(node: &ExecutionNode) -> String {
 
     if let Some(ref tool_result) = node.tool_result {
         if let Some(is_error) = tool_result.is_error {
-            preview.push_str(&format!("Status: {}\n", if is_error { "ERROR" } else { "OK" }));
+            preview.push_str(&format!(
+                "Status: {}\n",
+                if is_error { "ERROR" } else { "OK" }
+            ));
         }
         if let Some(ref content) = tool_result.content {
             let preview_text = truncate_string(content, 300);
@@ -841,7 +894,6 @@ fn format_time_ago(timestamp: i64) -> String {
         format!("{}w ago", diff / 604800)
     }
 }
-
 
 /// Create a centered rectangle
 fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {

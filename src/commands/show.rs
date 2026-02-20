@@ -5,7 +5,7 @@
 use crate::error::{HindsightError, Result};
 use crate::parser::parse_session;
 use crate::storage::SessionIndex;
-use crate::tui::{App, run as run_tui};
+use crate::tui::{run as run_tui, App};
 
 pub fn run(session_id: String, dashboard: bool, _port: u16) -> Result<()> {
     if dashboard {

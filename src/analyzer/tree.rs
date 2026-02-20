@@ -39,4 +39,3 @@ where
 impl TreeNode {
     // TreeNode methods can be added here as needed
 }
-

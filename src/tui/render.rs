@@ -125,40 +125,34 @@ fn render_user(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> {
                         Span::styled("Status: ", Style::default().fg(Color::Cyan)),
                         Span::styled(
                             if err { "Error" } else { "Success" },
-                            Style::default()
-                                .fg(if err { Color::Red } else { Color::Green }),
+                            Style::default().fg(if err { Color::Red } else { Color::Green }),
                         ),
                     ]));
 
                     lines.push(Line::from(""));
 
                     // Show content — prefer clean toolUseResult over block content
-                    let (result_str, file_path) =
-                        if let Some(ref tool_use_result) = node.node.tool_use_result {
-                            if let Ok(result) = serde_json::from_value::<
-                                crate::parser::models::ToolResult,
-                            >(tool_use_result.clone())
-                            {
-                                if let Some(ref file) = result.file {
-                                    (file.content.clone(), file.file_path.clone())
-                                } else {
-                                    (result.content.clone(), None)
-                                }
+                    let (result_str, file_path) = if let Some(ref tool_use_result) =
+                        node.node.tool_use_result
+                    {
+                        if let Ok(result) = serde_json::from_value::<
+                            crate::parser::models::ToolResult,
+                        >(tool_use_result.clone())
+                        {
+                            if let Some(ref file) = result.file {
+                                (file.content.clone(), file.file_path.clone())
                             } else {
-                                // Fallback: extract string from block content
-                                let s = content
-                                    .as_ref()
-                                    .and_then(|c| c.as_str())
-                                    .map(String::from);
-                                (s, None)
+                                (result.content.clone(), None)
                             }
                         } else {
-                            let s = content
-                                .as_ref()
-                                .and_then(|c| c.as_str())
-                                .map(String::from);
+                            // Fallback: extract string from block content
+                            let s = content.as_ref().and_then(|c| c.as_str()).map(String::from);
                             (s, None)
-                        };
+                        }
+                    } else {
+                        let s = content.as_ref().and_then(|c| c.as_str()).map(String::from);
+                        (s, None)
+                    };
 
                     if let Some(result_content) = result_str {
                         if !result_content.is_empty() {
@@ -284,19 +278,21 @@ fn render_assistant(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> 
                             lines.push(Line::from(""));
                             has_tools = true;
                         }
-                        lines.push(Line::from(vec![
-                            Span::styled(
-                                format!("{}  Tool: {}", icons::TOOL_USE, name),
-                                Style::default().fg(colors::TOOL_USE).add_modifier(Modifier::BOLD),
-                            ),
-                        ]));
+                        lines.push(Line::from(vec![Span::styled(
+                            format!("{}  Tool: {}", icons::TOOL_USE, name),
+                            Style::default()
+                                .fg(colors::TOOL_USE)
+                                .add_modifier(Modifier::BOLD),
+                        )]));
                         lines.push(Line::from(vec![
                             Span::styled("ID: ", Style::default().fg(Color::Cyan)),
                             Span::styled(id.clone(), Style::default().fg(Color::DarkGray)),
                         ]));
                         lines.push(Line::from(""));
                         if name == "Edit" {
-                            if let Some(rendered) = code_render::render_edit_result(&input.to_string()) {
+                            if let Some(rendered) =
+                                code_render::render_edit_result(&input.to_string())
+                            {
                                 lines.extend(rendered);
                             } else {
                                 render_parameters(&mut lines, input);
@@ -309,13 +305,14 @@ fn render_assistant(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> 
                             lines.push(Line::from(""));
                             let is_err = summary.starts_with('✗');
                             lines.push(Line::from(vec![
-                                Span::styled(
-                                    "Result: ",
-                                    Style::default().fg(Color::DarkGray),
-                                ),
+                                Span::styled("Result: ", Style::default().fg(Color::DarkGray)),
                                 Span::styled(
                                     summary.clone(),
-                                    Style::default().fg(if is_err { Color::Red } else { Color::Green }),
+                                    Style::default().fg(if is_err {
+                                        Color::Red
+                                    } else {
+                                        Color::Green
+                                    }),
                                 ),
                             ]));
                         }
@@ -379,17 +376,14 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
                     lines.push(Line::from(""));
 
                     if name == "Edit" {
-                        if let Some(rendered) =
-                            code_render::render_edit_result(&input.to_string())
+                        if let Some(rendered) = code_render::render_edit_result(&input.to_string())
                         {
                             lines.extend(rendered);
                         } else {
                             render_parameters(&mut lines, input);
                         }
                     } else if name == "Read" {
-                        if let Some(file_path) =
-                            input.get("file_path").and_then(|v| v.as_str())
-                        {
+                        if let Some(file_path) = input.get("file_path").and_then(|v| v.as_str()) {
                             lines.push(Line::from(vec![
                                 Span::styled(
                                     " Reading: ",
@@ -554,9 +548,7 @@ fn render_progress(node: &TreeNode) -> Vec<Line<'static>> {
             // Show type-specific fields
             match progress_type {
                 "bash_progress" => {
-                    if let Some(elapsed) =
-                        data.get("elapsedTimeSeconds").and_then(|e| e.as_f64())
-                    {
+                    if let Some(elapsed) = data.get("elapsedTimeSeconds").and_then(|e| e.as_f64()) {
                         lines.push(Line::from(vec![
                             Span::styled("Elapsed: ", Style::default().fg(Color::Cyan)),
                             Span::raw(format!("{:.1}s", elapsed)),
