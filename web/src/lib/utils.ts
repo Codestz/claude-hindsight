@@ -1,18 +1,5 @@
 // Formatting helpers — pure functions, no side effects.
 
-export function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
-  return n.toString();
-}
-
-export function formatCost(n: number): string {
-  if (n === 0)    return "$0.00";
-  if (n < 0.001)  return "<$0.001";
-  if (n < 1)      return `$${n.toFixed(3)}`;
-  return `$${n.toFixed(2)}`;
-}
-
 export function formatBytes(n: number): string {
   if (n >= 1_073_741_824) return `${(n / 1_073_741_824).toFixed(1)} GB`;
   if (n >= 1_048_576)     return `${(n / 1_048_576).toFixed(1)} MB`;

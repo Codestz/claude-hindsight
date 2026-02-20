@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import type { SessionFile } from "@/lib/types";
-import { formatCost, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
+import { shortId, shortModel, timeAgo } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 
 // Column layout — shared with SessionTable header so they always stay in sync.
-// 8 cols: dot | id | message | project | model | tokens | cost | when
-export const SESSION_COLS = "28px 96px 1fr 140px 110px 76px 76px 80px";
+// 6 cols: dot | id | message | project | model | when
+export const SESSION_COLS = "28px 96px 1fr 140px 110px 80px";
 
 interface SessionRowProps {
   session: SessionFile;
@@ -136,16 +136,6 @@ export function SessionRow({ session: s }: SessionRowProps) {
         ) : (
           <span style={{ color: "var(--text-3)" }}>—</span>
         )}
-      </span>
-
-      {/* Tokens */}
-      <span style={{ color: "var(--cyan)" }}>
-        {formatTokens(s.total_tokens)}
-      </span>
-
-      {/* Cost */}
-      <span style={{ color: "var(--amber)" }}>
-        {formatCost(s.estimated_cost)}
       </span>
 
       {/* When */}

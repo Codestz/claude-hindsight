@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ProjectAnalytics, SessionFile } from "@/lib/types";
-import { formatBytes, formatCost, formatTokens } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { BarChart } from "@/components/charts/BarChart";
@@ -110,15 +110,12 @@ function ProjectDetail({ name }: { name: string }) {
 
       {/* Stats bento */}
       <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
             <StatCard label="Sessions" value={analytics.total_sessions.toLocaleString()} sub={sessionsSub || undefined} accent />
           </div>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
-            <StatCard label="Tokens" value={formatTokens(analytics.total_tokens)} sub="total consumed" valueColor="var(--cyan)" />
-          </div>
-          <div style={{ borderRight: "1px solid var(--border-1)" }}>
-            <StatCard label="Estimated Cost" value={formatCost(analytics.total_cost)} sub="based on model pricing" valueColor="var(--amber)" />
+            <StatCard label="Size" value={formatBytes(analytics.total_size)} sub={`avg ${formatBytes(analytics.avg_session_size)}/session`} />
           </div>
           <StatCard
             label="Errors"

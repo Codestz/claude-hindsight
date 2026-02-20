@@ -36,8 +36,6 @@ export interface GlobalAnalytics {
   avg_session_size: number;     // u64, bytes
   most_active_project: string | null;
   top_tools: [string, number][]; // Vec<(String, usize)> → [["Read", 312], ...]
-  total_tokens: number;         // u64
-  total_cost: number;           // f64, USD
   total_errors: number;         // usize
 }
 
@@ -52,8 +50,6 @@ export interface ProjectAnalytics {
   avg_session_size: number;     // bytes
   top_tools: [string, number][];
   last_activity: number | null; // unix seconds
-  total_tokens: number;
-  total_cost: number;           // USD
   total_errors: number;
 }
 
@@ -71,8 +67,6 @@ export interface SessionFile {
   created_at: number;           // unix seconds
   modified_at: number;          // unix seconds
   has_subagents: boolean;
-  total_tokens: number;         // u64
-  estimated_cost: number;       // f64, USD
   model: string | null;         // e.g. "claude-sonnet-4-5-20250929"
   error_count: number;
   first_message: string | null; // first user message text, truncated
