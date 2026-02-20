@@ -115,6 +115,12 @@ enum Commands {
         action: ConfigAction,
     },
 
+    /// Manage Claude project directories to scan
+    Paths {
+        #[command(subcommand)]
+        action: PathsAction,
+    },
+
     /// Sync index with disk: remove deleted sessions, add new ones, refresh analytics
     Reindex {
         /// Show each session being processed
@@ -131,6 +137,24 @@ enum Commands {
         /// Open browser after starting
         #[arg(long)]
         open: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum PathsAction {
+    /// List all configured scan directories
+    List,
+
+    /// Add a directory to scan for Claude sessions
+    Add {
+        /// Path to add (e.g. ~/.claudep/projects)
+        path: String,
+    },
+
+    /// Remove a directory (the default ~/.claude/projects cannot be removed)
+    Remove {
+        /// Path to remove
+        path: String,
     },
 }
 
@@ -215,6 +239,11 @@ fn run() -> Result<()> {
         Commands::Export { session_id, output } => {
             commands::export::run(session_id, output)?;
         }
+        Commands::Paths { action } => match action {
+            PathsAction::List => commands::paths::list()?,
+            PathsAction::Add { path } => commands::paths::add(path)?,
+            PathsAction::Remove { path } => commands::paths::remove(path)?,
+        },
         Commands::Config { action } => match action {
             ConfigAction::Show => commands::config::show_config()?,
             ConfigAction::Edit => commands::config::edit_config()?,
@@ -312,4 +341,3 @@ fn run_last_session() -> Result<()> {
     }
 }
 
-// TEMP_DEBUG
