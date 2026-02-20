@@ -25,6 +25,32 @@ pub struct Config {
     /// Performance settings
     #[serde(default)]
     pub performance: PerformanceConfig,
+
+    /// Path settings
+    #[serde(default)]
+    pub paths: PathsConfig,
+}
+
+/// Paths configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PathsConfig {
+    /// Directories to scan for Claude Code session files.
+    /// Each entry should be an absolute path or use `~` for home directory.
+    /// Default: ["~/.claude/projects"]
+    #[serde(default = "default_claude_dirs")]
+    pub claude_dirs: Vec<String>,
+}
+
+impl Default for PathsConfig {
+    fn default() -> Self {
+        PathsConfig {
+            claude_dirs: default_claude_dirs(),
+        }
+    }
+}
+
+fn default_claude_dirs() -> Vec<String> {
+    vec!["~/.claude/projects".to_string()]
 }
 
 /// UI configuration

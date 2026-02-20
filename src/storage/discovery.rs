@@ -61,7 +61,22 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
     let home = dirs::home_dir()
         .ok_or_else(|| HindsightError::Config("Could not determine home directory".to_string()))?;
 
-    let claude_dirs = vec![home.join(".claude/projects")];
+    let config = crate::config::Config::load().unwrap_or_default();
+
+    // Resolve configured directories: expand ~ and filter to those that exist
+    let claude_dirs: Vec<std::path::PathBuf> = config
+        .paths
+        .claude_dirs
+        .iter()
+        .map(|d| {
+            if let Some(stripped) = d.strip_prefix("~/") {
+                home.join(stripped)
+            } else {
+                std::path::PathBuf::from(d)
+            }
+        })
+        .filter(|p| p.exists())
+        .collect();
 
     let mut sessions = Vec::new();
 
