@@ -1,6 +1,6 @@
 //! `hindsight paths` — manage Claude project directories to scan
 
-use crate::config::Config;
+use crate::config::{ClaudeDirConfig, Config};
 use crate::error::{HindsightError, Result};
 
 const DEFAULT_DIR: &str = "~/.claude/projects";
@@ -14,19 +14,24 @@ pub fn list() -> Result<()> {
     println!("  Claude project directories:\n");
 
     for dir in &config.paths.claude_dirs {
-        let expanded = if let Some(rest) = dir.strip_prefix("~/") {
+        let expanded = if let Some(rest) = dir.path.strip_prefix("~/") {
             home.join(rest)
         } else {
-            std::path::PathBuf::from(dir)
+            std::path::PathBuf::from(&dir.path)
         };
 
         let exists = expanded.exists();
-        let is_default = dir == DEFAULT_DIR;
+        let is_default = dir.path == DEFAULT_DIR;
 
         let status = if exists { "✓" } else { "✗ (not found)" };
         let tag = if is_default { "  [default]" } else { "" };
+        let name_tag = dir
+            .name
+            .as_deref()
+            .map(|n| format!("  [{}]", n))
+            .unwrap_or_default();
 
-        println!("  {} {}{}", status, dir, tag);
+        println!("  {} {}{}{}", status, dir.path, tag, name_tag);
     }
 
     println!();
@@ -34,7 +39,7 @@ pub fn list() -> Result<()> {
 }
 
 /// Add a directory to the scan list
-pub fn add(path: String) -> Result<()> {
+pub fn add(path: String, name: Option<String>) -> Result<()> {
     // Normalise: replace home dir prefix with ~
     let home = dirs::home_dir()
         .ok_or_else(|| HindsightError::Config("Could not determine home directory".to_string()))?;
@@ -47,15 +52,22 @@ pub fn add(path: String) -> Result<()> {
 
     let mut config = Config::load()?;
 
-    if config.paths.claude_dirs.contains(&normalised) {
+    if config.paths.claude_dirs.iter().any(|d| d.path == normalised) {
         println!("  Already configured: {}", normalised);
         return Ok(());
     }
 
-    config.paths.claude_dirs.push(normalised.clone());
+    config.paths.claude_dirs.push(ClaudeDirConfig {
+        path: normalised.clone(),
+        name: name.clone(),
+    });
     config.save()?;
 
-    println!("  ✓ Added: {}", normalised);
+    if let Some(n) = name {
+        println!("  ✓ Added: {} [{}]", normalised, n);
+    } else {
+        println!("  ✓ Added: {}", normalised);
+    }
     println!("  Run `hindsight reindex` to scan the new directory.");
     Ok(())
 }
@@ -82,7 +94,7 @@ pub fn remove(path: String) -> Result<()> {
     let mut config = Config::load()?;
 
     let before = config.paths.claude_dirs.len();
-    config.paths.claude_dirs.retain(|d| d != &normalised);
+    config.paths.claude_dirs.retain(|d| d.path != normalised);
 
     if config.paths.claude_dirs.len() == before {
         eprintln!("  Not found in config: {}", normalised);

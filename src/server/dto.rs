@@ -111,10 +111,15 @@ pub struct SessionFileDto {
     pub model: Option<String>,
     pub error_count: usize,
     pub first_message: Option<String>,
+    pub source_dir: String,
+    pub subagent_models: Option<Vec<String>>,
 }
 
 impl From<SessionFile> for SessionFileDto {
     fn from(s: SessionFile) -> Self {
+        let subagent_models = s.subagent_models.map(|m| {
+            m.split(',').map(str::to_string).collect()
+        });
         Self {
             session_id: s.session_id,
             project_name: s.project_name,
@@ -127,6 +132,8 @@ impl From<SessionFile> for SessionFileDto {
             model: s.model,
             error_count: s.error_count,
             first_message: s.first_message,
+            source_dir: s.source_dir,
+            subagent_models,
         }
     }
 }

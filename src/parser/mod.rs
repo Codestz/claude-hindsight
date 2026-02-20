@@ -5,3 +5,4 @@ pub mod transcript;
 
 pub use models::{ExecutionNode, Session};
 pub use transcript::parse_session;
+pub use transcript::parse_subagents;

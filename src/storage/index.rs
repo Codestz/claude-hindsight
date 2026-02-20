@@ -50,7 +50,7 @@ impl SessionIndex {
             .query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
         if version == 0 {
-            // Fresh database: create schema v5 with all tables
+            // Fresh database: create schema v6 with all tables
             self.conn.execute_batch(
                 r#"
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -66,7 +66,9 @@ impl SessionIndex {
                     estimated_cost REAL NOT NULL DEFAULT 0.0,
                     model TEXT,
                     error_count INTEGER NOT NULL DEFAULT 0,
-                    first_message TEXT
+                    first_message TEXT,
+                    source_dir TEXT NOT NULL DEFAULT '',
+                    subagent_models TEXT
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_project_name ON sessions(project_name);
@@ -102,7 +104,7 @@ impl SessionIndex {
                 );
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 5", [])?;
+            self.conn.execute("PRAGMA user_version = 6", [])?;
         } else {
             // Incremental migrations
             if version < 4 {
@@ -140,6 +142,19 @@ impl SessionIndex {
                 )?;
                 self.conn.execute("PRAGMA user_version = 5", [])?;
             }
+
+            if version < 6 {
+                // v5 → v6: add source_dir and subagent_models columns
+                let _ = self.conn.execute(
+                    "ALTER TABLE sessions ADD COLUMN source_dir TEXT NOT NULL DEFAULT ''",
+                    [],
+                );
+                let _ = self.conn.execute(
+                    "ALTER TABLE sessions ADD COLUMN subagent_models TEXT",
+                    [],
+                );
+                self.conn.execute("PRAGMA user_version = 6", [])?;
+            }
         }
 
         Ok(())
@@ -156,8 +171,8 @@ impl SessionIndex {
 
         // Try to parse session for rich analytics; fall back to defaults on failure
         let (
-            total_tokens,
-            estimated_cost,
+            mut total_tokens,
+            mut estimated_cost,
             model,
             error_count,
             first_message,
@@ -242,6 +257,26 @@ impl SessionIndex {
             )
         };
 
+        // Aggregate subagent costs — each subagent may use a different model
+        let subagent_sessions = crate::parser::parse_subagents(&session.path);
+        let sub_tokens: i64 = subagent_sessions.iter().map(|s| s.total_tokens).sum();
+        let sub_cost: f64 = subagent_sessions.iter().map(|s| s.estimated_cost).sum();
+        total_tokens = total_tokens.saturating_add(sub_tokens as u64);
+        estimated_cost += sub_cost;
+
+        let mut sub_models: Vec<String> = subagent_sessions
+            .iter()
+            .filter_map(|s| s.model.clone())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+        sub_models.sort();
+        let subagent_models_str: Option<String> = if sub_models.is_empty() {
+            None
+        } else {
+            Some(sub_models.join(","))
+        };
+
         // Skip sessions with no meaningful content (file-history-snapshots, abandoned
         // test files, etc.). Remove from index if previously added.
         if total_tokens == 0 && first_message.is_none() {
@@ -260,8 +295,8 @@ impl SessionIndex {
             r#"
             INSERT OR REPLACE INTO sessions
             (session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents, indexed_at,
-             total_tokens, estimated_cost, model, error_count, first_message)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+             total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
             "#,
             params![
                 session.session_id,
@@ -277,6 +312,8 @@ impl SessionIndex {
                 model,
                 error_count,
                 first_message,
+                session.source_dir,
+                subagent_models_str,
             ],
         )?;
 
@@ -350,7 +387,7 @@ impl SessionIndex {
     pub fn list_sessions(&self) -> Result<Vec<SessionFile>> {
         let mut stmt = self.conn.prepare(
             "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message
+                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
              FROM sessions
              ORDER BY modified_at DESC"
         )?;
@@ -370,6 +407,8 @@ impl SessionIndex {
                     model: row.get(9).ok().flatten(),
                     error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                     first_message: row.get(11).ok().flatten(),
+                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                    subagent_models: row.get(13).ok().flatten(),
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -381,7 +420,7 @@ impl SessionIndex {
     pub fn find_by_project(&self, project: &str) -> Result<Vec<SessionFile>> {
         let mut stmt = self.conn.prepare(
             "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message
+                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
              FROM sessions
              WHERE project_name = ?1
                AND (first_message IS NOT NULL OR total_tokens > 0)
@@ -403,6 +442,8 @@ impl SessionIndex {
                     model: row.get(9).ok().flatten(),
                     error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                     first_message: row.get(11).ok().flatten(),
+                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                    subagent_models: row.get(13).ok().flatten(),
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -415,7 +456,7 @@ impl SessionIndex {
         // Try exact match first
         let mut stmt = self.conn.prepare(
             "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message
+                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
              FROM sessions
              WHERE session_id = ?1"
         )?;
@@ -434,6 +475,8 @@ impl SessionIndex {
                 model: row.get(9).ok().flatten(),
                 error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                 first_message: row.get(11).ok().flatten(),
+                source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                subagent_models: row.get(13).ok().flatten(),
             })
         });
 
@@ -443,7 +486,7 @@ impl SessionIndex {
                 // Try prefix match
                 let mut stmt = self.conn.prepare(
                     "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                            total_tokens, estimated_cost, model, error_count, first_message
+                            total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
                      FROM sessions
                      WHERE session_id LIKE ?1 || '%'
                      ORDER BY modified_at DESC
@@ -464,6 +507,8 @@ impl SessionIndex {
                         model: row.get(9).ok().flatten(),
                         error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                         first_message: row.get(11).ok().flatten(),
+                        source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                        subagent_models: row.get(13).ok().flatten(),
                     })
                 });
 
@@ -481,7 +526,7 @@ impl SessionIndex {
     pub fn get_latest(&self) -> Result<Option<SessionFile>> {
         let mut stmt = self.conn.prepare(
             "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message
+                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
              FROM sessions
              ORDER BY modified_at DESC
              LIMIT 1"
@@ -501,6 +546,8 @@ impl SessionIndex {
                 model: row.get(9).ok().flatten(),
                 error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                 first_message: row.get(11).ok().flatten(),
+                source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                subagent_models: row.get(13).ok().flatten(),
             })
         });
 
@@ -870,7 +917,7 @@ impl SessionIndex {
         let query = format!(
             r#"
             SELECT DISTINCT s.session_id, s.project_name, s.file_path, s.file_size, s.created_at, s.modified_at, s.has_subagents,
-                            s.total_tokens, s.estimated_cost, s.model, s.error_count, s.first_message
+                            s.total_tokens, s.estimated_cost, s.model, s.error_count, s.first_message, s.source_dir, s.subagent_models
             FROM sessions s
             JOIN tool_usage t ON s.session_id = t.session_id
             WHERE t.tool_name IN ({})
@@ -902,6 +949,8 @@ impl SessionIndex {
                     model: row.get(9).ok().flatten(),
                     error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                     first_message: row.get(11).ok().flatten(),
+                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                    subagent_models: row.get(13).ok().flatten(),
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -980,7 +1029,7 @@ impl SessionIndex {
     ) -> Result<Vec<SessionFile>> {
         let col_list = "s.session_id, s.project_name, s.file_path, s.file_size, s.created_at, \
                         s.modified_at, s.has_subagents, s.total_tokens, s.estimated_cost, \
-                        s.model, s.error_count, s.first_message";
+                        s.model, s.error_count, s.first_message, s.source_dir, s.subagent_models";
 
         let mut joins = String::new();
         let mut conditions: Vec<String> =
@@ -1041,6 +1090,8 @@ impl SessionIndex {
                     model: row.get(9).ok().flatten(),
                     error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
                     first_message: row.get(11).ok().flatten(),
+                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
+                    subagent_models: row.get(13).ok().flatten(),
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -1177,6 +1228,8 @@ mod tests {
             model: None,
             error_count: 0,
             first_message: None,
+            source_dir: String::new(),
+            subagent_models: None,
         };
 
         let result = index.index_session(&session);
@@ -1300,6 +1353,8 @@ mod tests {
             model: None,
             error_count: 0,
             first_message: None,
+            source_dir: String::new(),
+            subagent_models: None,
         };
 
         index.index_session(&session).unwrap();

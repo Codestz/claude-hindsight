@@ -44,6 +44,12 @@ pub struct SessionFile {
 
     /// First user message preview (up to 80 chars)
     pub first_message: Option<String>,
+
+    /// Source directory path (from config, e.g. "~/.claude/projects")
+    pub source_dir: String,
+
+    /// Comma-separated unique models used by subagents (e.g. "claude-haiku-4-5")
+    pub subagent_models: Option<String>,
 }
 
 /// Discover all Claude Code sessions in configured directories
@@ -63,30 +69,32 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
 
     let config = crate::config::Config::load().unwrap_or_default();
 
-    // Resolve configured directories: expand ~ and filter to those that exist
-    let claude_dirs: Vec<std::path::PathBuf> = config
+    // Resolve configured directories: expand ~ and filter to those that exist.
+    // Each entry carries (expanded_path, raw_config_path) for source_dir tracking.
+    let claude_dirs: Vec<(PathBuf, String)> = config
         .paths
         .claude_dirs
         .iter()
         .map(|d| {
-            if let Some(stripped) = d.strip_prefix("~/") {
+            let expanded = if let Some(stripped) = d.path.strip_prefix("~/") {
                 home.join(stripped)
             } else {
-                std::path::PathBuf::from(d)
-            }
+                PathBuf::from(&d.path)
+            };
+            (expanded, d.path.clone())
         })
-        .filter(|p| p.exists())
+        .filter(|(p, _)| p.exists())
         .collect();
 
     let mut sessions = Vec::new();
 
-    for claude_dir in claude_dirs {
+    for (claude_dir, source_dir) in &claude_dirs {
         if !claude_dir.exists() {
             continue;
         }
 
         // Scan each project directory
-        for project_entry in fs::read_dir(&claude_dir)? {
+        for project_entry in fs::read_dir(claude_dir)? {
             let project_entry = project_entry?;
             let project_path = project_entry.path();
 
@@ -136,6 +144,8 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
                         model: None,
                         error_count: 0,
                         first_message: None,
+                        source_dir: source_dir.clone(),
+                        subagent_models: None,
                     });
                 }
             }

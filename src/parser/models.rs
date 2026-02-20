@@ -506,14 +506,22 @@ impl Session {
 }
 
 /// Model-aware cost estimator (USD). Pricing as of early 2026.
-/// (input_$/M, cache_write_$/M, cache_read_$/M, output_$/M)
+///
+/// Token types: input (non-cached), cache_write (new cache), cache_read (from cache), output.
+/// Rates per 1M tokens:
+///   Opus 4:    $15 / $18.75 / $1.50 / $75
+///   Sonnet 4:  $3  / $3.75  / $0.30 / $15   (default)
+///   Haiku 4.5: $1  / $1.25  / $0.10 / $5
+///   (Haiku 3.5 was $0.80/$1.00/$0.08/$4 — do NOT confuse with 4.5)
 fn estimate_cost(model: &str, inp: i64, cw: i64, cr: i64, out: i64) -> f64 {
     let (i, w, r, o): (f64, f64, f64, f64) = if model.contains("opus") {
         (15.0, 18.75, 1.5, 75.0)
     } else if model.contains("haiku") {
-        (0.8, 1.0, 0.08, 4.0)
+        // claude-haiku-4-5-20251001 pricing (NOT 3.5 haiku)
+        (1.0, 1.25, 0.10, 5.0)
     } else {
-        (3.0, 3.75, 0.30, 15.0) // Sonnet default
+        // Sonnet (4.x) default
+        (3.0, 3.75, 0.30, 15.0)
     };
     let m = 1_000_000.0_f64;
     (inp as f64 / m * i) + (cw as f64 / m * w) + (cr as f64 / m * r) + (out as f64 / m * o)
