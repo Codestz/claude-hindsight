@@ -3,7 +3,7 @@
 //! Separates presentation logic from data structures.
 #![allow(dead_code)]
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PresentationConfig {
@@ -19,10 +19,10 @@ pub enum ColorScheme {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IconStyle {
-    NerdFont,   // Terminal Nerd Fonts
-    Unicode,    // Unicode emoji
-    Ascii,      // ASCII fallback
-    None,       // No icons
+    NerdFont, // Terminal Nerd Fonts
+    Unicode,  // Unicode emoji
+    Ascii,    // ASCII fallback
+    None,     // No icons
 }
 
 impl Default for PresentationConfig {

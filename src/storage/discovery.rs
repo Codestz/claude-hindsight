@@ -58,13 +58,10 @@ pub struct SessionFile {
 ///
 /// Returns `HindsightError::NoSessionsFound` if no sessions are discovered.
 pub fn discover_sessions() -> Result<Vec<SessionFile>> {
-    let home = dirs::home_dir().ok_or_else(|| {
-        HindsightError::Config("Could not determine home directory".to_string())
-    })?;
+    let home = dirs::home_dir()
+        .ok_or_else(|| HindsightError::Config("Could not determine home directory".to_string()))?;
 
-    let claude_dirs = vec![
-        home.join(".claude/projects"),
-    ];
+    let claude_dirs = vec![home.join(".claude/projects")];
 
     let mut sessions = Vec::new();
 
@@ -91,9 +88,9 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
                 let file_path = file_entry.path();
 
                 // Check if it's a .jsonl file (not a directory)
-                if file_path.is_file() &&
-                   file_path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-
+                if file_path.is_file()
+                    && file_path.extension().and_then(|s| s.to_str()) == Some("jsonl")
+                {
                     let metadata = fs::metadata(&file_path)?;
                     let session_id = file_path
                         .file_stem()

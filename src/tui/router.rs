@@ -19,7 +19,7 @@ use ratatui::Frame;
 pub enum ViewMode {
     Projects,
     Dashboard,
-    Sessions(String),      // Project name
+    Sessions(String), // Project name
     #[allow(dead_code)]
     SessionDetail(String), // Session ID
 }
@@ -182,12 +182,16 @@ impl Router {
             }
 
             ViewMode::SessionDetail(_) => {
-                let (should_go_back, should_quit) = if let Some(ref mut view) = self.session_detail_view {
-                    view.handle_key(key)?;
-                    (view.should_quit && !self.view_stack.is_empty(), view.should_quit && self.view_stack.is_empty())
-                } else {
-                    (false, false)
-                };
+                let (should_go_back, should_quit) =
+                    if let Some(ref mut view) = self.session_detail_view {
+                        view.handle_key(key)?;
+                        (
+                            view.should_quit && !self.view_stack.is_empty(),
+                            view.should_quit && self.view_stack.is_empty(),
+                        )
+                    } else {
+                        (false, false)
+                    };
 
                 if should_go_back {
                     self.navigate_back()?;
@@ -269,7 +273,8 @@ impl Router {
                 }
                 ViewMode::Sessions(project_name) => {
                     if self.sessions_view.is_none() {
-                        self.sessions_view = Some(SessionsView::new(project_name.clone(), &self.config)?);
+                        self.sessions_view =
+                            Some(SessionsView::new(project_name.clone(), &self.config)?);
                     } else if let Some(ref mut view) = self.sessions_view {
                         view.refresh()?;
                     }

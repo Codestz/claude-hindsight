@@ -1,9 +1,9 @@
 //! Project routes: GET /api/projects
 
-use axum::{extract::State, Json};
-use crate::server::{AppState, error::ApiError};
 use crate::server::dto::ProjectStatsDto;
+use crate::server::{error::ApiError, AppState};
 use crate::storage::SessionIndex;
+use axum::{extract::State, Json};
 
 pub async fn list_projects(
     State(_state): State<AppState>,
@@ -15,5 +15,7 @@ pub async fn list_projects(
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))??;
 
-    Ok(Json(result.into_iter().map(ProjectStatsDto::from).collect()))
+    Ok(Json(
+        result.into_iter().map(ProjectStatsDto::from).collect(),
+    ))
 }

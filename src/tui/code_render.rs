@@ -46,21 +46,35 @@ impl Language {
     fn keywords(&self) -> &[&str] {
         match self {
             Language::Rust => &[
-                "fn", "let", "mut", "const", "static", "impl", "trait", "struct", "enum",
-                "pub", "use", "mod", "crate", "super", "self", "if", "else", "match",
-                "for", "while", "loop", "break", "continue", "return", "async", "await",
+                "fn", "let", "mut", "const", "static", "impl", "trait", "struct", "enum", "pub",
+                "use", "mod", "crate", "super", "self", "if", "else", "match", "for", "while",
+                "loop", "break", "continue", "return", "async", "await",
             ],
             Language::JavaScript => &[
-                "function", "const", "let", "var", "if", "else", "for", "while", "return",
-                "class", "extends", "import", "export", "async", "await", "try", "catch",
+                "function", "const", "let", "var", "if", "else", "for", "while", "return", "class",
+                "extends", "import", "export", "async", "await", "try", "catch",
             ],
             Language::Python => &[
-                "def", "class", "if", "elif", "else", "for", "while", "return", "import",
-                "from", "as", "try", "except", "with", "lambda", "async", "await",
+                "def", "class", "if", "elif", "else", "for", "while", "return", "import", "from",
+                "as", "try", "except", "with", "lambda", "async", "await",
             ],
             Language::Go => &[
-                "func", "var", "const", "if", "else", "for", "range", "return", "struct",
-                "interface", "type", "package", "import", "defer", "go", "chan",
+                "func",
+                "var",
+                "const",
+                "if",
+                "else",
+                "for",
+                "range",
+                "return",
+                "struct",
+                "interface",
+                "type",
+                "package",
+                "import",
+                "defer",
+                "go",
+                "chan",
             ],
             _ => &[],
         }
@@ -69,8 +83,13 @@ impl Language {
     /// Get types for this language
     fn types(&self) -> &[&str] {
         match self {
-            Language::Rust => &["String", "str", "i32", "i64", "u32", "u64", "f32", "f64", "bool", "usize", "Option", "Result", "Vec"],
-            Language::JavaScript | Language::Python => &["string", "number", "boolean", "object", "array"],
+            Language::Rust => &[
+                "String", "str", "i32", "i64", "u32", "u64", "f32", "f64", "bool", "usize",
+                "Option", "Result", "Vec",
+            ],
+            Language::JavaScript | Language::Python => {
+                &["string", "number", "boolean", "object", "array"]
+            }
             Language::Go => &["string", "int", "int64", "float64", "bool", "map", "slice"],
             _ => &[],
         }
@@ -116,7 +135,10 @@ fn highlight_line(line: &str, language: Language) -> Line<'static> {
                 current.push(ch);
             } else if ch == string_char {
                 current.push(ch);
-                spans.push(Span::styled(current.clone(), Style::default().fg(Color::Green)));
+                spans.push(Span::styled(
+                    current.clone(),
+                    Style::default().fg(Color::Green),
+                ));
                 current.clear();
                 in_string = false;
             } else {
@@ -124,7 +146,17 @@ fn highlight_line(line: &str, language: Language) -> Line<'static> {
             }
         } else if in_string {
             current.push(ch);
-        } else if ch.is_whitespace() || ch == '(' || ch == ')' || ch == '{' || ch == '}' || ch == '[' || ch == ']' || ch == ';' || ch == ',' || ch == ':' {
+        } else if ch.is_whitespace()
+            || ch == '('
+            || ch == ')'
+            || ch == '{'
+            || ch == '}'
+            || ch == '['
+            || ch == ']'
+            || ch == ';'
+            || ch == ','
+            || ch == ':'
+        {
             // Flush current word
             if !current.is_empty() {
                 spans.push(word_to_span(&current, keywords, types));
@@ -151,7 +183,12 @@ fn highlight_line(line: &str, language: Language) -> Line<'static> {
 /// Convert a word to a styled span
 fn word_to_span(word: &str, keywords: &[&str], types: &[&str]) -> Span<'static> {
     if keywords.contains(&word) {
-        Span::styled(word.to_string(), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD))
+        Span::styled(
+            word.to_string(),
+            Style::default()
+                .fg(Color::Magenta)
+                .add_modifier(Modifier::BOLD),
+        )
     } else if types.contains(&word) {
         Span::styled(word.to_string(), Style::default().fg(Color::Cyan))
     } else if word.starts_with("//") {
@@ -173,7 +210,12 @@ pub fn render_edit_result(content: &str) -> Option<Vec<Line<'static>>> {
     // Extract file path
     if let Some(file_path) = json.get("file_path").and_then(|v| v.as_str()) {
         lines.push(Line::from(vec![
-            Span::styled(" File: ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),  // nf-fa-file_code
+            Span::styled(
+                " File: ",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ), // nf-fa-file_code
             Span::styled(file_path.to_string(), Style::default().fg(Color::Yellow)),
         ]));
         lines.push(Line::from(""));
@@ -183,7 +225,7 @@ pub fn render_edit_result(content: &str) -> Option<Vec<Line<'static>>> {
         // Show old code if present
         if let Some(old_string) = json.get("old_string").and_then(|v| v.as_str()) {
             lines.push(Line::from(Span::styled(
-                " Removed:",  // nf-fa-minus_circle
+                " Removed:", // nf-fa-minus_circle
                 Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             )));
             lines.push(Line::from(""));
@@ -199,8 +241,10 @@ pub fn render_edit_result(content: &str) -> Option<Vec<Line<'static>>> {
         // Show new code if present
         if let Some(new_string) = json.get("new_string").and_then(|v| v.as_str()) {
             lines.push(Line::from(Span::styled(
-                " Added:",  // nf-fa-plus_circle
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                " Added:", // nf-fa-plus_circle
+                Style::default()
+                    .fg(Color::Green)
+                    .add_modifier(Modifier::BOLD),
             )));
             lines.push(Line::from(""));
 

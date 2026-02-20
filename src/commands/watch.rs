@@ -63,10 +63,16 @@ pub fn run(session_id: Option<String>, dashboard: bool) -> Result<()> {
                 stats.update(node);
             }
 
-            println!("\n  ... ({} nodes omitted) ...\n", existing_nodes.len() - show_count * 2);
+            println!(
+                "\n  ... ({} nodes omitted) ...\n",
+                existing_nodes.len() - show_count * 2
+            );
 
             // Show last 5
-            for node in existing_nodes.iter().skip(existing_nodes.len() - show_count) {
+            for node in existing_nodes
+                .iter()
+                .skip(existing_nodes.len() - show_count)
+            {
                 render_node(node);
                 stats.update(node);
             }

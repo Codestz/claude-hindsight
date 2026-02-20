@@ -8,8 +8,8 @@ use std::collections::HashSet;
 #[derive(Debug, Clone)]
 pub struct SearchState {
     pub query: String,
-    pub node_types: HashSet<String>,  // Set of node types to filter by
-    pub matches: Vec<String>,         // UUIDs of matching nodes
+    pub node_types: HashSet<String>, // Set of node types to filter by
+    pub matches: Vec<String>,        // UUIDs of matching nodes
     pub current_match: usize,
 }
 
@@ -39,7 +39,8 @@ impl SearchState {
         if self.node_types.is_empty() {
             return true; // No filter active, show all
         }
-        self.node_types.contains(&node.node.node_type.to_lowercase())
+        self.node_types
+            .contains(&node.node.node_type.to_lowercase())
     }
 
     /// Move to next match

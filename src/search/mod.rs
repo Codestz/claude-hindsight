@@ -1,7 +1,6 @@
 //! Search engine for Claude Code sessions
 //!
 //! Provides fast metadata-based search using the SQLite index.
-#![allow(dead_code)]
 
 pub mod filters;
 pub mod results;
@@ -35,6 +34,7 @@ pub use results::SearchResult;
 /// let results = search_sessions(&filters)?;
 /// # Ok::<(), hindsight::error::HindsightError>(())
 /// ```
+#[allow(dead_code)]
 pub fn search_sessions(filters: &SearchFilters) -> Result<Vec<SearchResult>> {
     let index = SessionIndex::new()?;
 
@@ -61,10 +61,7 @@ pub fn search_sessions(filters: &SearchFilters) -> Result<Vec<SearchResult>> {
 
     // Filter by errors if requested
     if filters.errors_only {
-        // Sessions with errors have error_count > 0 in the parsed session
-        // For Phase 1 MVP, we skip this filter (will implement in Phase 2)
-        // For now, just include all sessions when --errors is specified
-        // TODO: Add error_count column to sessions table during indexing
+        sessions.retain(|s| s.error_count > 0);
     }
 
     // Convert to SearchResults with metadata and sort by relevance
@@ -75,7 +72,9 @@ pub fn search_sessions(filters: &SearchFilters) -> Result<Vec<SearchResult>> {
 
     // Sort by relevance (most relevant first)
     results.sort_by(|a, b| {
-        b.relevance.partial_cmp(&a.relevance).unwrap_or(std::cmp::Ordering::Equal)
+        b.relevance
+            .partial_cmp(&a.relevance)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     Ok(results)

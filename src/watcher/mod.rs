@@ -39,17 +39,15 @@ impl SessionWatcher {
         }
 
         // Start at end of file so only newly appended content is read
-        let position = std::fs::metadata(&file_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let position = std::fs::metadata(&file_path).map(|m| m.len()).unwrap_or(0);
 
         // Set up file watcher
         let (tx, rx) = channel();
         let mut watcher: RecommendedWatcher = Watcher::new(
             move |res: notify::Result<Event>| {
-                let _ = tx.send(res.map_err(|e| {
-                    HindsightError::FileWatcher(format!("Watch error: {}", e))
-                }));
+                let _ = tx.send(
+                    res.map_err(|e| HindsightError::FileWatcher(format!("Watch error: {}", e))),
+                );
             },
             notify::Config::default(),
         )

@@ -4,7 +4,7 @@
 
 use crate::config::Config;
 use crate::error::Result;
-use crate::storage::{SessionFile, SessionIndex, ProjectAnalytics};
+use crate::storage::{ProjectAnalytics, SessionFile, SessionIndex};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Layout, Rect},
@@ -26,19 +26,19 @@ pub enum SortMode {
 impl SortMode {
     fn label(self) -> &'static str {
         match self {
-            SortMode::Newest       => "Newest",
+            SortMode::Newest => "Newest",
             SortMode::MostExpensive => "Cost ↓",
-            SortMode::MostTokens   => "Tokens ↓",
-            SortMode::MostErrors   => "Errors ↓",
+            SortMode::MostTokens => "Tokens ↓",
+            SortMode::MostErrors => "Errors ↓",
         }
     }
 
     fn next(self) -> Self {
         match self {
-            SortMode::Newest        => SortMode::MostExpensive,
+            SortMode::Newest => SortMode::MostExpensive,
             SortMode::MostExpensive => SortMode::MostTokens,
-            SortMode::MostTokens    => SortMode::MostErrors,
-            SortMode::MostErrors    => SortMode::Newest,
+            SortMode::MostTokens => SortMode::MostErrors,
+            SortMode::MostErrors => SortMode::Newest,
         }
     }
 }
@@ -155,9 +155,7 @@ impl SessionsView {
             }
 
             // Go back to projects
-            (KeyCode::Char('h'), KeyModifiers::NONE) | (KeyCode::Esc, _) => {
-                Ok(SessionAction::Back)
-            }
+            (KeyCode::Char('h'), KeyModifiers::NONE) | (KeyCode::Esc, _) => Ok(SessionAction::Back),
 
             // Start filter
             (KeyCode::Char('/'), KeyModifiers::NONE) => {
@@ -174,7 +172,8 @@ impl SessionsView {
             }
 
             // Sort toggle (S cycles through sort modes)
-            (KeyCode::Char('s'), KeyModifiers::NONE) | (KeyCode::Char('S'), KeyModifiers::SHIFT) => {
+            (KeyCode::Char('s'), KeyModifiers::NONE)
+            | (KeyCode::Char('S'), KeyModifiers::SHIFT) => {
                 self.sort_mode = self.sort_mode.next();
                 self.apply_sort();
                 self.status_message = format!("Sort: {}", self.sort_mode.label());
@@ -182,9 +181,7 @@ impl SessionsView {
             }
 
             // Quit
-            (KeyCode::Char('q'), KeyModifiers::NONE) => {
-                Ok(SessionAction::Quit)
-            }
+            (KeyCode::Char('q'), KeyModifiers::NONE) => Ok(SessionAction::Quit),
 
             _ => Ok(SessionAction::None),
         }
@@ -194,19 +191,23 @@ impl SessionsView {
     fn apply_sort(&mut self) {
         match self.sort_mode {
             SortMode::Newest => {
-                self.sessions.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+                self.sessions
+                    .sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
             }
             SortMode::MostExpensive => {
                 self.sessions.sort_by(|a, b| {
-                    b.estimated_cost.partial_cmp(&a.estimated_cost)
+                    b.estimated_cost
+                        .partial_cmp(&a.estimated_cost)
                         .unwrap_or(std::cmp::Ordering::Equal)
                 });
             }
             SortMode::MostTokens => {
-                self.sessions.sort_by(|a, b| b.total_tokens.cmp(&a.total_tokens));
+                self.sessions
+                    .sort_by(|a, b| b.total_tokens.cmp(&a.total_tokens));
             }
             SortMode::MostErrors => {
-                self.sessions.sort_by(|a, b| b.error_count.cmp(&a.error_count));
+                self.sessions
+                    .sort_by(|a, b| b.error_count.cmp(&a.error_count));
             }
         }
         // Keep selection at top after sort
@@ -278,7 +279,9 @@ impl SessionsView {
 
     /// Get selected session
     pub fn selected_session(&self) -> Option<&SessionFile> {
-        self.list_state.selected().and_then(|i| self.sessions.get(i))
+        self.list_state
+            .selected()
+            .and_then(|i| self.sessions.get(i))
     }
 
     /// Select next session
@@ -338,9 +341,9 @@ impl SessionsView {
         let chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
-                Constraint::Length(12),  // Header (ASCII art + description + project info)
-                Constraint::Min(0),      // Content area (sessions + analytics)
-                Constraint::Length(3),   // Status bar
+                Constraint::Length(12), // Header (ASCII art + description + project info)
+                Constraint::Min(0),     // Content area (sessions + analytics)
+                Constraint::Length(3),  // Status bar
             ])
             .split(area);
 
@@ -351,8 +354,8 @@ impl SessionsView {
         let content_chunks = Layout::default()
             .direction(ratatui::layout::Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(65),  // Sessions list
-                Constraint::Percentage(35),  // Analytics panel
+                Constraint::Percentage(65), // Sessions list
+                Constraint::Percentage(35), // Analytics panel
             ])
             .split(chunks[1]);
 
@@ -379,42 +382,54 @@ impl SessionsView {
                 Span::raw(&pad),
                 Span::styled(
                     "██╗  ██╗██╗███╗   ██╗██████╗ ███████╗██╗ ██████╗ ██╗  ██╗████████╗",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "██║  ██║██║████╗  ██║██╔══██╗██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "███████║██║██╔██╗ ██║██║  ██║███████╗██║██║  ███╗███████║   ██║   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "██╔══██║██║██║╚██╗██║██║  ██║╚════██║██║██║   ██║██╔══██║   ██║   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "██║  ██║██║██║ ╚████║██████╔╝███████║██║╚██████╔╝██║  ██║   ██║   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
@@ -437,7 +452,9 @@ impl SessionsView {
                 Span::styled("Project: ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
                     &self.project_name,
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw("  •  "),
                 Span::styled(
@@ -457,7 +474,10 @@ impl SessionsView {
     /// Render the session list with column header
     fn render_list(&mut self, f: &mut Frame, area: Rect) {
         // Render the outer block and get inner area for children
-        let title = format!("Sessions — Sort: {} (S:cycle)  ●=clean ●=errors", self.sort_mode.label());
+        let title = format!(
+            "Sessions — Sort: {} (S:cycle)  ●=clean ●=errors",
+            self.sort_mode.label()
+        );
         let block = Block::default().borders(Borders::ALL).title(title);
         let inner = block.inner(area);
         f.render_widget(block, area);
@@ -471,53 +491,118 @@ impl SessionsView {
         // ── #11: Column header row ────────────────────────────────────────
         let header = Paragraph::new(Line::from(vec![
             Span::styled("  ● ", Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:8}", "ID"),      Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                format!("{:8}", "ID"),
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:7}", "Age"),     Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                format!("{:7}", "Age"),
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:8}", "Updated"), Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                format!("{:8}", "Updated"),
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:12}", "Model"),  Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                format!("{:12}", "Model"),
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:7}", "Tokens"),  Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                format!("{:7}", "Tokens"),
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(format!("{:7}", "Cost"),    Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                format!("{:7}", "Cost"),
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled("Message",                   Style::default().fg(Color::DarkGray).add_modifier(Modifier::UNDERLINED)),
+            Span::styled(
+                "Message",
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::UNDERLINED),
+            ),
         ]));
         f.render_widget(header, chunks[0]);
 
         // ── Data rows ─────────────────────────────────────────────────────
-        let items: Vec<ListItem> = self.sessions
+        let items: Vec<ListItem> = self
+            .sessions
             .iter()
             .map(|session| {
                 let age_str = format_time_ago(Some(session.created_at));
                 let updated_str = format_time_ago(Some(session.modified_at));
                 let short_id = &session.session_id[..8.min(session.session_id.len())];
-                let dot_color = if session.error_count == 0 { Color::Green } else { Color::Red };
+                let dot_color = if session.error_count == 0 {
+                    Color::Green
+                } else {
+                    Color::Red
+                };
                 let model_raw = session.model.as_deref().unwrap_or("-");
-                let model_display = if model_raw.len() > 12 { &model_raw[..12] } else { model_raw };
+                let model_display = if model_raw.len() > 12 {
+                    &model_raw[..12]
+                } else {
+                    model_raw
+                };
                 let tok_str = fmt_tokens(session.total_tokens);
                 let cost_str = format!("${:.3}", session.estimated_cost);
                 let preview_raw = session.first_message.as_deref().unwrap_or("(no message)");
-                let preview_end = preview_raw.char_indices().nth(35).map(|(i, _)| i).unwrap_or(preview_raw.len());
+                let preview_end = preview_raw
+                    .char_indices()
+                    .nth(35)
+                    .map(|(i, _)| i)
+                    .unwrap_or(preview_raw.len());
                 let preview = &preview_raw[..preview_end];
 
                 ListItem::new(Line::from(vec![
                     Span::styled("  ", Style::default()),
                     Span::styled("●", Style::default().fg(dot_color)),
                     Span::raw(" "),
-                    Span::styled(format!("{:8}", short_id), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+                    Span::styled(
+                        format!("{:8}", short_id),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
+                    ),
                     Span::raw(" │ "),
-                    Span::styled(format!("{:7}", age_str),     Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!("{:7}", age_str),
+                        Style::default().fg(Color::DarkGray),
+                    ),
                     Span::raw(" │ "),
-                    Span::styled(format!("{:8}", updated_str), Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        format!("{:8}", updated_str),
+                        Style::default().fg(Color::Yellow),
+                    ),
                     Span::raw(" │ "),
-                    Span::styled(format!("{:12}", model_display), Style::default().fg(Color::Blue)),
+                    Span::styled(
+                        format!("{:12}", model_display),
+                        Style::default().fg(Color::Blue),
+                    ),
                     Span::raw(" │ "),
                     Span::styled(format!("{:7}", tok_str), Style::default().fg(Color::Green)),
                     Span::raw(" │ "),
-                    Span::styled(format!("{:7}", cost_str), Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        format!("{:7}", cost_str),
+                        Style::default().fg(Color::Yellow),
+                    ),
                     Span::raw(" │ "),
                     Span::styled(preview.to_string(), Style::default().fg(Color::Gray)),
                 ]))
@@ -525,7 +610,11 @@ impl SessionsView {
             .collect();
 
         let list = List::new(items)
-            .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
+            .highlight_style(
+                Style::default()
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD),
+            )
             .highlight_symbol(">> ");
 
         f.render_stateful_widget(list, chunks[1], &mut self.list_state);
@@ -544,42 +633,56 @@ impl SessionsView {
         let mut lines = vec![
             Line::from(""),
             // Overview section
-            Line::from(vec![
-                Span::styled(" Overview", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
+            Line::from(vec![Span::styled(
+                " Overview",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("  Sessions:       "),
                 Span::styled(
                     format!("{}", self.analytics.total_sessions),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw("  Total Size:     "),
                 Span::styled(
                     format!("{:.1} MB", size_mb),
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
             // Cost & tokens
-            Line::from(vec![
-                Span::styled(" Cost & Usage", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
+            Line::from(vec![Span::styled(
+                " Cost & Usage",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("  Total Tokens:   "),
                 Span::styled(
                     total_tokens,
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw("  Total Cost:     "),
                 Span::styled(
                     format!("${:.2}", self.analytics.total_cost),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
@@ -593,9 +696,13 @@ impl SessionsView {
                 Span::raw("  Total Errors:   "),
                 Span::styled(
                     format!("{}", self.analytics.total_errors),
-                    Style::default().fg(
-                        if self.analytics.total_errors > 0 { Color::Red } else { Color::Green }
-                    ).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(if self.analytics.total_errors > 0 {
+                            Color::Red
+                        } else {
+                            Color::Green
+                        })
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
@@ -603,15 +710,20 @@ impl SessionsView {
 
         // Activity section (conditional based on config)
         if self.config.analytics.show_activity {
-            lines.push(Line::from(vec![
-                Span::styled(" Activity", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Activity",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::raw("  This Week:      "),
                 Span::styled(
                     format!("{}", self.analytics.sessions_this_week),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" sessions"),
             ]));
@@ -619,7 +731,9 @@ impl SessionsView {
                 Span::raw("  Today:          "),
                 Span::styled(
                     format!("{}", self.analytics.sessions_today),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" sessions"),
             ]));
@@ -628,15 +742,20 @@ impl SessionsView {
 
         // Session Types section (conditional based on config)
         if self.config.analytics.show_subagent_count {
-            lines.push(Line::from(vec![
-                Span::styled(" Session Types", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Session Types",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::raw("  With Subagents: "),
                 Span::styled(
                     format!("{}", self.analytics.subagent_count),
-                    Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Magenta)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]));
             lines.push(Line::from(""));
@@ -644,14 +763,20 @@ impl SessionsView {
 
         // Top Tools section (conditional based on config)
         if self.config.analytics.show_top_tools {
-            lines.push(Line::from(vec![
-                Span::styled(" Top Tools", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Top Tools",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
 
             if !self.analytics.top_tools.is_empty() {
                 // Limit to configured number of tools
-                let tools_to_show = self.analytics.top_tools.iter()
+                let tools_to_show = self
+                    .analytics
+                    .top_tools
+                    .iter()
                     .take(self.config.analytics.tools_limit);
 
                 for (tool, count) in tools_to_show {
@@ -669,23 +794,26 @@ impl SessionsView {
                         ),
                         Span::styled(
                             format!("{:>4}", count),
-                            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
                         ),
                     ]));
                 }
             } else {
                 lines.push(Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(
-                        "Analyzing...",
-                        Style::default().fg(Color::DarkGray),
-                    ),
+                    Span::styled("Analyzing...", Style::default().fg(Color::DarkGray)),
                 ]));
             }
         }
 
         let paragraph = Paragraph::new(lines)
-            .block(Block::default().borders(Borders::ALL).title("Project Analytics"))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Project Analytics"),
+            )
             .alignment(ratatui::layout::Alignment::Left);
 
         f.render_widget(paragraph, area);
@@ -713,8 +841,7 @@ impl SessionsView {
             Line::from(self.status_message.as_str()),
         ];
 
-        let status = Paragraph::new(shortcuts)
-            .block(Block::default().borders(Borders::ALL));
+        let status = Paragraph::new(shortcuts).block(Block::default().borders(Borders::ALL));
 
         f.render_widget(status, area);
     }

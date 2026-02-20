@@ -1,10 +1,9 @@
 //! API response DTOs for web dashboard
 //!
 //! These types are optimized for JSON serialization and frontend consumption.
-#![allow(dead_code)]
 
-use serde::{Serialize, Deserialize};
 use crate::analyzer::TreeNode;
+use serde::{Deserialize, Serialize};
 
 /// Serializable node representation for API
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,7 +11,7 @@ pub struct NodeResponse {
     pub uuid: Option<String>,
     pub node_type: String,
     pub label: String,
-    pub color: String,        // Semantic: "cyan", "green", etc.
+    pub color: String, // Semantic: "cyan", "green", etc.
     pub summary: String,
     pub depth: usize,
     pub has_error: bool,
@@ -20,7 +19,7 @@ pub struct NodeResponse {
     pub children: Vec<NodeResponse>,
 
     #[serde(flatten)]
-    pub data: serde_json::Value,  // Original node data
+    pub data: serde_json::Value, // Original node data
 }
 
 /// Tree response with statistics
@@ -29,20 +28,6 @@ pub struct TreeResponse {
     pub roots: Vec<NodeResponse>,
     pub total_nodes: usize,
     pub max_depth: usize,
-}
-
-/// Session statistics response
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SessionStatsResponse {
-    pub session_id: String,
-    pub start_time: Option<i64>,
-    pub end_time: Option<i64>,
-    pub duration_seconds: Option<i64>,
-    pub total_nodes: usize,
-    pub total_tools: usize,
-    pub total_tokens: i64,
-    pub estimated_cost: f64,
-    pub error_count: usize,
 }
 
 impl NodeResponse {
@@ -55,13 +40,43 @@ impl NodeResponse {
             node_type: node.node.node_type.clone(),
             label,
             color: color.to_string(),
-            summary: String::new(), // TODO: Add summary logic
+            summary: String::new(),
             depth: node.depth,
-            has_error: node.node
-                .tool_result
-                .as_ref()
-                .and_then(|r| r.is_error)
-                .unwrap_or(false),
+            has_error: {
+                // Explicit is_error flag on top-level tool_result
+                let tr = node.node.tool_result.as_ref();
+                let flag_error = tr.and_then(|r| r.is_error).unwrap_or(false);
+
+                // Content string containing <tool_use_error> tag
+                let tag_error = tr
+                    .and_then(|r| r.content.as_deref())
+                    .map(|c| c.contains("<tool_use_error>"))
+                    .unwrap_or(false);
+
+                // ToolResult blocks inside message.content with is_error or error tag
+                let block_error = node
+                    .node
+                    .message
+                    .as_ref()
+                    .map(|m| {
+                        m.content_blocks().iter().any(|b| match b {
+                            crate::parser::models::ContentBlock::ToolResult {
+                                content, is_error, ..
+                            } => {
+                                is_error.unwrap_or(false)
+                                    || content
+                                        .as_ref()
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.contains("<tool_use_error>"))
+                                        .unwrap_or(false)
+                            }
+                            _ => false,
+                        })
+                    })
+                    .unwrap_or(false);
+
+                flag_error || tag_error || block_error
+            },
             timestamp: node.node.timestamp,
             children: node.children.iter().map(Self::from_tree_node).collect(),
             data: serde_json::to_value(&*node.node).unwrap_or(serde_json::Value::Null),

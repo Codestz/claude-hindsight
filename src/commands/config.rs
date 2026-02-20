@@ -68,9 +68,10 @@ pub fn edit_config() -> Result<()> {
         .status()?;
 
     if !status.success() {
-        return Err(crate::error::HindsightError::Config(
-            format!("Editor {} exited with error", editor)
-        ));
+        return Err(crate::error::HindsightError::Config(format!(
+            "Editor {} exited with error",
+            editor
+        )));
     }
 
     // Validate after edit

@@ -8,10 +8,10 @@ use std::process;
 
 mod analyzer;
 mod api;
-mod parser;
 mod commands;
 mod config;
 mod error;
+mod parser;
 mod search;
 mod server;
 mod storage;
@@ -212,20 +212,15 @@ fn run() -> Result<()> {
         } => {
             commands::search::run(query, tool, errors)?;
         }
-        Commands::Export {
-            session_id,
-            output,
-        } => {
+        Commands::Export { session_id, output } => {
             commands::export::run(session_id, output)?;
         }
-        Commands::Config { action } => {
-            match action {
-                ConfigAction::Show => commands::config::show_config()?,
-                ConfigAction::Edit => commands::config::edit_config()?,
-                ConfigAction::Reset => commands::config::reset_config()?,
-                ConfigAction::Validate => commands::config::validate_config()?,
-            }
-        }
+        Commands::Config { action } => match action {
+            ConfigAction::Show => commands::config::show_config()?,
+            ConfigAction::Edit => commands::config::edit_config()?,
+            ConfigAction::Reset => commands::config::reset_config()?,
+            ConfigAction::Validate => commands::config::validate_config()?,
+        },
         Commands::Reindex { verbose } => {
             commands::reindex::run(verbose)?;
         }

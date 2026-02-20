@@ -2,10 +2,10 @@
 //!
 //! Manages the state of the interactive terminal UI.
 
-use crate::analyzer::{build_simple_tree, TreeNode, SessionAnalytics};
+use crate::analyzer::{build_simple_tree, SessionAnalytics, TreeNode};
 use crate::error::Result;
-use crate::parser::Session;
 use crate::parser::models::ContentBlock;
+use crate::parser::Session;
 use crate::tui::search::SearchState;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
@@ -158,7 +158,12 @@ impl App {
             // Path 1: ToolResult content blocks inside user messages
             if let Some(ref msg) = node.message {
                 for block in msg.content_blocks() {
-                    if let ContentBlock::ToolResult { tool_use_id, content, is_error } = block {
+                    if let ContentBlock::ToolResult {
+                        tool_use_id,
+                        content,
+                        is_error,
+                    } = block
+                    {
                         let is_err = is_error.unwrap_or(false);
                         let prefix = if is_err { "✗" } else { "✓" };
                         let text = content.as_ref().and_then(|v| {
@@ -178,8 +183,11 @@ impl App {
                                 let lines = t.lines().count();
                                 let first = t.lines().next().unwrap_or("").trim();
                                 let short: String = first.chars().take(60).collect();
-                                if lines > 1 { format!("{} {} ({} lines)", prefix, short, lines) }
-                                else { format!("{} {}", prefix, short) }
+                                if lines > 1 {
+                                    format!("{} {} ({} lines)", prefix, short, lines)
+                                } else {
+                                    format!("{} {}", prefix, short)
+                                }
                             }
                         };
                         tool_result_map.insert(tool_use_id.clone(), summary);
@@ -190,21 +198,38 @@ impl App {
             if let Some(ref result) = node.tool_result {
                 if let Some(ref id) = result.tool_use_id {
                     let summary = if result.is_error == Some(true) {
-                        let err = result.error.as_deref().or(result.content.as_deref()).unwrap_or("error");
+                        let err = result
+                            .error
+                            .as_deref()
+                            .or(result.content.as_deref())
+                            .unwrap_or("error");
                         let first = err.lines().next().unwrap_or("").trim();
                         format!("✗ {}", &first.chars().take(60).collect::<String>())
                     } else if let Some(ref file) = result.file {
-                        let name = file.file_path.as_deref()
-                            .and_then(|p| p.rsplit('/').next()).unwrap_or("file");
-                        let lines = file.content.as_deref().map(|c| c.lines().count()).unwrap_or(0);
-                        if lines > 0 { format!("✓ {} ({} lines)", name, lines) }
-                        else { format!("✓ {}", name) }
+                        let name = file
+                            .file_path
+                            .as_deref()
+                            .and_then(|p| p.rsplit('/').next())
+                            .unwrap_or("file");
+                        let lines = file
+                            .content
+                            .as_deref()
+                            .map(|c| c.lines().count())
+                            .unwrap_or(0);
+                        if lines > 0 {
+                            format!("✓ {} ({} lines)", name, lines)
+                        } else {
+                            format!("✓ {}", name)
+                        }
                     } else if let Some(ref content) = result.content {
                         let lines = content.lines().count();
                         let first = content.lines().next().unwrap_or("").trim();
                         let short: String = first.chars().take(60).collect();
-                        if lines > 1 { format!("✓ {} ({} lines)", short, lines) }
-                        else { format!("✓ {}", short) }
+                        if lines > 1 {
+                            format!("✓ {} ({} lines)", short, lines)
+                        } else {
+                            format!("✓ {}", short)
+                        }
                     } else {
                         "✓ ok".to_string()
                     };
@@ -234,17 +259,25 @@ impl App {
             let mut info = vec![];
             for node in &session.nodes {
                 let is_err = node.node_type == "error"
-                    || node.tool_result.as_ref().map(|r| r.is_error == Some(true)).unwrap_or(false);
+                    || node
+                        .tool_result
+                        .as_ref()
+                        .map(|r| r.is_error == Some(true))
+                        .unwrap_or(false);
                 if is_err {
                     if let Some(ref uuid) = node.uuid {
                         let desc: String = if node.node_type == "error" {
-                            node.extra.as_ref()
+                            node.extra
+                                .as_ref()
                                 .and_then(|e| e.get("error"))
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("Unknown error")
-                                .chars().take(50).collect()
+                                .chars()
+                                .take(50)
+                                .collect()
                         } else {
-                            node.tool_result.as_ref()
+                            node.tool_result
+                                .as_ref()
                                 .and_then(|r| r.error.as_ref())
                                 .map(|e| e.chars().take(50).collect::<String>())
                                 .unwrap_or_else(|| "Tool error".to_string())
@@ -301,7 +334,9 @@ impl App {
         self.tree_state.select(vec![uuid]);
         self.details_scroll = 0;
         self.status_message = format!(
-            "Error {}/{}", self.current_error_idx + 1, self.error_node_uuids.len()
+            "Error {}/{}",
+            self.current_error_idx + 1,
+            self.error_node_uuids.len()
         );
     }
 
@@ -320,7 +355,9 @@ impl App {
         self.tree_state.select(vec![uuid]);
         self.details_scroll = 0;
         self.status_message = format!(
-            "Error {}/{}", self.current_error_idx + 1, self.error_node_uuids.len()
+            "Error {}/{}",
+            self.current_error_idx + 1,
+            self.error_node_uuids.len()
         );
     }
 
@@ -334,8 +371,14 @@ impl App {
                 tool_result_map: &self.tool_result_map,
             };
             let lines = crate::tui::render::render_node_content(node, &ctx);
-            lines.iter()
-                .map(|line| line.spans.iter().map(|s| s.content.as_ref()).collect::<String>())
+            lines
+                .iter()
+                .map(|line| {
+                    line.spans
+                        .iter()
+                        .map(|s| s.content.as_ref())
+                        .collect::<String>()
+                })
                 .collect::<Vec<_>>()
                 .join("\n")
         } else {
@@ -394,7 +437,8 @@ impl App {
                 }
             }
             KeyCode::Enter => {
-                if let Some((uuid, _, _)) = self.error_nodes_info.get(self.error_summary_selection) {
+                if let Some((uuid, _, _)) = self.error_nodes_info.get(self.error_summary_selection)
+                {
                     let uuid = uuid.clone();
                     self.tree_state.select(vec![uuid]);
                     self.details_scroll = 0;
@@ -455,11 +499,12 @@ impl App {
                 let label = match node.node.node_type.as_str() {
                     "user" => "User".to_string(),
                     "assistant" => "Assistant".to_string(),
-                    "tool_use" => {
-                        node.node.tool_use.as_ref()
-                            .map(|t| format!("Tool:{}", t.name))
-                            .unwrap_or_else(|| "Tool".to_string())
-                    }
+                    "tool_use" => node
+                        .node
+                        .tool_use
+                        .as_ref()
+                        .map(|t| format!("Tool:{}", t.name))
+                        .unwrap_or_else(|| "Tool".to_string()),
                     "tool_result" => "Result".to_string(),
                     "thinking" => "Think".to_string(),
                     "progress" => "Progress".to_string(),
@@ -499,7 +544,9 @@ impl App {
 
             search.current_match = 0;
 
-            let filter_types = search.node_types.iter()
+            let filter_types = search
+                .node_types
+                .iter()
                 .map(|s| s.as_str())
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -507,7 +554,11 @@ impl App {
             self.status_message = if search.node_types.is_empty() {
                 "Filter cleared - showing all nodes".to_string()
             } else {
-                format!("Filtered: {} ({} matches)", filter_types, search.matches.len())
+                format!(
+                    "Filtered: {} ({} matches)",
+                    filter_types,
+                    search.matches.len()
+                )
             };
 
             search.current_match_uuid().map(|s| s.to_string())
@@ -547,7 +598,8 @@ impl App {
     pub fn tick(&mut self) {
         // ── #17: Replay advance ──────────────────────────────────────────
         if self.replay_mode {
-            let should_advance = self.last_replay_tick
+            let should_advance = self
+                .last_replay_tick
                 .map(|t| t.elapsed() >= std::time::Duration::from_millis(800))
                 .unwrap_or(true);
             if should_advance {
@@ -621,7 +673,8 @@ impl App {
 
     /// Rebuild tree items (used when search state changes)
     pub fn rebuild_tree_items(&mut self) {
-        self.tree_items = build_tree_items(&self.tree_roots, &self.search_state, &self.tool_correlation);
+        self.tree_items =
+            build_tree_items(&self.tree_roots, &self.search_state, &self.tool_correlation);
     }
 
     /// Handle keyboard input
@@ -766,7 +819,8 @@ impl App {
             (KeyCode::Char('J'), KeyModifiers::SHIFT) => self.toggle_raw_json(),
 
             // ── #14: Error summary overlay ────────────────────────────────
-            (KeyCode::Char('x'), KeyModifiers::NONE) | (KeyCode::Char('X'), KeyModifiers::SHIFT) => {
+            (KeyCode::Char('x'), KeyModifiers::NONE)
+            | (KeyCode::Char('X'), KeyModifiers::SHIFT) => {
                 self.toggle_error_summary();
             }
 
@@ -859,7 +913,8 @@ fn build_tree_items(
 ) -> Vec<TreeItem<'static, String>> {
     // Use the first root node's timestamp as session start for latency deltas
     let session_start = roots.iter().filter_map(|n| n.node.timestamp).next();
-    roots.iter()
+    roots
+        .iter()
         .filter_map(|root| build_tree_item(root, search_state, correlation, session_start))
         .collect()
 }
@@ -901,7 +956,8 @@ fn build_tree_item(
         .unwrap_or_else(|| format!("no-uuid-{}", node.node.node_type));
 
     // Get smart label with color (pass correlation so ToolResult shows tool name)
-    let (label_text, color_name) = crate::analyzer::smart_label::get_node_label(node, Some(correlation));
+    let (label_text, color_name) =
+        crate::analyzer::smart_label::get_node_label(node, Some(correlation));
 
     // Map color name to ratatui Color
     let color = match color_name {
@@ -934,7 +990,11 @@ fn build_tree_item(
         let total = tu.total();
         if total > 0 {
             spans.push(Span::styled(
-                format!("  {}↑ {}↓", fmt_compact(tu.total_input()), fmt_compact(tu.total_output())),
+                format!(
+                    "  {}↑ {}↓",
+                    fmt_compact(tu.total_input()),
+                    fmt_compact(tu.total_output())
+                ),
                 Style::default().fg(Color::DarkGray),
             ));
         }
@@ -950,5 +1010,7 @@ fn build_tree_item(
 
     let styled_line = Line::from(spans);
 
-    Some(TreeItem::new(identifier, styled_line, children).expect("Failed to create tree item"))
+    // Safety: identifiers are UUIDs (or unique "no-uuid-{type}" strings), so
+    // duplicate siblings within the same parent cannot occur.
+    Some(TreeItem::new(identifier, styled_line, children).expect("duplicate tree identifier"))
 }

@@ -4,7 +4,7 @@
 
 use crate::config::Config;
 use crate::error::Result;
-use crate::storage::{ProjectStats, SessionIndex, GlobalAnalytics};
+use crate::storage::{GlobalAnalytics, ProjectStats, SessionIndex};
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Layout, Rect},
@@ -132,9 +132,7 @@ impl ProjectsView {
             }
 
             // Quit
-            (KeyCode::Char('q'), KeyModifiers::NONE) => {
-                Ok(ProjectAction::Quit)
-            }
+            (KeyCode::Char('q'), KeyModifiers::NONE) => Ok(ProjectAction::Quit),
 
             _ => Ok(ProjectAction::None),
         }
@@ -197,7 +195,9 @@ impl ProjectsView {
 
     /// Get selected project
     pub fn selected_project(&self) -> Option<&ProjectStats> {
-        self.list_state.selected().and_then(|i| self.projects.get(i))
+        self.list_state
+            .selected()
+            .and_then(|i| self.projects.get(i))
     }
 
     /// Select next project
@@ -257,9 +257,9 @@ impl ProjectsView {
         let chunks = Layout::default()
             .direction(ratatui::layout::Direction::Vertical)
             .constraints([
-                Constraint::Length(12),  // Welcome header (taller for new ASCII art)
-                Constraint::Min(0),      // Content area (projects + analytics)
-                Constraint::Length(3),   // Status bar
+                Constraint::Length(12), // Welcome header (taller for new ASCII art)
+                Constraint::Min(0),     // Content area (projects + analytics)
+                Constraint::Length(3),  // Status bar
             ])
             .split(area);
 
@@ -270,8 +270,8 @@ impl ProjectsView {
         let content_chunks = Layout::default()
             .direction(ratatui::layout::Direction::Horizontal)
             .constraints([
-                Constraint::Percentage(65),  // Projects list
-                Constraint::Percentage(35),  // Analytics panel
+                Constraint::Percentage(65), // Projects list
+                Constraint::Percentage(35), // Analytics panel
             ])
             .split(chunks[1]);
 
@@ -298,42 +298,54 @@ impl ProjectsView {
                 Span::raw(&pad),
                 Span::styled(
                     "██╗  ██╗██╗███╗   ██╗██████╗ ███████╗██╗ ██████╗ ██╗  ██╗████████╗",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "██║  ██║██║████╗  ██║██╔══██╗██╔════╝██║██╔════╝ ██║  ██║╚══██╔══╝",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "███████║██║██╔██╗ ██║██║  ██║███████╗██║██║  ███╗███████║   ██║   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "██╔══██║██║██║╚██╗██║██║  ██║╚════██║██║██║   ██║██╔══██║   ██║   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "██║  ██║██║██║ ╚████║██████╔╝███████║██║╚██████╔╝██║  ██║   ██║   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw(&pad),
                 Span::styled(
                     "╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
@@ -363,7 +375,8 @@ impl ProjectsView {
 
     /// Render the project list
     fn render_list(&mut self, f: &mut Frame, area: Rect) {
-        let items: Vec<ListItem> = self.projects
+        let items: Vec<ListItem> = self
+            .projects
             .iter()
             .map(|project| {
                 let size_mb = project.total_size as f64 / 1_000_000.0;
@@ -373,7 +386,9 @@ impl ProjectsView {
                     Span::raw("  "),
                     Span::styled(
                         format!("{:22}", project.project_name),
-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                        Style::default()
+                            .fg(Color::Cyan)
+                            .add_modifier(Modifier::BOLD),
                     ),
                     Span::styled(
                         format!("{:4} sessions", project.session_count),
@@ -427,49 +442,65 @@ impl ProjectsView {
         let mut lines = vec![
             Line::from(""),
             // Overview section
-            Line::from(vec![
-                Span::styled(" Overview", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
+            Line::from(vec![Span::styled(
+                " Overview",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("  Total Sessions: "),
                 Span::styled(
                     format!("{}", self.analytics.total_sessions),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw("  Total Projects: "),
                 Span::styled(
                     format!("{}", self.analytics.total_projects),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw("  Total Size:     "),
                 Span::styled(
                     format!("{:.1} MB", size_mb),
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
             // Cost & Token section
-            Line::from(vec![
-                Span::styled(" Cost & Usage", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]),
+            Line::from(vec![Span::styled(
+                " Cost & Usage",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
             Line::from(""),
             Line::from(vec![
                 Span::raw("  Total Tokens:   "),
                 Span::styled(
                     total_tokens,
-                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
                 Span::raw("  Total Cost:     "),
                 Span::styled(
                     format!("${:.2}", self.analytics.total_cost),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(vec![
@@ -483,9 +514,13 @@ impl ProjectsView {
                 Span::raw("  Total Errors:   "),
                 Span::styled(
                     format!("{}", self.analytics.total_errors),
-                    Style::default().fg(
-                        if self.analytics.total_errors > 0 { Color::Red } else { Color::Green }
-                    ).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(if self.analytics.total_errors > 0 {
+                            Color::Red
+                        } else {
+                            Color::Green
+                        })
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]),
             Line::from(""),
@@ -493,15 +528,20 @@ impl ProjectsView {
 
         // Activity section (conditional based on config)
         if self.config.analytics.show_activity {
-            lines.push(Line::from(vec![
-                Span::styled(" Activity", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Activity",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::raw("  This Week:      "),
                 Span::styled(
                     format!("{}", self.analytics.sessions_this_week),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" sessions"),
             ]));
@@ -509,7 +549,9 @@ impl ProjectsView {
                 Span::raw("  Today:          "),
                 Span::styled(
                     format!("{}", self.analytics.sessions_today),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(" sessions"),
             ]));
@@ -518,15 +560,20 @@ impl ProjectsView {
 
         // Session Types section (conditional based on config)
         if self.config.analytics.show_subagent_count {
-            lines.push(Line::from(vec![
-                Span::styled(" Session Types", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Session Types",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::raw("  With Subagents: "),
                 Span::styled(
                     format!("{}", self.analytics.subagent_count),
-                    Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Magenta)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]));
             lines.push(Line::from(""));
@@ -534,15 +581,20 @@ impl ProjectsView {
 
         // Most Active Project
         if let Some(ref project) = self.analytics.most_active_project {
-            lines.push(Line::from(vec![
-                Span::styled(" Most Active", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Most Active",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
             lines.push(Line::from(vec![
                 Span::raw("  "),
                 Span::styled(
                     project,
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
             ]));
             lines.push(Line::from(""));
@@ -550,14 +602,20 @@ impl ProjectsView {
 
         // Top Tools section (conditional based on config)
         if self.config.analytics.show_top_tools {
-            lines.push(Line::from(vec![
-                Span::styled(" Top Tools", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-            ]));
+            lines.push(Line::from(vec![Span::styled(
+                " Top Tools",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]));
             lines.push(Line::from(""));
 
             if !self.analytics.top_tools.is_empty() {
                 // Limit to configured number of tools
-                let tools_to_show = self.analytics.top_tools.iter()
+                let tools_to_show = self
+                    .analytics
+                    .top_tools
+                    .iter()
                     .take(self.config.analytics.tools_limit);
 
                 for (tool, count) in tools_to_show {
@@ -575,17 +633,16 @@ impl ProjectsView {
                         ),
                         Span::styled(
                             format!("{:>4}", count),
-                            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
                         ),
                     ]));
                 }
             } else {
                 lines.push(Line::from(vec![
                     Span::raw("  "),
-                    Span::styled(
-                        "Analyzing...",
-                        Style::default().fg(Color::DarkGray),
-                    ),
+                    Span::styled("Analyzing...", Style::default().fg(Color::DarkGray)),
                 ]));
             }
         }
@@ -600,41 +657,44 @@ impl ProjectsView {
     /// Render status bar
     fn render_status(&self, f: &mut Frame, area: Rect) {
         let shortcuts = if self.projects.is_empty() {
-            vec![
-                Line::from(vec![
-                    Span::styled(" Tip: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                    Span::raw("Run "),
-                    Span::styled("hindsight init", Style::default().fg(Color::Cyan)),
-                    Span::raw(" to discover Claude Code sessions"),
-                ]),
-            ]
+            vec![Line::from(vec![
+                Span::styled(
+                    " Tip: ",
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw("Run "),
+                Span::styled("hindsight init", Style::default().fg(Color::Cyan)),
+                Span::raw(" to discover Claude Code sessions"),
+            ])]
         } else {
-            vec![
-                Line::from(vec![
-                    Span::styled(" ↑↓", Style::default().fg(Color::Cyan)),
-                    Span::raw(" navigate  "),
-                    Span::styled("Enter", Style::default().fg(Color::Cyan)),
-                    Span::raw(" select  "),
-                    Span::styled("/", Style::default().fg(Color::Cyan)),
-                    Span::raw(" search (text | @tool | errors)  "),
-                    Span::styled("r", Style::default().fg(Color::Cyan)),
-                    Span::raw(" refresh  "),
-                    Span::styled("q", Style::default().fg(Color::Cyan)),
-                    Span::raw(" quit"),
-                ]),
-            ]
+            vec![Line::from(vec![
+                Span::styled(" ↑↓", Style::default().fg(Color::Cyan)),
+                Span::raw(" navigate  "),
+                Span::styled("Enter", Style::default().fg(Color::Cyan)),
+                Span::raw(" select  "),
+                Span::styled("/", Style::default().fg(Color::Cyan)),
+                Span::raw(" search (text | @tool | errors)  "),
+                Span::styled("r", Style::default().fg(Color::Cyan)),
+                Span::raw(" refresh  "),
+                Span::styled("q", Style::default().fg(Color::Cyan)),
+                Span::raw(" quit"),
+            ])]
         };
 
         let mut text = shortcuts;
         if !self.status_message.is_empty() {
             text.push(Line::from(vec![
                 Span::styled(" ", Style::default()),
-                Span::styled(self.status_message.as_str(), Style::default().fg(Color::Yellow)),
+                Span::styled(
+                    self.status_message.as_str(),
+                    Style::default().fg(Color::Yellow),
+                ),
             ]));
         }
 
-        let status = Paragraph::new(text)
-            .block(Block::default().borders(Borders::ALL));
+        let status = Paragraph::new(text).block(Block::default().borders(Borders::ALL));
 
         f.render_widget(status, area);
     }

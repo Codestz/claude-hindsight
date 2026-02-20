@@ -60,7 +60,11 @@ pub fn run(
     // Display sessions
     for session in &sessions {
         let timestamp = DateTime::from_timestamp(session.modified_at, 0)
-            .map(|dt| dt.with_timezone(&Local).format("%Y-%m-%d %H:%M:%S").to_string())
+            .map(|dt| {
+                dt.with_timezone(&Local)
+                    .format("%Y-%m-%d %H:%M:%S")
+                    .to_string()
+            })
             .unwrap_or_else(|| "Unknown".to_string());
 
         let size_kb = session.file_size / 1024;

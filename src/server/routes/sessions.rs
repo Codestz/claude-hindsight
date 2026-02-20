@@ -1,14 +1,14 @@
 //! Session routes
 
+use crate::api::responses::{NodeResponse, TreeResponse};
+use crate::server::dto::SessionFileDto;
+use crate::server::{error::ApiError, AppState};
+use crate::storage::SessionIndex;
 use axum::{
     extract::{Path, Query, State},
     Json,
 };
 use serde::Deserialize;
-use crate::server::{AppState, error::ApiError};
-use crate::server::dto::SessionFileDto;
-use crate::api::responses::{NodeResponse, TreeResponse};
-use crate::storage::SessionIndex;
 
 #[derive(Deserialize)]
 pub struct SessionsQuery {
@@ -72,10 +72,8 @@ pub async fn get_session_nodes(
         let parsed = crate::parser::parse_session(&session.path)?;
         let roots = crate::analyzer::build_simple_tree(parsed.nodes);
 
-        let roots_response: Vec<NodeResponse> = roots
-            .iter()
-            .map(NodeResponse::from_tree_node)
-            .collect();
+        let roots_response: Vec<NodeResponse> =
+            roots.iter().map(NodeResponse::from_tree_node).collect();
 
         let total_nodes = count_nodes(&roots_response);
         let max_depth = max_depth(&roots_response, 0);
@@ -93,7 +91,9 @@ pub async fn get_session_nodes(
 }
 
 fn count_nodes(nodes: &[NodeResponse]) -> usize {
-    nodes.iter().fold(0, |acc, n| acc + 1 + count_nodes(&n.children))
+    nodes
+        .iter()
+        .fold(0, |acc, n| acc + 1 + count_nodes(&n.children))
 }
 
 fn max_depth(nodes: &[NodeResponse], current: usize) -> usize {
