@@ -4,6 +4,7 @@ pub mod config;
 pub mod export;
 pub mod init;
 pub mod list;
+pub mod paths;
 pub mod reindex;
 pub mod search;
 pub mod serve;
