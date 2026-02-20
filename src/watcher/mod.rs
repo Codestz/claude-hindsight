@@ -38,8 +38,10 @@ impl SessionWatcher {
             )));
         }
 
-        // Start reading from the beginning to show existing nodes
-        let position = 0;
+        // Start at end of file so only newly appended content is read
+        let position = std::fs::metadata(&file_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
 
         // Set up file watcher
         let (tx, rx) = channel();
