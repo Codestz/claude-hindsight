@@ -38,11 +38,18 @@
 
 <!-- Mark completed items with an 'x' -->
 
+**Rust (if applicable):**
 - [ ] My code follows the [Rust best practices](../CONTRIBUTING.md#rust)
-- [ ] I have run `cargo fmt` to format my code
+- [ ] I have run `cargo fmt` with no changes
 - [ ] I have run `cargo clippy --all-targets -- -D warnings` with no errors
 - [ ] I have run `cargo test` and all tests pass
 - [ ] I have added tests that prove my fix is effective or that my feature works
+
+**Frontend (if applicable):**
+- [ ] `npm run build` succeeds cleanly
+- [ ] `npm run lint` passes with no errors
+
+**General:**
 - [ ] I have updated the documentation (README, code comments, etc.)
 - [ ] I have checked that no new warnings were introduced
 - [ ] My commits follow the [conventional commit format](../CONTRIBUTING.md#commit-message-format)
