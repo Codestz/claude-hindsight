@@ -14,7 +14,7 @@ export function NodeTree({ tree }: NodeTreeProps) {
         <NodeRow key={root.uuid ?? i} node={root} defaultExpanded={true} />
       ))}
       {tree.roots.length === 0 && (
-        <div className="text-text-muted text-sm text-center py-8">No nodes in this session</div>
+        <div className="mono text-sm text-center py-8" style={{ color: "var(--text-3)" }}>No nodes in this session</div>
       )}
     </div>
   );

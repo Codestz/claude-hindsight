@@ -47,12 +47,15 @@ function LiveWatch() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [nodes]);
 
-  const statusConfig = {
-    connecting: { label: "Connecting…", color: "#64748b", dot: "bg-text-muted animate-pulse" },
-    live: { label: "Live", color: "#4ade80", dot: "bg-accent-green animate-pulse" },
-    disconnected: { label: "Disconnected", color: "#f87171", dot: "bg-accent-red" },
-  };
-  const sc = statusConfig[status];
+  const statusDotCls =
+    status === "live" ? "dot dot--pulse" :
+    status === "connecting" ? "dot dot--amber dot--pulse" :
+    "dot dot--red";
+
+  const statusLabel =
+    status === "live" ? "LIVE" :
+    status === "connecting" ? "CONNECTING" :
+    "DISCONNECTED";
 
   return (
     <div className="flex flex-col flex-1">
@@ -61,13 +64,31 @@ function LiveWatch() {
         subtitle="Real-time session stream"
         actions={
           <div className="flex items-center gap-4">
-            {totalCost > 0 && <div className="mono text-accent-yellow text-sm">{formatCost(totalCost)}</div>}
-            {totalTokens > 0 && <div className="mono text-accent-green text-sm">{formatTokens(totalTokens)} tok</div>}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.05)" }}>
-              <span className={`w-2 h-2 rounded-full ${sc.dot}`} />
-              <span className="text-xs" style={{ color: sc.color }}>{sc.label}</span>
+            {totalCost > 0 && (
+              <div className="mono tabular text-sm" style={{ color: "var(--amber)" }}>{formatCost(totalCost)}</div>
+            )}
+            {totalTokens > 0 && (
+              <div className="mono tabular text-sm" style={{ color: "var(--cyan)" }}>{formatTokens(totalTokens)} tok</div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className={statusDotCls} aria-hidden="true" />
+              <span className="mono" style={{
+                fontSize: "9px",
+                letterSpacing: "0.1em",
+                color: status === "live" ? "var(--accent)" : status === "connecting" ? "var(--amber)" : "var(--red)",
+              }}>
+                {statusLabel}
+              </span>
             </div>
-            {id && <Link href={`/sessions?id=${encodeURIComponent(id)}`} className="text-text-muted text-sm hover:text-text-primary">← Detail</Link>}
+            {id && (
+              <Link
+                href={`/sessions?id=${encodeURIComponent(id)}`}
+                className="mono text-xs"
+                style={{ color: "var(--text-2)", fontSize: "11px" }}
+              >
+                ← Detail
+              </Link>
+            )}
           </div>
         }
       />
@@ -75,29 +96,63 @@ function LiveWatch() {
       <div className="flex-1 overflow-auto p-4">
         {nodes.length === 0 && status !== "disconnected" && (
           <div className="text-center py-16">
-            <div className="text-text-muted text-sm animate-pulse">Waiting for events…</div>
+            <div className="mono text-sm animate-pulse" style={{ color: "var(--text-3)" }}>Waiting for events…</div>
           </div>
         )}
         {nodes.length === 0 && status === "disconnected" && (
           <div className="text-center py-16">
-            <div className="text-accent-red text-sm mb-2">Stream ended</div>
-            {id && <Link href={`/sessions?id=${encodeURIComponent(id)}`} className="text-accent-cyan text-xs hover:underline">View full session →</Link>}
+            <div className="mono text-sm mb-2" style={{ color: "var(--red)" }}>Stream ended</div>
+            {id && (
+              <Link
+                href={`/sessions?id=${encodeURIComponent(id)}`}
+                className="mono text-xs hover:underline"
+                style={{ color: "var(--accent)" }}
+              >
+                View full session →
+              </Link>
+            )}
           </div>
         )}
         <div className="space-y-0.5">
           {nodes.map((node, i) => (
-            <NodeRow key={node.uuid ?? i} node={node} defaultExpanded={false} />
+            <div
+              key={node.uuid ?? i}
+              style={{ animation: "fadeIn 0.15s ease forwards" }}
+            >
+              <NodeRow node={node} defaultExpanded={false} />
+            </div>
           ))}
         </div>
         <div ref={bottomRef} />
       </div>
 
-      <div className="px-6 py-3 border-t flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(13,13,15,0.8)" }}>
-        <div className="text-text-muted text-xs mono">{nodes.length} node{nodes.length !== 1 ? "s" : ""}</div>
+      <div
+        className="px-6 py-3 flex items-center justify-between"
+        style={{
+          borderTop: "1px solid var(--border)",
+          background: "rgba(5,5,5,0.95)",
+        }}
+      >
+        <div className="mono text-2xs" style={{ color: "var(--text-3)" }}>
+          {nodes.length} node{nodes.length !== 1 ? "s" : ""}
+        </div>
         {status === "disconnected" && (
-          <button onClick={() => window.location.reload()} className="text-accent-cyan text-xs hover:underline">Reconnect</button>
+          <button
+            onClick={() => window.location.reload()}
+            className="mono text-xs hover:underline"
+            style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer" }}
+          >
+            Reconnect
+          </button>
         )}
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -108,7 +163,7 @@ export default function LivePage() {
       <div className="flex flex-col flex-1">
         <Header title="Live Watch" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-muted animate-pulse">Connecting…</div>
+          <div className="mono text-sm animate-pulse" style={{ color: "var(--text-2)" }}>Connecting…</div>
         </div>
       </div>
     }>
