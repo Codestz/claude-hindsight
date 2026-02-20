@@ -268,7 +268,7 @@ impl Config {
             HindsightError::Config("Could not determine config directory".to_string())
         })?;
 
-        let hindsight_dir = config_dir.join("hindsight");
+        let hindsight_dir = config_dir.join("claude-hindsight");
         Ok(hindsight_dir.join("config.toml"))
     }
 

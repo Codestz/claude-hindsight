@@ -625,7 +625,7 @@ impl ProjectsView {
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw("Run "),
-                Span::styled("hindsight init", Style::default().fg(Color::Cyan)),
+                Span::styled("claude-hindsight init", Style::default().fg(Color::Cyan)),
                 Span::raw(" to discover Claude Code sessions"),
             ])]
         } else {
