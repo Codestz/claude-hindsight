@@ -33,45 +33,55 @@ function ProjectDetail() {
         title={projectName || "Project"}
         subtitle={`${sessions.length} session${sessions.length !== 1 ? "s" : ""}`}
         actions={
-          <Link href="/projects" className="text-text-muted text-sm hover:text-text-primary">← Projects</Link>
+          <Link href="/projects" className="mono text-xs" style={{ color: "var(--text-2)", fontSize: "11px" }}>← Projects</Link>
         }
       />
 
-      <div className="flex-1 p-6 space-y-6">
+      <div className="flex-1 p-4 space-y-1">
         {analytics && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Stats bento */}
+            <div
+              className="bento"
+              style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
+            >
               {[
-                { label: "Sessions", value: analytics.total_sessions.toLocaleString(), color: "#22d3ee" },
-                { label: "Tokens", value: formatTokens(analytics.total_tokens), color: "#4ade80" },
-                { label: "Total Cost", value: formatCost(analytics.total_cost), color: "#facc15" },
-                { label: "Total Size", value: formatBytes(analytics.total_size), color: "#64748b" },
+                { label: "Sessions",   value: analytics.total_sessions.toLocaleString(), color: "var(--text-1)" },
+                { label: "Tokens",     value: formatTokens(analytics.total_tokens),      color: "var(--cyan)" },
+                { label: "Total Cost", value: formatCost(analytics.total_cost),           color: "var(--amber)" },
+                { label: "Total Size", value: formatBytes(analytics.total_size),          color: "var(--text-2)" },
               ].map((s) => (
-                <div key={s.label} className="card p-4 rounded-lg">
-                  <div className="text-text-muted text-xs mb-1">{s.label}</div>
-                  <div className="mono font-semibold text-lg" style={{ color: s.color }}>{s.value}</div>
+                <div key={s.label} className="px-4 py-3" style={{ background: "var(--bg)" }}>
+                  <div className="label mb-1" style={{ color: "var(--text-3)" }}>{s.label}</div>
+                  <div className="mono font-bold tabular" style={{ fontSize: "1.25rem", color: s.color }}>{s.value}</div>
                 </div>
               ))}
             </div>
 
             {analytics.top_tools.length > 0 && (
-              <div className="card p-5 rounded-lg max-w-sm">
-                <div className="text-text-primary font-medium text-sm mb-4">Top Tools</div>
+              <div className="p-5" style={{ background: "var(--bg-2)", border: "1px solid var(--border)", maxWidth: "360px" }}>
+                <div className="label mb-4" style={{ color: "var(--text-2)" }}>Top Tools</div>
                 <ToolBarChart tools={analytics.top_tools} />
               </div>
             )}
           </>
         )}
 
-        <div className="card rounded-lg overflow-hidden">
-          <div className="px-5 py-4 border-b text-text-primary font-medium text-sm" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        {/* Sessions table */}
+        <div style={{ background: "var(--border)" }}>
+          <div
+            className="px-5 py-3 label"
+            style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)", color: "var(--text-2)" }}
+          >
             Sessions
           </div>
-          {loading ? (
-            <div className="text-center py-16 text-text-muted animate-pulse">Loading sessions…</div>
-          ) : (
-            <SessionsTable sessions={sessions} />
-          )}
+          <div style={{ background: "var(--bg)" }}>
+            {loading ? (
+              <div className="mono text-center py-16 animate-pulse" style={{ color: "var(--text-3)" }}>Loading sessions…</div>
+            ) : (
+              <SessionsTable sessions={sessions} />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -84,7 +94,7 @@ export default function ProjectDetailPage() {
       <div className="flex flex-col flex-1">
         <Header title="Project" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-muted animate-pulse">Loading…</div>
+          <div className="mono text-sm animate-pulse" style={{ color: "var(--text-2)" }}>Loading…</div>
         </div>
       </div>
     }>

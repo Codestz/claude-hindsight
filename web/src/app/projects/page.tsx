@@ -22,7 +22,8 @@ const columns: ColumnDef<ProjectStats>[] = [
     cell: ({ row }) => (
       <Link
         href={`/projects/detail?name=${encodeURIComponent(row.original.project_name)}`}
-        className="text-accent-cyan hover:underline font-medium"
+        className="hover:underline mono text-sm"
+        style={{ color: "var(--accent)", fontWeight: 600 }}
       >
         {row.original.project_name}
       </Link>
@@ -32,7 +33,7 @@ const columns: ColumnDef<ProjectStats>[] = [
     accessorKey: "session_count",
     header: "Sessions",
     cell: ({ getValue }) => (
-      <span className="text-text-primary mono">{(getValue() as number).toLocaleString()}</span>
+      <span className="mono tabular" style={{ color: "var(--text-1)" }}>{(getValue() as number).toLocaleString()}</span>
     ),
     size: 90,
   },
@@ -40,7 +41,7 @@ const columns: ColumnDef<ProjectStats>[] = [
     accessorKey: "total_size",
     header: "Size",
     cell: ({ getValue }) => (
-      <span className="text-text-muted mono text-sm">{formatBytes(getValue() as number)}</span>
+      <span className="mono text-sm tabular" style={{ color: "var(--text-2)" }}>{formatBytes(getValue() as number)}</span>
     ),
     size: 90,
   },
@@ -50,9 +51,9 @@ const columns: ColumnDef<ProjectStats>[] = [
     cell: ({ getValue }) => {
       const v = getValue() as number | null;
       return v ? (
-        <span className="text-text-muted text-sm">{timeAgo(v)}</span>
+        <span className="mono text-sm" style={{ color: "var(--text-2)" }}>{timeAgo(v)}</span>
       ) : (
-        <span className="text-text-muted text-xs">—</span>
+        <span className="mono text-xs" style={{ color: "var(--text-3)" }}>—</span>
       );
     },
     size: 110,
@@ -87,21 +88,36 @@ export default function ProjectsPage() {
         subtitle={`${projects.length} project${projects.length !== 1 ? "s" : ""}`}
       />
 
-      <div className="flex-1 p-6">
-        <div className="card rounded-lg overflow-hidden">
+      <div className="flex-1 p-4">
+        {/* Section header */}
+        <div className="flex items-center gap-4 mb-4">
+          <span className="label" style={{ color: "var(--accent)", fontSize: "10px" }}>PROJECTS</span>
+          <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        </div>
+
+        <div style={{ background: "var(--border)" }}>
           {loading ? (
-            <div className="text-center py-16 text-text-muted animate-pulse">Loading projects…</div>
+            <div className="mono text-center py-16 animate-pulse" style={{ color: "var(--text-3)", background: "var(--bg)" }}>Loading projects…</div>
           ) : (
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm" style={{ borderCollapse: "collapse", background: "var(--bg)" }}>
               <thead>
                 {table.getHeaderGroups().map((hg) => (
-                  <tr key={hg.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <tr key={hg.id} style={{ borderBottom: "1px solid var(--border)" }}>
                     {hg.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="text-left px-5 py-3 text-text-muted text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-text-primary transition-colors"
-                        style={{ width: header.getSize() }}
+                        className="text-left px-5 py-2 mono cursor-pointer select-none"
+                        style={{
+                          width: header.getSize(),
+                          color: "var(--text-3)",
+                          fontSize: "9px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.12em",
+                          fontWeight: 700,
+                        }}
                         onClick={header.column.getToggleSortingHandler()}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-2)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
                       >
                         <div className="flex items-center gap-1">
                           {flexRender(header.column.columnDef.header, header.getContext())}
@@ -118,10 +134,12 @@ export default function ProjectsPage() {
                   <tr
                     key={row.id}
                     className="group transition-colors"
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                    style={{ borderBottom: "1px solid var(--border)" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-2)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-5 py-3 group-hover:bg-white/[0.02]">
+                      <td key={cell.id} className="px-5 py-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -132,9 +150,9 @@ export default function ProjectsPage() {
           )}
 
           {!loading && projects.length === 0 && (
-            <div className="text-center py-16">
-              <div className="text-text-muted text-sm mb-2">No projects indexed yet</div>
-              <div className="text-text-muted text-xs">Run hindsight init to discover sessions</div>
+            <div className="text-center py-16" style={{ background: "var(--bg)" }}>
+              <div className="mono text-sm mb-2" style={{ color: "var(--text-2)" }}>No projects indexed yet</div>
+              <div className="mono text-xs" style={{ color: "var(--text-3)" }}>Run hindsight init to discover sessions</div>
             </div>
           )}
         </div>

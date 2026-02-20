@@ -24,7 +24,8 @@ const columns: ColumnDef<SessionFile>[] = [
     cell: ({ row }) => (
       <Link
         href={`/sessions?id=${row.original.session_id}`}
-        className="text-accent-cyan mono text-xs hover:underline"
+        className="mono text-xs hover:underline"
+        style={{ color: "var(--accent)" }}
       >
         {shortId(row.original.session_id)}
       </Link>
@@ -36,10 +37,10 @@ const columns: ColumnDef<SessionFile>[] = [
     header: "Session",
     cell: ({ row }) => (
       <div>
-        <div className="text-text-primary text-sm truncate max-w-xs">
-          {row.original.first_message ?? <span className="text-text-muted italic">No message</span>}
+        <div className="text-sm truncate max-w-xs" style={{ color: "var(--text-1)" }}>
+          {row.original.first_message ?? <span className="italic" style={{ color: "var(--text-3)" }}>No message</span>}
         </div>
-        <div className="text-text-muted text-xs">{row.original.project_name}</div>
+        <div className="mono text-xs" style={{ color: "var(--text-3)" }}>{row.original.project_name}</div>
       </div>
     ),
   },
@@ -47,7 +48,7 @@ const columns: ColumnDef<SessionFile>[] = [
     accessorKey: "total_tokens",
     header: "Tokens",
     cell: ({ getValue }) => (
-      <span className="text-accent-green mono text-sm">{formatTokens(getValue() as number)}</span>
+      <span className="mono text-sm tabular" style={{ color: "var(--cyan)" }}>{formatTokens(getValue() as number)}</span>
     ),
     size: 80,
   },
@@ -55,7 +56,7 @@ const columns: ColumnDef<SessionFile>[] = [
     accessorKey: "estimated_cost",
     header: "Cost",
     cell: ({ getValue }) => (
-      <span className="text-accent-yellow mono text-sm">{formatCost(getValue() as number)}</span>
+      <span className="mono text-sm tabular" style={{ color: "var(--amber)" }}>{formatCost(getValue() as number)}</span>
     ),
     size: 80,
   },
@@ -65,9 +66,9 @@ const columns: ColumnDef<SessionFile>[] = [
     cell: ({ getValue }) => {
       const v = getValue() as number;
       return v > 0 ? (
-        <span className="text-accent-red mono text-xs">{v}</span>
+        <span className="tbadge tbadge-err">{v}</span>
       ) : (
-        <span className="text-text-muted text-xs">—</span>
+        <span className="mono text-xs" style={{ color: "var(--text-3)" }}>—</span>
       );
     },
     size: 60,
@@ -76,7 +77,7 @@ const columns: ColumnDef<SessionFile>[] = [
     accessorKey: "modified_at",
     header: "Last active",
     cell: ({ getValue }) => (
-      <span className="text-text-muted text-xs">{timeAgo(getValue() as number)}</span>
+      <span className="mono text-xs" style={{ color: "var(--text-3)" }}>{timeAgo(getValue() as number)}</span>
     ),
     size: 100,
   },
@@ -98,16 +99,25 @@ export function SessionsTable({ sessions }: SessionsTableProps) {
 
   return (
     <div className="overflow-auto">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
         <thead>
           {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <tr key={hg.id} style={{ borderBottom: "1px solid var(--border)" }}>
               {hg.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="text-left px-4 py-3 text-text-muted text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-text-primary transition-colors"
-                  style={{ width: header.getSize() }}
+                  className="text-left px-4 py-2 cursor-pointer select-none mono"
+                  style={{
+                    width: header.getSize(),
+                    color: "var(--text-3)",
+                    fontSize: "9px",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    fontWeight: 700,
+                  }}
                   onClick={header.column.getToggleSortingHandler()}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-2)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
                 >
                   <div className="flex items-center gap-1">
                     {flexRender(header.column.columnDef.header, header.getContext())}
@@ -124,12 +134,15 @@ export function SessionsTable({ sessions }: SessionsTableProps) {
             <tr
               key={row.id}
               className="group transition-colors"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+              style={{ borderBottom: "1px solid var(--border)" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--bg-2)"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
             >
               {row.getVisibleCells().map((cell) => (
                 <td
                   key={cell.id}
-                  className="px-4 py-3 group-hover:bg-white/[0.02]"
+                  className="px-4 py-3"
+                  style={{ color: "var(--text-2)", fontSize: "13px" }}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
@@ -140,7 +153,7 @@ export function SessionsTable({ sessions }: SessionsTableProps) {
       </table>
 
       {sessions.length === 0 && (
-        <div className="text-center py-16 text-text-muted">No sessions found</div>
+        <div className="text-center py-16 mono" style={{ color: "var(--text-3)" }}>No sessions found</div>
       )}
     </div>
   );

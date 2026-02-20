@@ -31,7 +31,7 @@ function SessionDetail() {
       <div className="flex flex-col flex-1">
         <Header title="Session" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-muted">No session ID provided</div>
+          <div className="mono text-sm" style={{ color: "var(--text-3)" }}>No session ID provided</div>
         </div>
       </div>
     );
@@ -42,7 +42,7 @@ function SessionDetail() {
       <div className="flex flex-col flex-1">
         <Header title="Session" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-muted animate-pulse">Loading session…</div>
+          <div className="mono text-sm animate-pulse" style={{ color: "var(--text-2)" }}>Loading session…</div>
         </div>
       </div>
     );
@@ -54,8 +54,8 @@ function SessionDetail() {
         <Header title="Session Not Found" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-accent-red text-sm mb-2">{error ?? "Session not found"}</div>
-            <Link href="/projects" className="text-accent-cyan text-xs hover:underline">← Back to projects</Link>
+            <div className="text-sm mb-2" style={{ color: "var(--red)" }}>{error ?? "Session not found"}</div>
+            <Link href="/projects" className="mono text-xs hover:underline" style={{ color: "var(--accent)" }}>← Back to projects</Link>
           </div>
         </div>
       </div>
@@ -71,14 +71,22 @@ function SessionDetail() {
           <div className="flex items-center gap-3">
             <Link
               href={`/sessions/live?id=${encodeURIComponent(session.session_id)}`}
-              className="text-xs px-3 py-1.5 rounded transition-colors"
-              style={{ background: "rgba(34,211,238,0.1)", color: "#22d3ee", border: "1px solid rgba(34,211,238,0.2)" }}
+              className="mono text-xs px-3 py-1 transition-colors"
+              style={{
+                background: "rgba(0,255,136,0.08)",
+                color: "var(--accent)",
+                border: "1px solid rgba(0,255,136,0.2)",
+                fontSize: "10px",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
             >
               ⟳ Live watch
             </Link>
             <Link
               href={`/projects/detail?name=${encodeURIComponent(session.project_name)}`}
-              className="text-text-muted text-sm hover:text-text-primary"
+              className="mono text-xs"
+              style={{ color: "var(--text-2)", fontSize: "11px" }}
             >
               ← {session.project_name}
             </Link>
@@ -86,53 +94,62 @@ function SessionDetail() {
         }
       />
 
-      <div className="flex-1 p-6 space-y-6">
-        <div className="card p-5 rounded-lg">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <MetaStat label="Session ID" value={shortId(session.session_id)} mono />
-            <MetaStat label="Tokens" value={formatTokens(session.total_tokens)} color="#4ade80" mono />
-            <MetaStat label="Cost" value={formatCost(session.estimated_cost)} color="#facc15" mono />
-            <MetaStat label="Size" value={formatBytes(session.file_size)} />
-            <MetaStat label="Last active" value={timeAgo(session.modified_at)} />
-          </div>
-          <div className="mt-4 pt-4 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-text-muted text-xs">Model:</span>
-              <span className="text-text-primary text-xs mono">{session.model ?? "unknown"}</span>
-              {session.has_subagents && (
-                <span className="text-accent-magenta text-xs px-2 py-0.5 rounded" style={{ background: "rgba(232,121,249,0.1)" }}>has subagents</span>
-              )}
-              {session.error_count > 0 && (
-                <span className="text-accent-red text-xs px-2 py-0.5 rounded" style={{ background: "rgba(248,113,113,0.1)" }}>
-                  {session.error_count} error{session.error_count !== 1 ? "s" : ""}
-                </span>
-              )}
+      <div className="flex-1 p-4 space-y-1">
+        {/* Session meta — bento */}
+        <div
+          className="bento"
+          style={{ gridTemplateColumns: "repeat(5, 1fr)" }}
+        >
+          {[
+            { label: "Session ID", value: shortId(session.session_id), color: "var(--text-1)" },
+            { label: "Tokens", value: formatTokens(session.total_tokens), color: "var(--cyan)" },
+            { label: "Cost", value: formatCost(session.estimated_cost), color: "var(--amber)" },
+            { label: "Size", value: formatBytes(session.file_size), color: "var(--text-1)" },
+            { label: "Last active", value: timeAgo(session.modified_at), color: "var(--text-2)" },
+          ].map((s) => (
+            <div key={s.label} className="px-4 py-3" style={{ background: "var(--bg)" }}>
+              <div className="label mb-1" style={{ color: "var(--text-3)" }}>{s.label}</div>
+              <div className="mono font-medium text-sm tabular" style={{ color: s.color }}>{s.value}</div>
             </div>
-            {session.first_message && (
-              <div className="mt-2 text-text-muted text-sm italic truncate">&ldquo;{session.first_message}&rdquo;</div>
-            )}
-          </div>
+          ))}
         </div>
 
-        <div className="card rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            <div className="text-text-primary font-medium text-sm">Execution Tree</div>
-            {tree && <div className="text-text-muted text-xs mono">{tree.total_nodes} nodes · depth {tree.max_depth}</div>}
+        {/* Model / subagent / error row */}
+        <div
+          className="px-4 py-3 flex items-center gap-3 flex-wrap"
+          style={{ background: "var(--bg-2)", border: "1px solid var(--border)" }}
+        >
+          <span className="label" style={{ color: "var(--text-3)" }}>Model</span>
+          <span className="mono text-xs" style={{ color: "var(--text-2)" }}>{session.model ?? "unknown"}</span>
+          {session.has_subagents && (
+            <span className="tbadge tbadge-sub">has subagents</span>
+          )}
+          {session.error_count > 0 && (
+            <span className="tbadge tbadge-err">{session.error_count} error{session.error_count !== 1 ? "s" : ""}</span>
+          )}
+          {session.first_message && (
+            <span className="text-sm italic truncate" style={{ color: "var(--text-2)", marginLeft: "auto" }}>&ldquo;{session.first_message}&rdquo;</span>
+          )}
+        </div>
+
+        {/* Execution tree */}
+        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)" }}>
+          <div
+            className="flex items-center justify-between px-5 py-3"
+            style={{ borderBottom: "1px solid var(--border)" }}
+          >
+            <div className="label" style={{ color: "var(--text-2)" }}>Execution Tree</div>
+            {tree && (
+              <div className="mono text-2xs" style={{ color: "var(--text-3)" }}>
+                {tree.total_nodes} nodes · depth {tree.max_depth}
+              </div>
+            )}
           </div>
           <div className="py-2">
-            {tree ? <NodeTree tree={tree} /> : <div className="text-center py-8 text-text-muted text-sm">No tree data</div>}
+            {tree ? <NodeTree tree={tree} /> : <div className="mono text-center py-8 text-sm" style={{ color: "var(--text-3)" }}>No tree data</div>}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function MetaStat({ label, value, color, mono }: { label: string; value: string; color?: string; mono?: boolean }) {
-  return (
-    <div>
-      <div className="text-text-muted text-xs mb-1">{label}</div>
-      <div className={`font-medium text-sm ${mono ? "mono" : ""}`} style={{ color: color ?? "var(--text-primary)" }}>{value}</div>
     </div>
   );
 }
@@ -143,7 +160,7 @@ export default function SessionPage() {
       <div className="flex flex-col flex-1">
         <Header title="Session" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-muted animate-pulse">Loading…</div>
+          <div className="mono text-sm animate-pulse" style={{ color: "var(--text-2)" }}>Loading…</div>
         </div>
       </div>
     }>
