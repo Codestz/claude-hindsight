@@ -27,6 +27,7 @@ export const NODE_COLOR_CSS: Record<string, string> = {
   green:   "var(--green)",
   magenta: "var(--purple)",  // design system uses --purple for magenta
   yellow:  "var(--amber)",
+  amber:   "var(--amber)",
   blue:    "var(--cyan)",    // tool results share cyan with info
   gray:    "var(--text-3)",
   white:   "var(--text-1)",
@@ -122,6 +123,14 @@ export const NODE_META: Record<string, NodeMeta> = {
     description: "Error",
   },
 
+  // Compaction boundary — context was compressed
+  compact_boundary: {
+    badge: "Compact",
+    icon: "⟐",
+    color: "var(--amber)",
+    description: "Context compacted",
+  },
+
   // System events (turn_duration, etc.)
   system: {
     badge: "Sys",
@@ -179,6 +188,12 @@ export function getNodeMeta(node: NodeResponse): NodeMeta {
   if (t === "user") {
     if (node.color === "blue") return NODE_META.tool_result ?? FALLBACK_META;
     return NODE_META.user ?? FALLBACK_META;
+  }
+
+  // ── Semantic refinement for system nodes ────────────────────
+  // color = "amber" means compact_boundary (context compacted)
+  if (t === "system") {
+    if (node.color === "amber") return NODE_META.compact_boundary ?? FALLBACK_META;
   }
 
   // ── Error detection ─────────────────────────────────────────
@@ -252,6 +267,9 @@ export function getTokenUsage(node: NodeResponse) {
  * These can be collapsed by default in the tree view.
  */
 export function isInternalNode(node: NodeResponse): boolean {
+  // compact_boundary system nodes are user-facing (show compaction events)
+  if (node.node_type === "system" && node.color === "amber") return false;
+
   return (
     node.node_type === "system" ||
     node.node_type === "queue-operation" ||

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { GlobalAnalytics, SessionFile } from "@/lib/types";
-import { formatCost, formatTokens } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DayChart } from "@/components/charts/DayChart";
@@ -91,17 +91,16 @@ export default function DashboardPage() {
           </div>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
             <StatCard
-              label="Total Tokens"
-              value={formatTokens(analytics.total_tokens)}
-              sub="across all sessions"
-              valueColor="var(--cyan)"
+              label="Projects"
+              value={analytics.total_projects.toLocaleString()}
+              sub={formatBytes(analytics.total_size)}
             />
           </div>
           <StatCard
-            label="Estimated Cost"
-            value={formatCost(analytics.total_cost)}
-            sub="based on model pricing"
-            valueColor="var(--amber)"
+            label="Errors"
+            value={analytics.total_errors.toLocaleString()}
+            sub={analytics.total_errors === 0 ? "clean sessions" : "across sessions"}
+            valueColor={analytics.total_errors > 0 ? "var(--red)" : undefined}
           />
         </div>
       </Card>

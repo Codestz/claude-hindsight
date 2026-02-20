@@ -9,8 +9,6 @@ const HEADERS = [
   { label: "Message", span: "1fr" },
   { label: "Project", span: "140px" },
   { label: "Model",   span: "110px" },
-  { label: "Tokens",  span: "76px" },
-  { label: "Cost",    span: "76px" },
   { label: "When",    span: "80px", alignRight: true },
 ];
 

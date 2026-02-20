@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ContentBlock, NodeResponse, SessionFile, TokenUsage } from "@/lib/types";
 import { getNodeMeta, getThinkingText, getTokenUsage } from "@/lib/node-meta";
-import { formatBytes, formatCost, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
+import { formatBytes, shortId, shortModel, timeAgo } from "@/lib/utils";
 import { NodeTree } from "@/components/nodes/NodeTree";
 import { CodeRender } from "@/components/ui/CodeRender";
 
@@ -96,7 +96,7 @@ function SessionDetail({ id }: { id: string }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: session.subagent_models?.length ? "repeat(7, 1fr)" : "repeat(6, 1fr)",
+          gridTemplateColumns: session.subagent_models?.length ? "repeat(5, 1fr)" : "repeat(4, 1fr)",
           background: "var(--bg-1)",
           border: "1px solid var(--border-1)",
           borderRadius: "var(--radius-lg)",
@@ -106,8 +106,6 @@ function SessionDetail({ id }: { id: string }) {
         }}
       >
         <MetaCell label="Model" accent>{shortModel(session.model)}</MetaCell>
-        <MetaCell label="Tokens" color="var(--cyan)">{formatTokens(session.total_tokens)}</MetaCell>
-        <MetaCell label="Cost" color="var(--amber)">{formatCost(session.estimated_cost)}</MetaCell>
         <MetaCell label="Errors" color={session.error_count > 0 ? "var(--red)" : undefined}>
           {session.error_count.toLocaleString()}
         </MetaCell>
