@@ -62,8 +62,6 @@ impl SessionIndex {
                     modified_at INTEGER NOT NULL,
                     has_subagents INTEGER NOT NULL,
                     indexed_at INTEGER NOT NULL,
-                    total_tokens INTEGER NOT NULL DEFAULT 0,
-                    estimated_cost REAL NOT NULL DEFAULT 0.0,
                     model TEXT,
                     error_count INTEGER NOT NULL DEFAULT 0,
                     first_message TEXT,
@@ -104,7 +102,7 @@ impl SessionIndex {
                 );
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 6", [])?;
+            self.conn.execute("PRAGMA user_version = 8", [])?;
         } else {
             // Incremental migrations
             if version < 4 {
@@ -155,6 +153,26 @@ impl SessionIndex {
                 );
                 self.conn.execute("PRAGMA user_version = 6", [])?;
             }
+
+            if version < 7 {
+                // v6 → v7: added token breakdown columns (now unused but harmless)
+                for stmt in &[
+                    "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0",
+                ] {
+                    let _ = self.conn.execute(stmt, []);
+                }
+                self.conn.execute("PRAGMA user_version = 7", [])?;
+            }
+
+            if version < 8 {
+                // v7 → v8: token/cost columns removed from application layer.
+                // Orphaned columns (total_tokens, estimated_cost, input_tokens, etc.)
+                // are left in place — SQLite handles unused columns gracefully.
+                self.conn.execute("PRAGMA user_version = 8", [])?;
+            }
         }
 
         Ok(())
@@ -170,99 +188,81 @@ impl SessionIndex {
             .unwrap_or(0);
 
         // Try to parse session for rich analytics; fall back to defaults on failure
-        let (
-            mut total_tokens,
-            mut estimated_cost,
-            model,
-            error_count,
-            first_message,
-            tool_counts,
-            file_counts,
-            created_at,
-        ) = if let Ok(parsed) = crate::parser::parse_session(&session.path) {
-            let analytics = crate::analyzer::SessionAnalytics::from_session(&parsed);
-            let total_tokens = analytics.input_tokens + analytics.output_tokens;
+        let (model, error_count, first_message, tool_counts, file_counts, created_at) =
+            if let Ok(parsed) = crate::parser::parse_session(&session.path) {
+                let analytics = crate::analyzer::SessionAnalytics::from_session(&parsed);
 
-            // Earliest node timestamp → session creation time (ms → secs)
-            let created_at = parsed
-                .nodes
-                .iter()
-                .find_map(|n| n.timestamp)
-                .map(|ms| ms / 1000)
-                .unwrap_or(session.modified_at);
+                // Earliest node timestamp → session creation time (ms → secs)
+                let created_at = parsed
+                    .nodes
+                    .iter()
+                    .find_map(|n| n.timestamp)
+                    .map(|ms| ms / 1000)
+                    .unwrap_or(session.modified_at);
 
-            // First user message text preview.
-            // Uses text_content() which handles both legacy plain-string content
-            // ("content": "...") and modern block arrays ({"type":"text","text":"..."}).
-            let first_message: Option<String> = parsed
-                .nodes
-                .iter()
-                .filter(|n| n.node_type == "user")
-                .find_map(|n| {
-                    let text = n.message.as_ref()?.text_content();
-                    let trimmed = text.trim().to_string();
-                    if trimmed.is_empty() {
-                        return None;
-                    }
-                    // Collapse newlines for the single-line preview
-                    let preview = trimmed.replace('\n', " ");
-                    Some(preview.chars().take(80).collect::<String>())
-                });
+                // First user message text preview.
+                let first_message: Option<String> = parsed
+                    .nodes
+                    .iter()
+                    .filter(|n| n.node_type == "user")
+                    .find_map(|n| {
+                        let text = n.message.as_ref()?.text_content();
+                        let trimmed = text.trim().to_string();
+                        if trimmed.is_empty() {
+                            return None;
+                        }
+                        let preview = trimmed.replace('\n', " ");
+                        Some(preview.chars().take(80).collect::<String>())
+                    });
 
-            // Build tool counts and file access counts
-            let mut tool_counts: HashMap<String, usize> = HashMap::new();
-            let mut file_counts: HashMap<String, usize> = HashMap::new();
-            for node in &parsed.nodes {
-                if let Some(ref tool_use) = node.tool_use {
-                    *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
-                    if let Some(path) = file_path_from_input(&tool_use.name, &tool_use.input) {
-                        *file_counts.entry(path).or_insert(0) += 1;
-                    }
-                }
-                for block in node
-                    .message
-                    .as_ref()
-                    .map(|m| m.content_blocks())
-                    .unwrap_or(&[])
-                {
-                    if let crate::parser::models::ContentBlock::ToolUse { name, input, .. } = block {
-                        *tool_counts.entry(name.clone()).or_insert(0) += 1;
-                        if let Some(path) = file_path_from_input(name, input) {
+                // Build tool counts and file access counts
+                let mut tool_counts: HashMap<String, usize> = HashMap::new();
+                let mut file_counts: HashMap<String, usize> = HashMap::new();
+                for node in &parsed.nodes {
+                    if let Some(ref tool_use) = node.tool_use {
+                        *tool_counts.entry(tool_use.name.clone()).or_insert(0) += 1;
+                        if let Some(path) = file_path_from_input(&tool_use.name, &tool_use.input) {
                             *file_counts.entry(path).or_insert(0) += 1;
                         }
                     }
+                    for block in node
+                        .message
+                        .as_ref()
+                        .map(|m| m.content_blocks())
+                        .unwrap_or(&[])
+                    {
+                        if let crate::parser::models::ContentBlock::ToolUse { name, input, .. } =
+                            block
+                        {
+                            *tool_counts.entry(name.clone()).or_insert(0) += 1;
+                            if let Some(path) = file_path_from_input(name, input) {
+                                *file_counts.entry(path).or_insert(0) += 1;
+                            }
+                        }
+                    }
                 }
-            }
 
-            (
-                total_tokens,
-                parsed.estimated_cost,
-                parsed.model.clone(),
-                analytics.error_count as i64,
-                first_message,
-                Some(tool_counts),
-                Some(file_counts),
-                created_at,
-            )
-        } else {
-            (
-                0u64,
-                0.0f64,
-                None::<String>,
-                0i64,
-                None::<String>,
-                None,
-                None,
-                session.modified_at,
-            )
-        };
+                (
+                    parsed.model.clone(),
+                    analytics.error_count as i64,
+                    first_message,
+                    Some(tool_counts),
+                    Some(file_counts),
+                    created_at,
+                )
+            } else {
+                (
+                    None::<String>,
+                    0i64,
+                    None::<String>,
+                    None,
+                    None,
+                    session.modified_at,
+                )
+            };
 
-        // Aggregate subagent costs — each subagent may use a different model
+        // Collect subagent models
         let subagent_sessions = crate::parser::parse_subagents(&session.path);
-        let sub_tokens: i64 = subagent_sessions.iter().map(|s| s.total_tokens).sum();
-        let sub_cost: f64 = subagent_sessions.iter().map(|s| s.estimated_cost).sum();
-        total_tokens = total_tokens.saturating_add(sub_tokens as u64);
-        estimated_cost += sub_cost;
 
         let mut sub_models: Vec<String> = subagent_sessions
             .iter()
@@ -279,7 +279,7 @@ impl SessionIndex {
 
         // Skip sessions with no meaningful content (file-history-snapshots, abandoned
         // test files, etc.). Remove from index if previously added.
-        if total_tokens == 0 && first_message.is_none() {
+        if model.is_none() && first_message.is_none() {
             self.conn.execute(
                 "DELETE FROM sessions WHERE session_id = ?1",
                 params![session.session_id],
@@ -295,8 +295,8 @@ impl SessionIndex {
             r#"
             INSERT OR REPLACE INTO sessions
             (session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents, indexed_at,
-             total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
+             model, error_count, first_message, source_dir, subagent_models)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
             "#,
             params![
                 session.session_id,
@@ -307,8 +307,6 @@ impl SessionIndex {
                 session.modified_at,
                 if session.has_subagents { 1 } else { 0 },
                 indexed_at,
-                total_tokens as i64,
-                estimated_cost,
                 model,
                 error_count,
                 first_message,
@@ -386,31 +384,11 @@ impl SessionIndex {
     /// Get all sessions, sorted by modification time (newest first)
     pub fn list_sessions(&self) -> Result<Vec<SessionFile>> {
         let mut stmt = self.conn.prepare(
-            "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
-             FROM sessions
-             ORDER BY modified_at DESC"
+            &format!("SELECT {} FROM sessions ORDER BY modified_at DESC", SESSION_COLS),
         )?;
 
         let sessions = stmt
-            .query_map([], |row| {
-                Ok(SessionFile {
-                    session_id: row.get(0)?,
-                    project_name: row.get(1)?,
-                    path: PathBuf::from(row.get::<_, String>(2)?),
-                    file_size: row.get::<_, i64>(3)? as u64,
-                    created_at: row.get::<_, i64>(4).unwrap_or(0),
-                    modified_at: row.get(5)?,
-                    has_subagents: row.get::<_, i64>(6)? != 0,
-                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                    model: row.get(9).ok().flatten(),
-                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                    first_message: row.get(11).ok().flatten(),
-                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                    subagent_models: row.get(13).ok().flatten(),
-                })
-            })?
+            .query_map([], session_from_row)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
@@ -419,33 +397,16 @@ impl SessionIndex {
     /// Find sessions by project name (excludes empty sessions)
     pub fn find_by_project(&self, project: &str) -> Result<Vec<SessionFile>> {
         let mut stmt = self.conn.prepare(
-            "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
-             FROM sessions
-             WHERE project_name = ?1
-               AND (first_message IS NOT NULL OR total_tokens > 0)
-             ORDER BY modified_at DESC"
+            &format!(
+                "SELECT {} FROM sessions WHERE project_name = ?1 \
+                 AND (first_message IS NOT NULL OR model IS NOT NULL) \
+                 ORDER BY modified_at DESC",
+                SESSION_COLS
+            ),
         )?;
 
         let sessions = stmt
-            .query_map([project], |row| {
-                Ok(SessionFile {
-                    session_id: row.get(0)?,
-                    project_name: row.get(1)?,
-                    path: PathBuf::from(row.get::<_, String>(2)?),
-                    file_size: row.get::<_, i64>(3)? as u64,
-                    created_at: row.get::<_, i64>(4).unwrap_or(0),
-                    modified_at: row.get(5)?,
-                    has_subagents: row.get::<_, i64>(6)? != 0,
-                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                    model: row.get(9).ok().flatten(),
-                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                    first_message: row.get(11).ok().flatten(),
-                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                    subagent_models: row.get(13).ok().flatten(),
-                })
-            })?
+            .query_map([project], session_from_row)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
@@ -455,62 +416,24 @@ impl SessionIndex {
     pub fn find_by_id(&self, session_id: &str) -> Result<Option<SessionFile>> {
         // Try exact match first
         let mut stmt = self.conn.prepare(
-            "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
-             FROM sessions
-             WHERE session_id = ?1"
+            &format!("SELECT {} FROM sessions WHERE session_id = ?1", SESSION_COLS),
         )?;
 
-        let result = stmt.query_row([session_id], |row| {
-            Ok(SessionFile {
-                session_id: row.get(0)?,
-                project_name: row.get(1)?,
-                path: PathBuf::from(row.get::<_, String>(2)?),
-                file_size: row.get::<_, i64>(3)? as u64,
-                created_at: row.get::<_, i64>(4).unwrap_or(0),
-                modified_at: row.get(5)?,
-                has_subagents: row.get::<_, i64>(6)? != 0,
-                total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                model: row.get(9).ok().flatten(),
-                error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                first_message: row.get(11).ok().flatten(),
-                source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                subagent_models: row.get(13).ok().flatten(),
-            })
-        });
+        let result = stmt.query_row([session_id], session_from_row);
 
         match result {
             Ok(session) => Ok(Some(session)),
             Err(rusqlite::Error::QueryReturnedNoRows) => {
                 // Try prefix match
                 let mut stmt = self.conn.prepare(
-                    "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                            total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
-                     FROM sessions
-                     WHERE session_id LIKE ?1 || '%'
-                     ORDER BY modified_at DESC
-                     LIMIT 1"
+                    &format!(
+                        "SELECT {} FROM sessions WHERE session_id LIKE ?1 || '%' \
+                         ORDER BY modified_at DESC LIMIT 1",
+                        SESSION_COLS
+                    ),
                 )?;
 
-                let result = stmt.query_row([session_id], |row| {
-                    Ok(SessionFile {
-                        session_id: row.get(0)?,
-                        project_name: row.get(1)?,
-                        path: PathBuf::from(row.get::<_, String>(2)?),
-                        file_size: row.get::<_, i64>(3)? as u64,
-                        created_at: row.get::<_, i64>(4).unwrap_or(0),
-                        modified_at: row.get(5)?,
-                        has_subagents: row.get::<_, i64>(6)? != 0,
-                        total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                        estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                        model: row.get(9).ok().flatten(),
-                        error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                        first_message: row.get(11).ok().flatten(),
-                        source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                        subagent_models: row.get(13).ok().flatten(),
-                    })
-                });
+                let result = stmt.query_row([session_id], session_from_row);
 
                 match result {
                     Ok(session) => Ok(Some(session)),
@@ -525,31 +448,10 @@ impl SessionIndex {
     /// Get the most recently modified session
     pub fn get_latest(&self) -> Result<Option<SessionFile>> {
         let mut stmt = self.conn.prepare(
-            "SELECT session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents,
-                    total_tokens, estimated_cost, model, error_count, first_message, source_dir, subagent_models
-             FROM sessions
-             ORDER BY modified_at DESC
-             LIMIT 1"
+            &format!("SELECT {} FROM sessions ORDER BY modified_at DESC LIMIT 1", SESSION_COLS),
         )?;
 
-        let result = stmt.query_row([], |row| {
-            Ok(SessionFile {
-                session_id: row.get(0)?,
-                project_name: row.get(1)?,
-                path: PathBuf::from(row.get::<_, String>(2)?),
-                file_size: row.get::<_, i64>(3)? as u64,
-                created_at: row.get::<_, i64>(4).unwrap_or(0),
-                modified_at: row.get(5)?,
-                has_subagents: row.get::<_, i64>(6)? != 0,
-                total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                model: row.get(9).ok().flatten(),
-                error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                first_message: row.get(11).ok().flatten(),
-                source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                subagent_models: row.get(13).ok().flatten(),
-            })
-        });
+        let result = stmt.query_row([], session_from_row);
 
         match result {
             Ok(session) => Ok(Some(session)),
@@ -651,21 +553,18 @@ impl SessionIndex {
         let one_week_ago = now - (7 * 24 * 60 * 60);
         let today_start = now - (now % (24 * 60 * 60));
 
-        // Total sessions, size, tokens, cost, errors
+        // Total sessions, size, errors
         let mut stmt = self.conn.prepare(
-            "SELECT COUNT(*), SUM(file_size), COALESCE(SUM(total_tokens),0), COALESCE(SUM(estimated_cost),0), COALESCE(SUM(error_count),0) FROM sessions"
+            "SELECT COUNT(*), SUM(file_size), COALESCE(SUM(error_count),0) FROM sessions",
         )?;
 
-        let (total_sessions, total_size, total_tokens, total_cost, total_errors) =
-            stmt.query_row([], |row| {
-                Ok((
-                    row.get::<_, i64>(0)? as usize,
-                    row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
-                    row.get::<_, i64>(2)? as u64,
-                    row.get::<_, f64>(3)?,
-                    row.get::<_, i64>(4)? as usize,
-                ))
-            })?;
+        let (total_sessions, total_size, total_errors) = stmt.query_row([], |row| {
+            Ok((
+                row.get::<_, i64>(0)? as usize,
+                row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+                row.get::<_, i64>(2)? as usize,
+            ))
+        })?;
 
         // Sessions this week
         let sessions_this_week: usize = self.conn.query_row(
@@ -721,8 +620,6 @@ impl SessionIndex {
             avg_session_size,
             most_active_project,
             top_tools,
-            total_tokens,
-            total_cost,
             total_errors,
         })
     }
@@ -759,21 +656,19 @@ impl SessionIndex {
         let one_week_ago = now - (7 * 24 * 60 * 60);
         let today_start = now - (now % (24 * 60 * 60));
 
-        // Total sessions, size, tokens, cost, errors for this project
+        // Total sessions, size, errors for this project
         let mut stmt = self.conn.prepare(
-            "SELECT COUNT(*), SUM(file_size), COALESCE(SUM(total_tokens),0), COALESCE(SUM(estimated_cost),0), COALESCE(SUM(error_count),0) FROM sessions WHERE project_name = ?1"
+            "SELECT COUNT(*), SUM(file_size), COALESCE(SUM(error_count),0) \
+             FROM sessions WHERE project_name = ?1",
         )?;
 
-        let (total_sessions, total_size, total_tokens, total_cost, total_errors) =
-            stmt.query_row([project], |row| {
-                Ok((
-                    row.get::<_, i64>(0)? as usize,
-                    row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
-                    row.get::<_, i64>(2)? as u64,
-                    row.get::<_, f64>(3)?,
-                    row.get::<_, i64>(4)? as usize,
-                ))
-            })?;
+        let (total_sessions, total_size, total_errors) = stmt.query_row([project], |row| {
+            Ok((
+                row.get::<_, i64>(0)? as usize,
+                row.get::<_, Option<i64>>(1)?.unwrap_or(0) as u64,
+                row.get::<_, i64>(2)? as usize,
+            ))
+        })?;
 
         // Sessions this week
         let sessions_this_week: usize = self.conn.query_row(
@@ -823,8 +718,6 @@ impl SessionIndex {
             avg_session_size,
             top_tools,
             last_activity,
-            total_tokens,
-            total_cost,
             total_errors,
         })
     }
@@ -915,44 +808,22 @@ impl SessionIndex {
         // Build SQL query with placeholders for tool names
         let placeholders = tool_names.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query = format!(
-            r#"
-            SELECT DISTINCT s.session_id, s.project_name, s.file_path, s.file_size, s.created_at, s.modified_at, s.has_subagents,
-                            s.total_tokens, s.estimated_cost, s.model, s.error_count, s.first_message, s.source_dir, s.subagent_models
-            FROM sessions s
-            JOIN tool_usage t ON s.session_id = t.session_id
-            WHERE t.tool_name IN ({})
-            ORDER BY s.modified_at DESC
-            "#,
-            placeholders
+            "SELECT DISTINCT {} FROM sessions s \
+             JOIN tool_usage t ON s.session_id = t.session_id \
+             WHERE t.tool_name IN ({}) \
+             ORDER BY s.modified_at DESC",
+            SESSION_COLS_PREFIXED, placeholders
         );
 
         let mut stmt = self.conn.prepare(&query)?;
 
-        // Convert tool_names to rusqlite::ToSql trait objects
         let params: Vec<&dyn rusqlite::ToSql> = tool_names
             .iter()
             .map(|s| s as &dyn rusqlite::ToSql)
             .collect();
 
         let sessions = stmt
-            .query_map(params.as_slice(), |row| {
-                Ok(SessionFile {
-                    session_id: row.get(0)?,
-                    project_name: row.get(1)?,
-                    path: PathBuf::from(row.get::<_, String>(2)?),
-                    file_size: row.get::<_, i64>(3)? as u64,
-                    created_at: row.get::<_, i64>(4).unwrap_or(0),
-                    modified_at: row.get(5)?,
-                    has_subagents: row.get::<_, i64>(6)? != 0,
-                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                    model: row.get(9).ok().flatten(),
-                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                    first_message: row.get(11).ok().flatten(),
-                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                    subagent_models: row.get(13).ok().flatten(),
-                })
-            })?
+            .query_map(params.as_slice(), session_from_row)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
@@ -1027,13 +898,9 @@ impl SessionIndex {
         tool: Option<&str>,
         use_fts: bool,
     ) -> Result<Vec<SessionFile>> {
-        let col_list = "s.session_id, s.project_name, s.file_path, s.file_size, s.created_at, \
-                        s.modified_at, s.has_subagents, s.total_tokens, s.estimated_cost, \
-                        s.model, s.error_count, s.first_message, s.source_dir, s.subagent_models";
-
         let mut joins = String::new();
         let mut conditions: Vec<String> =
-            vec!["(s.first_message IS NOT NULL OR s.total_tokens > 0)".to_string()];
+            vec!["(s.first_message IS NOT NULL OR s.model IS NOT NULL)".to_string()];
         let mut params_storage: Vec<String> = Vec::new();
 
         if use_fts && !text.is_empty() {
@@ -1064,7 +931,7 @@ impl SessionIndex {
 
         let sql = format!(
             "SELECT DISTINCT {} FROM sessions s{} WHERE {} ORDER BY s.modified_at DESC",
-            col_list,
+            SESSION_COLS_PREFIXED,
             joins,
             conditions.join(" AND "),
         );
@@ -1076,38 +943,41 @@ impl SessionIndex {
 
         let mut stmt = self.conn.prepare(&sql)?;
         let sessions = stmt
-            .query_map(params_refs.as_slice(), |row| {
-                Ok(SessionFile {
-                    session_id: row.get(0)?,
-                    project_name: row.get(1)?,
-                    path: PathBuf::from(row.get::<_, String>(2)?),
-                    file_size: row.get::<_, i64>(3)? as u64,
-                    created_at: row.get::<_, i64>(4).unwrap_or(0),
-                    modified_at: row.get(5)?,
-                    has_subagents: row.get::<_, i64>(6)? != 0,
-                    total_tokens: row.get::<_, i64>(7).unwrap_or(0) as u64,
-                    estimated_cost: row.get::<_, f64>(8).unwrap_or(0.0),
-                    model: row.get(9).ok().flatten(),
-                    error_count: row.get::<_, i64>(10).unwrap_or(0) as usize,
-                    first_message: row.get(11).ok().flatten(),
-                    source_dir: row.get::<_, String>(12).unwrap_or_default(),
-                    subagent_models: row.get(13).ok().flatten(),
-                })
-            })?
+            .query_map(params_refs.as_slice(), session_from_row)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(sessions)
     }
 
-    /// Get total tokens and cost across all sessions
-    pub fn get_global_totals(&self) -> Result<(u64, f64)> {
-        let (total_tokens, total_cost) = self.conn.query_row(
-            "SELECT COALESCE(SUM(total_tokens), 0), COALESCE(SUM(estimated_cost), 0.0) FROM sessions",
-            [],
-            |row| Ok((row.get::<_, i64>(0)? as u64, row.get::<_, f64>(1)?)),
-        )?;
-        Ok((total_tokens, total_cost))
-    }
+}
+
+/// Standard column list for all session SELECT queries.
+const SESSION_COLS: &str = "session_id, project_name, file_path, file_size, created_at, \
+                            modified_at, has_subagents, model, error_count, first_message, \
+                            source_dir, subagent_models";
+
+/// Same columns with `s.` table prefix (for JOINed queries).
+const SESSION_COLS_PREFIXED: &str =
+    "s.session_id, s.project_name, s.file_path, s.file_size, s.created_at, \
+     s.modified_at, s.has_subagents, s.model, s.error_count, s.first_message, \
+     s.source_dir, s.subagent_models";
+
+/// Build a SessionFile from a row matching SESSION_COLS.
+fn session_from_row(row: &rusqlite::Row) -> rusqlite::Result<SessionFile> {
+    Ok(SessionFile {
+        session_id: row.get(0)?,
+        project_name: row.get(1)?,
+        path: PathBuf::from(row.get::<_, String>(2)?),
+        file_size: row.get::<_, i64>(3)? as u64,
+        created_at: row.get::<_, i64>(4).unwrap_or(0),
+        modified_at: row.get(5)?,
+        has_subagents: row.get::<_, i64>(6)? != 0,
+        model: row.get(7).ok().flatten(),
+        error_count: row.get::<_, i64>(8).unwrap_or(0) as usize,
+        first_message: row.get(9).ok().flatten(),
+        source_dir: row.get::<_, String>(10).unwrap_or_default(),
+        subagent_models: row.get(11).ok().flatten(),
+    })
 }
 
 /// Extract a file path from a tool's JSON input, if the tool operates on files.
@@ -1143,8 +1013,6 @@ pub struct GlobalAnalytics {
     pub avg_session_size: u64,
     pub most_active_project: Option<String>,
     pub top_tools: Vec<(String, usize)>,
-    pub total_tokens: u64,
-    pub total_cost: f64,
     pub total_errors: usize,
 }
 
@@ -1160,8 +1028,6 @@ pub struct ProjectAnalytics {
     pub avg_session_size: u64,
     pub top_tools: Vec<(String, usize)>,
     pub last_activity: Option<i64>,
-    pub total_tokens: u64,
-    pub total_cost: f64,
     pub total_errors: usize,
 }
 
@@ -1223,8 +1089,6 @@ mod tests {
             created_at: 1234567890,
             modified_at: 1234567890,
             has_subagents: false,
-            total_tokens: 0,
-            estimated_cost: 0.0,
             model: None,
             error_count: 0,
             first_message: None,
@@ -1348,8 +1212,6 @@ mod tests {
             created_at: 1234567890,
             modified_at: 1234567890,
             has_subagents: false,
-            total_tokens: 0,
-            estimated_cost: 0.0,
             model: None,
             error_count: 0,
             first_message: None,

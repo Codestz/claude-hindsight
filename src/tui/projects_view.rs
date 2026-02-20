@@ -432,12 +432,6 @@ impl ProjectsView {
     /// Render analytics panel
     fn render_analytics_panel(&self, f: &mut Frame, area: Rect) {
         let size_mb = self.analytics.total_size as f64 / 1_000_000.0;
-        let total_tokens = fmt_tokens(self.analytics.total_tokens);
-        let avg_cost = if self.analytics.total_sessions > 0 {
-            self.analytics.total_cost / self.analytics.total_sessions as f64
-        } else {
-            0.0
-        };
 
         let mut lines = vec![
             Line::from(""),
@@ -474,40 +468,6 @@ impl ProjectsView {
                     Style::default()
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            // Cost & Token section
-            Line::from(vec![Span::styled(
-                " Cost & Usage",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from(""),
-            Line::from(vec![
-                Span::raw("  Total Tokens:   "),
-                Span::styled(
-                    total_tokens,
-                    Style::default()
-                        .fg(Color::Green)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::raw("  Total Cost:     "),
-                Span::styled(
-                    format!("${:.2}", self.analytics.total_cost),
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::raw("  Avg Cost/Sess:  "),
-                Span::styled(
-                    format!("${:.3}", avg_cost),
-                    Style::default().fg(Color::Yellow),
                 ),
             ]),
             Line::from(vec![
@@ -706,17 +666,6 @@ pub enum ProjectAction {
     None,
     SelectProject(String),
     Quit,
-}
-
-/// Format token count as compact string
-fn fmt_tokens(n: u64) -> String {
-    if n < 1_000 {
-        format!("{}", n)
-    } else if n < 1_000_000 {
-        format!("{:.1}k", n as f64 / 1_000.0)
-    } else {
-        format!("{:.1}M", n as f64 / 1_000_000.0)
-    }
 }
 
 /// Format timestamp as relative time

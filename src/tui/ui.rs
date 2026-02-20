@@ -39,7 +39,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 }
 
-/// Format token count for header display (e.g. 8200 → "8.2k", 1500000 → "1.5M")
+/// Format token count for display (e.g. 8200 → "8.2k", 1500000 → "1.5M")
 fn fmt_tok(n: u64) -> String {
     if n < 1_000 {
         format!("{}", n)
@@ -114,7 +114,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
                 }),
             ),
         ]),
-        // Line 2: model + token breakdown + cost
+        // Line 2: model
         Line::from(vec![
             Span::styled("Model: ", Style::default().fg(Color::Cyan)),
             Span::styled(
@@ -122,30 +122,6 @@ fn draw_header(f: &mut Frame, area: Rect, app: &mut App) {
                 Style::default()
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw("  |  "),
-            Span::styled("In: ", Style::default().fg(Color::Cyan)),
-            Span::styled(
-                fmt_tok(analytics.input_tokens),
-                Style::default().fg(Color::Green),
-            ),
-            Span::styled(
-                format!(" Wr: {}", fmt_tok(analytics.cache_creation_tokens)),
-                Style::default().fg(Color::DarkGray),
-            ),
-            Span::styled(
-                format!(" Rd: {}", fmt_tok(analytics.cache_read_tokens)),
-                Style::default().fg(Color::DarkGray),
-            ),
-            Span::styled(
-                format!("  Out: {}", fmt_tok(analytics.output_tokens)),
-                Style::default().fg(Color::Green),
-            ),
-            Span::raw("  |  "),
-            Span::styled("Cost: ", Style::default().fg(Color::Cyan)),
-            Span::styled(
-                format!("${:.4}", app.session.estimated_cost),
-                Style::default().fg(Color::Yellow),
             ),
         ]),
     ];

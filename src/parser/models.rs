@@ -384,12 +384,6 @@ pub struct Session {
     /// Total tool calls
     pub total_tools: usize,
 
-    /// Total tokens used (includes cache tokens)
-    pub total_tokens: i64,
-
-    /// Estimated cost in USD
-    pub estimated_cost: f64,
-
     /// Number of errors
     pub error_count: usize,
 
@@ -401,13 +395,6 @@ impl Session {
     /// Create a new session from parsed nodes
     pub fn new(session_id: String, file_path: Option<String>, nodes: Vec<ExecutionNode>) -> Self {
         let total_tools = nodes.iter().filter(|n| n.tool_use.is_some()).count();
-
-        // Token total: include ALL token types (cache creation + cache reads)
-        let total_tokens: i64 = nodes
-            .iter()
-            .filter_map(|n| n.effective_token_usage())
-            .map(|t| t.total())
-            .sum();
 
         let error_count = nodes
             .iter()
@@ -465,31 +452,6 @@ impl Session {
             .next()
             .map(str::to_string);
 
-        // Per-model cost estimation with cache tier pricing
-        let estimated_cost = {
-            let inp: i64 = nodes
-                .iter()
-                .filter_map(|n| n.effective_token_usage())
-                .map(|t| t.input_tokens.unwrap_or(0))
-                .sum();
-            let cw: i64 = nodes
-                .iter()
-                .filter_map(|n| n.effective_token_usage())
-                .map(|t| t.cache_creation_input_tokens.unwrap_or(0))
-                .sum();
-            let cr: i64 = nodes
-                .iter()
-                .filter_map(|n| n.effective_token_usage())
-                .map(|t| t.cache_read_input_tokens.unwrap_or(0))
-                .sum();
-            let out: i64 = nodes
-                .iter()
-                .filter_map(|n| n.effective_token_usage())
-                .map(|t| t.output_tokens.unwrap_or(0))
-                .sum();
-            estimate_cost(model.as_deref().unwrap_or(""), inp, cw, cr, out)
-        };
-
         Session {
             session_id,
             file_path,
@@ -497,34 +459,10 @@ impl Session {
             start_time,
             end_time,
             total_tools,
-            total_tokens,
-            estimated_cost,
             error_count,
             model,
         }
     }
-}
-
-/// Model-aware cost estimator (USD). Pricing as of early 2026.
-///
-/// Token types: input (non-cached), cache_write (new cache), cache_read (from cache), output.
-/// Rates per 1M tokens:
-///   Opus 4:    $15 / $18.75 / $1.50 / $75
-///   Sonnet 4:  $3  / $3.75  / $0.30 / $15   (default)
-///   Haiku 4.5: $1  / $1.25  / $0.10 / $5
-///   (Haiku 3.5 was $0.80/$1.00/$0.08/$4 — do NOT confuse with 4.5)
-fn estimate_cost(model: &str, inp: i64, cw: i64, cr: i64, out: i64) -> f64 {
-    let (i, w, r, o): (f64, f64, f64, f64) = if model.contains("opus") {
-        (15.0, 18.75, 1.5, 75.0)
-    } else if model.contains("haiku") {
-        // claude-haiku-4-5-20251001 pricing (NOT 3.5 haiku)
-        (1.0, 1.25, 0.10, 5.0)
-    } else {
-        // Sonnet (4.x) default
-        (3.0, 3.75, 0.30, 15.0)
-    };
-    let m = 1_000_000.0_f64;
-    (inp as f64 / m * i) + (cw as f64 / m * w) + (cr as f64 / m * r) + (out as f64 / m * o)
 }
 
 #[cfg(test)]
@@ -722,4 +660,5 @@ mod tests {
         assert_eq!(base.cache_creation_input_tokens, Some(5));
         assert_eq!(base.cache_read_input_tokens, Some(3));
     }
+
 }

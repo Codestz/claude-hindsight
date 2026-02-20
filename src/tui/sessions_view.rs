@@ -18,8 +18,6 @@ use ratatui::{
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SortMode {
     Newest,
-    MostExpensive,
-    MostTokens,
     MostErrors,
 }
 
@@ -27,17 +25,13 @@ impl SortMode {
     fn label(self) -> &'static str {
         match self {
             SortMode::Newest => "Newest",
-            SortMode::MostExpensive => "Cost ↓",
-            SortMode::MostTokens => "Tokens ↓",
             SortMode::MostErrors => "Errors ↓",
         }
     }
 
     fn next(self) -> Self {
         match self {
-            SortMode::Newest => SortMode::MostExpensive,
-            SortMode::MostExpensive => SortMode::MostTokens,
-            SortMode::MostTokens => SortMode::MostErrors,
+            SortMode::Newest => SortMode::MostErrors,
             SortMode::MostErrors => SortMode::Newest,
         }
     }
@@ -193,17 +187,6 @@ impl SessionsView {
             SortMode::Newest => {
                 self.sessions
                     .sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
-            }
-            SortMode::MostExpensive => {
-                self.sessions.sort_by(|a, b| {
-                    b.estimated_cost
-                        .partial_cmp(&a.estimated_cost)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                });
-            }
-            SortMode::MostTokens => {
-                self.sessions
-                    .sort_by(|a, b| b.total_tokens.cmp(&a.total_tokens));
             }
             SortMode::MostErrors => {
                 self.sessions
@@ -520,20 +503,6 @@ impl SessionsView {
             ),
             Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                format!("{:7}", "Tokens"),
-                Style::default()
-                    .fg(Color::DarkGray)
-                    .add_modifier(Modifier::UNDERLINED),
-            ),
-            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format!("{:7}", "Cost"),
-                Style::default()
-                    .fg(Color::DarkGray)
-                    .add_modifier(Modifier::UNDERLINED),
-            ),
-            Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
                 "Message",
                 Style::default()
                     .fg(Color::DarkGray)
@@ -561,8 +530,6 @@ impl SessionsView {
                 } else {
                     model_raw
                 };
-                let tok_str = fmt_tokens(session.total_tokens);
-                let cost_str = format!("${:.3}", session.estimated_cost);
                 let preview_raw = session.first_message.as_deref().unwrap_or("(no message)");
                 let preview_end = preview_raw
                     .char_indices()
@@ -597,13 +564,6 @@ impl SessionsView {
                         Style::default().fg(Color::Blue),
                     ),
                     Span::raw(" │ "),
-                    Span::styled(format!("{:7}", tok_str), Style::default().fg(Color::Green)),
-                    Span::raw(" │ "),
-                    Span::styled(
-                        format!("{:7}", cost_str),
-                        Style::default().fg(Color::Yellow),
-                    ),
-                    Span::raw(" │ "),
                     Span::styled(preview.to_string(), Style::default().fg(Color::Gray)),
                 ]))
             })
@@ -623,12 +583,6 @@ impl SessionsView {
     /// Render analytics panel
     fn render_analytics_panel(&self, f: &mut Frame, area: Rect) {
         let size_mb = self.analytics.total_size as f64 / 1_000_000.0;
-        let total_tokens = fmt_tokens(self.analytics.total_tokens);
-        let avg_cost = if self.analytics.total_sessions > 0 {
-            self.analytics.total_cost / self.analytics.total_sessions as f64
-        } else {
-            0.0
-        };
 
         let mut lines = vec![
             Line::from(""),
@@ -656,40 +610,6 @@ impl SessionsView {
                     Style::default()
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(""),
-            // Cost & tokens
-            Line::from(vec![Span::styled(
-                " Cost & Usage",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from(""),
-            Line::from(vec![
-                Span::raw("  Total Tokens:   "),
-                Span::styled(
-                    total_tokens,
-                    Style::default()
-                        .fg(Color::Green)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::raw("  Total Cost:     "),
-                Span::styled(
-                    format!("${:.2}", self.analytics.total_cost),
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::raw("  Avg Cost/Sess:  "),
-                Span::styled(
-                    format!("${:.3}", avg_cost),
-                    Style::default().fg(Color::Yellow),
                 ),
             ]),
             Line::from(vec![
@@ -854,17 +774,6 @@ pub enum SessionAction {
     SelectSession(String),
     Back,
     Quit,
-}
-
-/// Format token count as compact string (e.g. 8200 → "8.2k", 1500000 → "1.5M")
-fn fmt_tokens(n: u64) -> String {
-    if n < 1_000 {
-        format!("{}", n)
-    } else if n < 1_000_000 {
-        format!("{:.1}k", n as f64 / 1_000.0)
-    } else {
-        format!("{:.1}M", n as f64 / 1_000_000.0)
-    }
 }
 
 /// Format timestamp as relative time

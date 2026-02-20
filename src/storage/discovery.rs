@@ -30,12 +30,6 @@ pub struct SessionFile {
     /// Whether this session has subagents (folder with subagents/ directory)
     pub has_subagents: bool,
 
-    /// Total tokens (input + output) for the session
-    pub total_tokens: u64,
-
-    /// Estimated cost in USD
-    pub estimated_cost: f64,
-
     /// Model used (short name, e.g. "sonnet-4-5")
     pub model: Option<String>,
 
@@ -139,8 +133,6 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
                         created_at: modified_at, // refined during indexing from first node timestamp
                         modified_at,
                         has_subagents,
-                        total_tokens: 0,
-                        estimated_cost: 0.0,
                         model: None,
                         error_count: 0,
                         first_message: None,
