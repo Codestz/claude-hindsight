@@ -27,6 +27,7 @@ pub fn get_node_label(
         "progress_agent" => (format!(" Agent: {}", details), "magenta"),
         "progress_other" => (format!(" Progress: {}", details), "yellow"),
         "file_snapshot" => (format!(" Snapshot: {}", details), "magenta"),
+        "compact_boundary" => (format!("⟐ {}", details), "amber"),
         "system" => (format!(" System: {}", details), "gray"),
         "queue_operation" => (format!(" Queued: {}", details), "gray"),
         "unknown" => (format!(" {}", details), "white"),
@@ -44,7 +45,7 @@ fn detect_node_type(
         "assistant" => detect_assistant_type(node),
         "progress" => detect_progress_type(node),
         "file-history-snapshot" => ("file_snapshot".to_string(), detect_snapshot_details(node)),
-        "system" => ("system".to_string(), detect_system_details(node)),
+        "system" => detect_system_type(node),
         "queue-operation" => ("queue_operation".to_string(), "queued".to_string()),
         _ => ("unknown".to_string(), node.node.node_type.clone()),
     }
@@ -237,6 +238,36 @@ fn detect_snapshot_details(node: &TreeNode) -> String {
         }
     }
     String::new()
+}
+
+/// Detect system node type — promotes compact_boundary to a first-class type
+fn detect_system_type(node: &TreeNode) -> (String, String) {
+    let subtype = node
+        .node
+        .extra
+        .as_ref()
+        .and_then(|e| e.get("subtype"))
+        .and_then(|s| s.as_str());
+
+    if subtype == Some("compact_boundary") {
+        let pre_tokens = node
+            .node
+            .extra
+            .as_ref()
+            .and_then(|e| e.get("compactMetadata"))
+            .and_then(|m| m.get("preTokens"))
+            .and_then(|v| v.as_i64());
+
+        let detail = match pre_tokens {
+            Some(t) if t >= 1_000_000 => format!("Compacted · {:.1}M tokens", t as f64 / 1_000_000.0),
+            Some(t) if t >= 1_000 => format!("Compacted · {:.1}K tokens", t as f64 / 1_000.0),
+            Some(t) => format!("Compacted · {} tokens", t),
+            None => "Compacted".to_string(),
+        };
+        return ("compact_boundary".to_string(), detail);
+    }
+
+    ("system".to_string(), detect_system_details(node))
 }
 
 /// Detect system event details

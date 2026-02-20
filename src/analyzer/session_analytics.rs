@@ -19,18 +19,6 @@ pub struct SessionAnalytics {
     /// Tool usage breakdown (tool name -> count)
     pub tool_usage: Vec<(String, usize)>,
 
-    /// Total input tokens (includes cache tokens)
-    pub input_tokens: u64,
-
-    /// Total output tokens
-    pub output_tokens: u64,
-
-    /// Total cache creation tokens
-    pub cache_creation_tokens: u64,
-
-    /// Total cache read tokens
-    pub cache_read_tokens: u64,
-
     /// Session duration in seconds (None if timestamps missing)
     pub duration_seconds: Option<i64>,
 
@@ -63,10 +51,6 @@ impl SessionAnalytics {
         let mut tool_counts: HashMap<String, usize> = HashMap::with_capacity(20);
         let mut timestamps = Vec::with_capacity(total_nodes);
 
-        let mut input_tokens = 0u64;
-        let mut output_tokens = 0u64;
-        let mut cache_creation_tokens = 0u64;
-        let mut cache_read_tokens = 0u64;
         let mut error_count = 0;
         let mut has_subagents = false;
         let mut thinking_count = 0;
@@ -121,25 +105,55 @@ impl SessionAnalytics {
                 }
             }
 
-            // Count errors
+            // Count errors — aligned with Session::new comprehensive detection
             if node.node_type == "error" {
                 error_count += 1;
             }
 
-            // Check tool results for errors
-            if let Some(ref tool_result) = node.tool_result {
-                if tool_result.is_error == Some(true) {
-                    error_count += 1;
-                    tool_result_error_count += 1;
-                }
-            }
+            {
+                let tr = node.tool_result.as_ref();
+                let tool_result_error = tr.and_then(|r| r.is_error).unwrap_or(false);
+                let content_tag_error = tr
+                    .and_then(|r| r.content.as_deref())
+                    .map(|c| c.contains("<tool_use_error>"))
+                    .unwrap_or(false);
 
-            // Collect token usage — use typed helpers to include cache tokens
-            if let Some(tu) = node.effective_token_usage() {
-                input_tokens += tu.total_input() as u64;
-                output_tokens += tu.total_output() as u64;
-                cache_creation_tokens += tu.cache_creation_input_tokens.unwrap_or(0) as u64;
-                cache_read_tokens += tu.cache_read_input_tokens.unwrap_or(0) as u64;
+                let tool_use_result_error = node
+                    .tool_use_result
+                    .as_ref()
+                    .and_then(|v| {
+                        serde_json::from_value::<crate::parser::models::ToolResult>(v.clone())
+                            .ok()
+                            .and_then(|r| r.is_error)
+                    })
+                    .unwrap_or(false);
+
+                let block_error = node
+                    .message
+                    .as_ref()
+                    .map(|m| {
+                        m.content_blocks().iter().any(|b| match b {
+                            ContentBlock::ToolResult {
+                                content, is_error, ..
+                            } => {
+                                is_error.unwrap_or(false)
+                                    || content
+                                        .as_ref()
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.contains("<tool_use_error>"))
+                                        .unwrap_or(false)
+                            }
+                            _ => false,
+                        })
+                    })
+                    .unwrap_or(false);
+
+                if tool_result_error || content_tag_error || tool_use_result_error || block_error {
+                    error_count += 1;
+                    if tool_result_error {
+                        tool_result_error_count += 1;
+                    }
+                }
             }
 
             // Collect timestamps
@@ -175,10 +189,6 @@ impl SessionAnalytics {
             total_nodes,
             node_counts,
             tool_usage,
-            input_tokens,
-            output_tokens,
-            cache_creation_tokens,
-            cache_read_tokens,
             duration_seconds,
             error_count,
             has_subagents,

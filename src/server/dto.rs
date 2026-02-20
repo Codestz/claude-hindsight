@@ -37,8 +37,6 @@ pub struct GlobalAnalyticsDto {
     pub avg_session_size: u64,
     pub most_active_project: Option<String>,
     pub top_tools: Vec<(String, usize)>,
-    pub total_tokens: u64,
-    pub total_cost: f64,
     pub total_errors: usize,
 }
 
@@ -54,8 +52,6 @@ impl From<GlobalAnalytics> for GlobalAnalyticsDto {
             avg_session_size: a.avg_session_size,
             most_active_project: a.most_active_project,
             top_tools: a.top_tools,
-            total_tokens: a.total_tokens,
-            total_cost: a.total_cost,
             total_errors: a.total_errors,
         }
     }
@@ -73,8 +69,6 @@ pub struct ProjectAnalyticsDto {
     pub avg_session_size: u64,
     pub top_tools: Vec<(String, usize)>,
     pub last_activity: Option<i64>,
-    pub total_tokens: u64,
-    pub total_cost: f64,
     pub total_errors: usize,
 }
 
@@ -90,8 +84,6 @@ impl From<ProjectAnalytics> for ProjectAnalyticsDto {
             avg_session_size: a.avg_session_size,
             top_tools: a.top_tools,
             last_activity: a.last_activity,
-            total_tokens: a.total_tokens,
-            total_cost: a.total_cost,
             total_errors: a.total_errors,
         }
     }
@@ -106,8 +98,6 @@ pub struct SessionFileDto {
     pub created_at: i64,
     pub modified_at: i64,
     pub has_subagents: bool,
-    pub total_tokens: u64,
-    pub estimated_cost: f64,
     pub model: Option<String>,
     pub error_count: usize,
     pub first_message: Option<String>,
@@ -127,8 +117,6 @@ impl From<SessionFile> for SessionFileDto {
             created_at: s.created_at,
             modified_at: s.modified_at,
             has_subagents: s.has_subagents,
-            total_tokens: s.total_tokens,
-            estimated_cost: s.estimated_cost,
             model: s.model,
             error_count: s.error_count,
             first_message: s.first_message,

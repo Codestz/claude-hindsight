@@ -21,8 +21,6 @@ pub enum DashboardAction {
 pub struct DashboardView {
     pub analytics: GlobalAnalytics,
     pub sparkline_data: Vec<u64>,
-    pub total_tokens: u64,
-    pub total_cost: f64,
 }
 
 impl DashboardView {
@@ -31,13 +29,10 @@ impl DashboardView {
         let index = SessionIndex::new()?;
         let analytics = index.get_global_analytics()?;
         let sparkline_data = index.get_daily_session_counts(14)?;
-        let (total_tokens, total_cost) = index.get_global_totals()?;
 
         Ok(DashboardView {
             analytics,
             sparkline_data,
-            total_tokens,
-            total_cost,
         })
     }
 
@@ -108,8 +103,6 @@ impl DashboardView {
 
         // ── Stats card ──────────────────────────────────────────────────────────
         let a = &self.analytics;
-        let total_cost = self.total_cost;
-        let total_tok = self.total_tokens;
 
         let stats_lines = vec![
             Line::from(vec![
@@ -131,24 +124,6 @@ impl DashboardView {
                     format!("{}", a.total_projects),
                     Style::default()
                         .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("  Tokens    ", Style::default().fg(Color::DarkGray)),
-                Span::styled(
-                    fmt_tokens(total_tok),
-                    Style::default()
-                        .fg(Color::Green)
-                        .add_modifier(Modifier::BOLD),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("  Cost      ", Style::default().fg(Color::DarkGray)),
-                Span::styled(
-                    format!("${:.2}", total_cost),
-                    Style::default()
-                        .fg(Color::Yellow)
                         .add_modifier(Modifier::BOLD),
                 ),
             ]),
@@ -231,16 +206,6 @@ impl DashboardView {
         let tools_widget = Paragraph::new(tool_lines)
             .block(Block::default().title(" Top Tools ").borders(Borders::ALL));
         f.render_widget(tools_widget, rows[0]);
-    }
-}
-
-fn fmt_tokens(n: u64) -> String {
-    if n < 1_000 {
-        format!("{}", n)
-    } else if n < 1_000_000 {
-        format!("{:.1}k", n as f64 / 1_000.0)
-    } else {
-        format!("{:.1}M", n as f64 / 1_000_000.0)
     }
 }
 

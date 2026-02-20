@@ -599,17 +599,6 @@ fn parse_query(q: &str) -> (String, bool, Option<String>) {
     (q.to_string(), false, None)
 }
 
-/// Format token count as compact string (e.g. 8200 → "8.2k")
-fn fmt_tokens(n: u64) -> String {
-    if n < 1_000 {
-        format!("{}", n)
-    } else if n < 1_000_000 {
-        format!("{:.1}k", n as f64 / 1_000.0)
-    } else {
-        format!("{:.1}M", n as f64 / 1_000_000.0)
-    }
-}
-
 /// Convert a SessionFile to a SearchResultItem
 fn session_to_result_item(s: &SessionFile) -> SearchResultItem {
     let short_id = &s.session_id[..8.min(s.session_id.len())];
@@ -623,12 +612,10 @@ fn session_to_result_item(s: &SessionFile) -> SearchResultItem {
         title: format!("{}  {}", short_id, s.project_name),
         subtitle: msg_short,
         preview: format!(
-            "Project:  {}\nMessage:  {}\nModel:    {}\nTokens:   {}\nCost:     ${:.4}\nErrors:   {}\nUpdated:  {}\nAge:      {}",
+            "Project:  {}\nMessage:  {}\nModel:    {}\nErrors:   {}\nUpdated:  {}\nAge:      {}",
             s.project_name,
             msg_preview,
             model,
-            fmt_tokens(s.total_tokens),
-            s.estimated_cost,
             s.error_count,
             updated,
             age,
