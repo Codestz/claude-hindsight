@@ -7,11 +7,13 @@ use clap::{Parser, Subcommand};
 use std::process;
 
 mod analyzer;
+mod api;
 mod parser;
 mod commands;
 mod config;
 mod error;
 mod search;
+mod server;
 mod storage;
 mod tui;
 mod watcher;
@@ -119,6 +121,17 @@ enum Commands {
         #[arg(short, long)]
         verbose: bool,
     },
+
+    /// Start the web dashboard server
+    Serve {
+        /// Port to listen on
+        #[arg(short, long, default_value = "7227")]
+        port: u16,
+
+        /// Open browser after starting
+        #[arg(long)]
+        open: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -215,6 +228,9 @@ fn run() -> Result<()> {
         }
         Commands::Reindex { verbose } => {
             commands::reindex::run(verbose)?;
+        }
+        Commands::Serve { port, open } => {
+            commands::serve::run(port, open)?;
         }
     }
 
