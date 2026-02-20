@@ -3,7 +3,7 @@
 > **20/20 hindsight for your Claude Code sessions**
 
 [![CI](https://github.com/Codestz/claude-hindsight/actions/workflows/ci.yml/badge.svg)](https://github.com/Codestz/claude-hindsight/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/hindsight.svg)](https://crates.io/crates/hindsight)
+[![Crates.io](https://img.shields.io/crates/v/claude-hindsight.svg)](https://crates.io/crates/claude-hindsight)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
 
@@ -25,7 +25,7 @@ brew install hindsight
 ### Cargo
 
 ```bash
-cargo install hindsight
+cargo install claude-hindsight
 ```
 
 ### Pre-built binaries
