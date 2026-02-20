@@ -1,0 +1,118 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const year = new Date().getFullYear();
+---
+<footer class="footer">
+
+  <!-- Main row -->
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="footer-logo">HINDSIGHT</span>
+      <span class="footer-tagline muted">// 20/20 hindsight for your Claude Code sessions</span>
+    </div>
+
+    <nav class="footer-links" aria-label="Footer navigation">
+      {[
+        { href: `${base}/docs/getting-started`, label: "GETTING STARTED" },
+        { href: `${base}/docs/commands`,         label: "COMMANDS" },
+        { href: `${base}/docs/architecture`,     label: "ARCHITECTURE" },
+        { href: "https://github.com/Codestz/claude-hindsight", label: "GITHUB", external: true },
+      ].map((l) => (
+        <a
+          href={l.href}
+          class="footer-link"
+          target={l.external ? "_blank" : undefined}
+          rel={l.external ? "noopener noreferrer" : undefined}
+        >{l.label}</a>
+      ))}
+    </nav>
+
+    <div class="footer-status">
+      <span class="dot dot--pulse" aria-hidden="true"></span>
+      <span class="label muted">SYS.STATUS: ONLINE</span>
+    </div>
+  </div>
+
+  <!-- Bottom bar -->
+  <div class="footer-bar">
+    <span class="label dim">// CLAUDE HINDSIGHT · MIT LICENSE · {year}</span>
+    <span class="label dim">READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span>
+  </div>
+
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--border);
+    background: var(--bg-2);
+  }
+
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .footer-logo {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--text-2);
+    flex-shrink: 0;
+  }
+
+  .footer-tagline {
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+
+  .footer-links {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .footer-link {
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-2);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    transition: color 0.15s;
+  }
+  .footer-link:hover { color: var(--text-1); }
+
+  .footer-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .footer-bar {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0.625rem 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+</style>

@@ -1,0 +1,18 @@
+{
+  "name": "hindsight-site",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^4.16.0",
+    "@astrojs/tailwind": "^5.1.0",
+    "@astrojs/mdx": "^3.1.0",
+    "@lucide/astro": "^0.575.0",
+    "@tailwindcss/typography": "^0.5.0",
+    "tailwindcss": "^3.4.0"
+  }
+}

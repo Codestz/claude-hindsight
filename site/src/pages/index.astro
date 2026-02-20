@@ -1,0 +1,1109 @@
+---
+import Landing from "../layouts/Landing.astro";
+import Nav     from "../components/Nav.astro";
+import Footer  from "../components/Footer.astro";
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+<Landing>
+  <Nav />
+
+  <!-- ═══════════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════════ -->
+  <section class="hero grid-bg">
+    <div class="hero-glow" aria-hidden="true"></div>
+
+    <div class="hero-inner">
+
+      <!-- LEFT: copy ──────────────────────────── -->
+      <div class="hero-copy">
+
+        <!-- Badge -->
+        <div class="hero-badge">
+          <span class="dot dot--pulse" aria-hidden="true"></span>
+          <span>v1.0.0 &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; MIT License</span>
+        </div>
+
+        <!-- Headline -->
+        <div class="hero-headline">
+          <div class="hero-tag">The observability layer for Claude Code</div>
+          <h1 class="hero-h1">20/20<br/>HINDSIGHT.</h1>
+        </div>
+
+        <!-- Sub -->
+        <p class="hero-sub">
+          You gave Claude Code a task. Four minutes later,
+          it was done. But what actually happened in there —
+          the decisions, the tools, the dead ends, the cost?
+          <strong>Now you can know.</strong>
+        </p>
+
+        <!-- CTAs -->
+        <div class="hero-actions">
+          <a href={`${base}/docs/getting-started`} class="btn btn-fill">
+            GET STARTED
+          </a>
+          <a href={`${base}/docs`} class="btn btn-outline">READ THE DOCS</a>
+          <a
+            href="https://github.com/Codestz/claude-hindsight"
+            class="btn btn-outline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >GITHUB</a>
+        </div>
+
+        <!-- Install snippet -->
+        <div class="hero-snippet">
+          <div class="snippet-label">QUICK INSTALL · MACOS &amp; LINUX</div>
+          <div class="snippet-block">
+            <div class="snippet-lines">
+              <div class="snippet-line">
+                <span class="accent" aria-hidden="true">$</span>
+                <span class="bright">brew tap Codestz/hindsight</span>
+              </div>
+              <div class="snippet-line">
+                <span class="accent" aria-hidden="true">$</span>
+                <span class="bright">brew install hindsight</span>
+              </div>
+            </div>
+            <button
+              class="copy-btn"
+              onclick="
+                navigator.clipboard.writeText('brew tap Codestz/hindsight\nbrew install hindsight');
+                this.textContent = 'COPIED';
+                setTimeout(() => this.textContent = 'COPY', 2000);
+              "
+            >COPY</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: terminal mockup ───────────────── -->
+      <div class="mockup">
+
+        <!-- Browser chrome -->
+        <div class="mockup-chrome">
+          <div class="mockup-dots">
+            <span class="mdot mdot-r"></span>
+            <span class="mdot mdot-y"></span>
+            <span class="mdot mdot-g"></span>
+          </div>
+          <div class="mockup-url">hindsight · localhost:7227</div>
+          <div class="mockup-live">
+            <span class="dot dot--pulse dot--red" aria-hidden="true"></span>
+            <span class="mockup-live-text">LIVE</span>
+          </div>
+        </div>
+
+        <!-- Mockup bento: header + tree + metrics -->
+        <div class="mockup-bento bento">
+
+          <!-- Session header -->
+          <div class="m-header">
+            <div class="m-row">
+              <span class="m-label">SESSION</span>
+              <span class="m-val">sess_17b8f9a2</span>
+            </div>
+            <div class="m-row">
+              <span class="m-label">4m 12s</span>
+              <span class="m-sep">·</span>
+              <span class="m-label">22,050 tokens</span>
+              <span class="m-sep">·</span>
+              <span class="m-cost">$0.0084</span>
+            </div>
+          </div>
+
+          <!-- Execution tree -->
+          <div class="m-tree">
+            <div class="m-cell-label">
+              <span class="accent" aria-hidden="true">⚡</span> EXECUTION TRACE
+            </div>
+            <div class="tree">
+              <div class="tl"><span class="dim">├─</span> <span class="tbadge tbadge-user">USER</span> <span class="muted">"Refactor auth module"</span></div>
+              <div class="tl tl-1"><span class="dim">└─</span> <span class="tbadge tbadge-asst">ASST</span> <span class="muted">claude-sonnet-4-6</span></div>
+              <div class="tl tl-2"><span class="dim">├─</span> <span class="tbadge tbadge-think">THINK</span> <span class="dim">892 tokens</span></div>
+              <div class="tl tl-2"><span class="dim">├─</span> <span class="tbadge tbadge-tool">TOOL</span> <span class="cyan"> Glob</span> <span class="dim">src/auth/**</span></div>
+              <div class="tl tl-3"><span class="dim">└─</span> <span class="tbadge tbadge-result">OK</span> <span class="dim">7 files</span></div>
+              <div class="tl tl-2"><span class="dim">├─</span> <span class="tbadge tbadge-tool">TOOL</span> <span class="cyan"> Bash</span> <span class="dim">cargo check</span></div>
+              <div class="tl tl-3"><span class="dim">└─</span> <span class="tbadge tbadge-ok">OK</span> <span class="accent">exit 0 ✓</span></div>
+              <div class="tl tl-2"><span class="dim">└─</span> <span class="tbadge tbadge-sub">SUB</span> <span class="amber"> TypeSpec validator</span></div>
+            </div>
+          </div>
+
+          <!-- Token metrics -->
+          <div class="m-metrics">
+            <div class="m-cell-label">
+              <span class="accent" aria-hidden="true">◎</span> TOKENS
+            </div>
+            <div class="m-chart">
+              {[
+                { lbl: "INPUT ", w: "78%", cls: "",      val: "12,847", vcls: "bright" },
+                { lbl: "CACHE ", w: "42%", cls: "bar-c", val: " 5,291", vcls: "cyan"   },
+                { lbl: "OUTPUT", w: "31%", cls: "bar-a", val: " 3,912", vcls: "amber"  },
+              ].map((r) => (
+                <div class="chart-row">
+                  <span class="chart-lbl">{r.lbl}</span>
+                  <span class="chart-bar">
+                    <span class={`chart-fill ${r.cls}`} style={`width:${r.w}`}></span>
+                  </span>
+                  <span class={`chart-val ${r.vcls}`}>{r.val}</span>
+                </div>
+              ))}
+              <div class="chart-divider"></div>
+              <div class="chart-summary">
+                <span class="m-label">COST EST.</span>
+                <span class="accent chart-cost">$0.0084</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       TICKER
+  ═══════════════════════════════════════════ -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-track">
+      {[...Array(2)].map(() => (
+        <>
+          <span class="tick"><span class="tick-accent">01</span>Free &amp; Open Source</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">02</span>Single binary — zero runtime deps</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">03</span>Reads ~/.claude/projects/ directly</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">04</span>SQLite index — no repeated parsing</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">05</span>No telemetry · No cloud · No accounts</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">06</span>Memory-safe Rust · ~8 MB</span>
+          <span class="tick-div">◆</span>
+        </>
+      ))}
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       [02] CAPABILITIES
+  ═══════════════════════════════════════════ -->
+  <section class="section section-sep">
+    <div class="section-inner">
+
+      <div class="section-header">
+        <span class="sec-num">[02]</span>
+        <span class="label">CAPABILITIES</span>
+        <span class="section-line"></span>
+        <span class="label muted">// what hindsight gives you</span>
+      </div>
+
+      <div class="feat-bento bento">
+
+        <!-- ── ZERO SETUP ─────────────────────── -->
+        <div class="feat-cell fc-setup">
+          <div class="fc-label label"><span class="accent">◈</span>&ensp;ZERO SETUP</div>
+          <h3 class="fc-title">One binary.<br/>No dependencies.</h3>
+          <p class="fc-desc">
+            Install via Homebrew, Cargo, or download a pre-built binary.
+            No Node.js, no Docker, no accounts — it just runs.
+          </p>
+          <div class="fc-terminal">
+            <div class="ft-chrome">
+              <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+            </div>
+            <div class="ft-body">
+              <div class="ft-line"><span class="accent">$</span><span class="bright"> brew install hindsight</span></div>
+              <div class="ft-line muted"><span class="dim">✓&nbsp;</span>hindsight 1.0.0 installed</div>
+              <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> hindsight init</span></div>
+              <div class="ft-line muted"><span class="dim">✓&nbsp;</span>Indexed 142 sessions across 8 projects</div>
+              <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> hindsight serve --open</span></div>
+              <div class="ft-line"><span class="cyan">→&nbsp;</span>http://localhost:7227</div>
+            </div>
+          </div>
+          <div class="fc-tags">
+            <span class="fc-tag"><span class="accent">✓</span>&ensp;macOS &amp; Linux</span>
+            <span class="fc-tag"><span class="accent">✓</span>&ensp;Rust 1.75+</span>
+            <span class="fc-tag"><span class="accent">✓</span>&ensp;~8 MB binary, zero runtime deps</span>
+          </div>
+        </div>
+
+        <!-- ── SESSION EXPLORER ───────────────── -->
+        <div class="feat-cell fc-explorer">
+          <div class="fc-label label"><span class="cyan">◉</span>&ensp;SESSION EXPLORER</div>
+          <h3 class="fc-title">Full execution tree.<br/>Every single node.</h3>
+          <p class="fc-desc">
+            Navigate Claude's entire reasoning process — user messages, thinking blocks,
+            tool calls with inputs and results, and spawned subagents. Every UUID, every timestamp.
+          </p>
+          <div class="fc-tree">
+            <div class="ftt muted">// session_17b8f9a2.jsonl</div>
+            <div class="ftt muted">│</div>
+            <div class="ftt"><span class="dim">├─ </span><span class="tbadge tbadge-user">USER</span><span class="muted"> "Refactor the auth module"</span></div>
+            <div class="ftt muted">│</div>
+            <div class="ftt"><span class="dim">└─ </span><span class="tbadge tbadge-asst">ASST</span><span class="muted"> thinking → tool calls</span></div>
+            <div class="ftt"><span class="dim">&nbsp;&nbsp; ├─ </span><span class="tbadge tbadge-think">THINK</span><span class="dim"> 892 tokens ──────────</span></div>
+            <div class="ftt"><span class="dim">&nbsp;&nbsp; ├─ </span><span class="tbadge tbadge-tool">TOOL: Glob</span><span class="cyan"> src/auth/**/*.ts</span></div>
+            <div class="ftt"><span class="dim">&nbsp;&nbsp; │&nbsp;&nbsp; └─ </span><span class="tbadge tbadge-result">RESULT</span><span class="muted"> 7 files matched</span></div>
+            <div class="ftt"><span class="dim">&nbsp;&nbsp; ├─ </span><span class="tbadge tbadge-tool">TOOL: Bash</span><span class="cyan"> cargo clippy</span></div>
+            <div class="ftt"><span class="dim">&nbsp;&nbsp; │&nbsp;&nbsp; └─ </span><span class="tbadge tbadge-ok">RESULT</span><span class="accent"> exit 0 ✓</span></div>
+            <div class="ftt"><span class="dim">&nbsp;&nbsp; └─ </span><span class="tbadge tbadge-sub">SUBAGENT</span><span class="amber"> spawned → TypeScript validator</span></div>
+          </div>
+        </div>
+
+        <!-- ── LIVE MONITOR ───────────────────── -->
+        <div class="feat-cell fc-live">
+          <div class="fc-label label">
+            <span class="dot dot--pulse dot--red" style="width:5px;height:5px" aria-hidden="true"></span>
+            &ensp;LIVE MONITOR
+          </div>
+          <h3 class="fc-title">Watch sessions as<br/>they happen.</h3>
+          <p class="fc-desc">
+            <code>hindsight watch</code> tails an active session in real time.
+            New nodes stream in as Claude works — powered by SSE, not polling.
+          </p>
+          <div class="fc-live-feed">
+            {[
+              { time: "14:21:05", badge: "tbadge-user",  label: "USER",  active: false },
+              { time: "14:21:11", badge: "tbadge-think", label: "THINK", active: false },
+              { time: "14:21:13", badge: "tbadge-tool",  label: "TOOL",  active: false },
+              { time: "14:21:18", badge: "tbadge-tool",  label: "TOOL",  active: false },
+              { time: "14:21:22", badge: "tbadge-sub",   label: "SUB",   active: true  },
+            ].map((r) => (
+              <div class={`live-row ${r.active ? "live-row--active" : ""}`}>
+                <span class="live-time">{r.time}</span>
+                <span class={`tbadge ${r.badge}`}>{r.label}</span>
+                {r.active && <span class="cursor"></span>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- ── TOKEN ANALYTICS ────────────────── -->
+        <div class="feat-cell fc-tokens">
+          <div class="fc-label label"><span class="amber">◐</span>&ensp;TOKEN ANALYTICS</div>
+          <h3 class="fc-title">Exactly where<br/>your tokens go.</h3>
+          <p class="fc-desc">
+            Track input, output, and cache tokens per session and across all projects.
+            Cost estimates are model-aware — Opus, Sonnet, and Haiku priced separately.
+          </p>
+          <div class="fc-chart">
+            {[
+              { lbl: "INPUT ", pct: "80%", cls: "",   val: "12,847", vcls: "bright"  },
+              { lbl: "CACHE ", pct: "43%", cls: "bc", val: " 5,291", vcls: "cyan"    },
+              { lbl: "OUTPUT", pct: "32%", cls: "ba", val: " 3,912", vcls: "amber"   },
+            ].map((r) => (
+              <div class="tkn-row">
+                <span class="tkn-lbl">{r.lbl}</span>
+                <span class="tkn-bar"><span class={`tkn-fill ${r.cls}`} style={`width:${r.pct}`}></span></span>
+                <span class={`tkn-val ${r.vcls}`}>{r.val}</span>
+              </div>
+            ))}
+            <div class="tkn-div"></div>
+            <div class="tkn-sum">
+              <div>
+                <div class="label muted">TOTAL TOKENS</div>
+                <div class="bright tkn-total">22,050</div>
+              </div>
+              <div style="text-align:right">
+                <div class="label muted">COST ESTIMATE</div>
+                <div class="accent tkn-total">$0.0084</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── DUAL INTERFACE ─────────────────── -->
+        <div class="feat-cell fc-dual">
+          <div class="fc-label label"><span class="purple">⬡</span>&ensp;TWO INTERFACES</div>
+          <h3 class="fc-title">Terminal or browser.<br/>Same data, your choice.</h3>
+          <p class="fc-desc">
+            The TUI lives in your terminal, the web dashboard opens in your browser.
+            Both read the same SQLite index. Pick the one that fits your workflow.
+          </p>
+          <div class="fc-dual-grid">
+            <div class="dual-panel">
+              <div class="dual-label accent">TERMINAL UI</div>
+              <div class="dual-code">
+                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight list</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight watch</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight show &lt;id&gt;</span></div>
+              </div>
+              <div class="dual-meta">ratatui · crossterm · j/k navigation</div>
+            </div>
+            <div class="dual-sep"></div>
+            <div class="dual-panel">
+              <div class="dual-label cyan">WEB DASHBOARD</div>
+              <div class="dual-code">
+                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight serve</span></div>
+                <div><span class="cyan">→&nbsp;localhost:7227</span></div>
+                <div class="muted" style="margin-top:0.375rem">Sessions · Analytics</div>
+                <div class="muted">Live feed · Search</div>
+              </div>
+              <div class="dual-meta">Next.js · embedded in the binary</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── LOCAL FIRST ────────────────────── -->
+        <div class="feat-cell fc-local">
+          <div class="fc-label label"><span class="accent">◉</span>&ensp;LOCAL FIRST</div>
+          <h3 class="fc-title">Your data never<br/>leaves your machine.</h3>
+          <p class="fc-desc">
+            Hindsight reads Claude's JSONL files directly.
+            Nothing leaves your disk.
+          </p>
+          <div class="fc-list">
+            {[
+              "No network requests",
+              "No telemetry or tracking",
+              "No accounts, no sign-up",
+              "Read-only — never modifies sessions",
+              "ACID-compliant SQLite on disk",
+              "Memory-safe Rust throughout",
+            ].map((item) => (
+              <div class="local-item">
+                <span class="accent" aria-hidden="true">✓</span>
+                <span class="muted">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       [03] HOW IT WORKS
+  ═══════════════════════════════════════════ -->
+  <section class="section section-sep">
+    <div class="section-inner">
+
+      <div class="section-header">
+        <span class="sec-num">[03]</span>
+        <span class="label">UP AND RUNNING IN 60 SECONDS</span>
+        <span class="section-line"></span>
+      </div>
+
+      <div class="steps-grid bento">
+        {[
+          {
+            num: "01", title: "INSTALL",
+            desc: "One command via Homebrew or cargo install. Pre-built binaries have zero external dependencies — no Node.js, no Python, nothing.",
+            lines: [
+              { t: "prompt",  text: "brew tap Codestz/hindsight"      },
+              { t: "dim",     text: "==> Tapping Codestz/hindsight..." },
+              { t: "prompt",  text: "brew install hindsight"           },
+              { t: "success", text: "✓  hindsight 1.0.0 installed"     },
+            ],
+          },
+          {
+            num: "02", title: "INDEX",
+            desc: "Scan ~/.claude/projects/ and build a local SQLite index. Takes seconds even for hundreds of sessions.",
+            lines: [
+              { t: "prompt",  text: "hindsight init"                       },
+              { t: "dim",     text: "Scanning ~/.claude/projects/"          },
+              { t: "success", text: "✓  Indexed 142 sessions, 8 projects"  },
+              { t: "success", text: "✓  Index → ~/.local/share/hindsight/" },
+            ],
+          },
+          {
+            num: "03", title: "EXPLORE",
+            desc: "Launch the web dashboard, fire up the TUI, or watch an active session stream live. Your sessions, your way.",
+            lines: [
+              { t: "prompt",  text: "hindsight serve --open" },
+              { t: "cyan",    text: "→  http://localhost:7227" },
+              { t: "dim",     text: "Press Ctrl+C to stop"    },
+              { t: "prompt",  text: "hindsight watch"         },
+            ],
+          },
+        ].map((step) => (
+          <div class="step">
+            <div class="step-num">{step.num}</div>
+            <div class="step-title">{step.title}</div>
+            <p class="step-desc">{step.desc}</p>
+            <div class="step-term">
+              <div class="sterm-chrome">
+                <span class="sterm-dot"></span>
+                <span class="sterm-dot"></span>
+                <span class="sterm-dot"></span>
+              </div>
+              <div class="sterm-body">
+                {step.lines.map((line) => (
+                  <div class="sterm-line">
+                    {line.t === "prompt"  && <><span class="accent">$&nbsp;</span><span class="bright">{line.text}</span></>}
+                    {line.t === "dim"     && <span class="muted">{line.text}</span>}
+                    {line.t === "success" && <span class="accent">{line.text}</span>}
+                    {line.t === "cyan"    && <><span class="dim">&nbsp;&nbsp;</span><span class="cyan">{line.text}</span></>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       [04] INSTALL
+  ═══════════════════════════════════════════ -->
+  <section id="install" class="section section-sep">
+    <div class="section-inner">
+
+      <div class="section-header">
+        <span class="sec-num">[04]</span>
+        <span class="label">INSTALL</span>
+        <span class="section-line"></span>
+        <span class="label muted">// pick your method</span>
+      </div>
+
+      <div class="install-grid bento">
+        {[
+          {
+            method: "HOMEBREW",
+            note: "macOS &amp; Linux — Recommended",
+            lines: ["brew tap Codestz/hindsight", "brew install hindsight"],
+          },
+          {
+            method: "CARGO",
+            note: "Rust toolchain required",
+            lines: ["cargo install hindsight"],
+          },
+          {
+            method: "BUILD FROM SOURCE",
+            note: "For contributors",
+            lines: [
+              "git clone https://github.com/Codestz/claude-hindsight",
+              "cd claude-hindsight && make build",
+            ],
+          },
+        ].map((block) => (
+          <div class="inst-block">
+            <div class="inst-header">
+              <div>
+                <div class="inst-method">{block.method}</div>
+                <div class="inst-note" set:html={block.note}></div>
+              </div>
+              <button
+                class="copy-btn"
+                onclick={`
+                  navigator.clipboard.writeText(${JSON.stringify(block.lines.join('\n'))});
+                  this.textContent = 'COPIED';
+                  setTimeout(() => this.textContent = 'COPY', 2000);
+                `}
+              >COPY</button>
+            </div>
+            <div class="inst-code">
+              {block.lines.map((line) => (
+                <div class="inst-line">
+                  <span class="accent" aria-hidden="true">$&nbsp;</span>
+                  <span class="bright">{line}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div class="inst-footer">
+        <a href={`${base}/docs/getting-started`} class="inst-docs-link">
+          Read the full getting started guide →
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <Footer />
+</Landing>
+
+<style>
+/* ─── HERO ───────────────────────────────────── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  padding-top: 48px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.hero-glow {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1000px;
+  height: 640px;
+  background: radial-gradient(ellipse at center,
+    rgba(0,255,136,0.045) 0%,
+    transparent 68%);
+  pointer-events: none;
+}
+
+.hero-inner {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 5.5rem 2.5rem 5rem;
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 4rem;
+  align-items: center;
+  min-height: calc(100vh - 48px);
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+/* Badge */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  border: 1px solid var(--border-2);
+  padding: 0.375rem 0.875rem;
+  width: fit-content;
+}
+
+.hero-headline { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.hero-tag {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+}
+
+.hero-h1 {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: clamp(2.75rem, 5.5vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.04em;
+  color: var(--text-1);
+}
+
+.hero-sub {
+  font-family: var(--sans);
+  font-size: 16px;
+  color: var(--text-2);
+  line-height: 1.75;
+  max-width: 500px;
+}
+
+.hero-sub strong {
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Buttons inherit size here */
+.btn { font-size: 11px; }
+
+.hero-snippet { display: flex; flex-direction: column; gap: 0.625rem; }
+
+.snippet-label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+}
+
+.snippet-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+}
+
+.snippet-lines { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.snippet-line {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  display: flex;
+  gap: 0.625rem;
+}
+
+/* Mockup */
+.mockup {
+  border: 1px solid var(--border-2);
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.7);
+}
+
+.mockup-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1.125rem;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.mockup-dots { display: flex; gap: 6px; }
+.mdot { width: 10px; height: 10px; border-radius: 50%; opacity: 0.45; }
+.mdot-r { background: #FF5F57; }
+.mdot-y { background: #FEBC2E; }
+.mdot-g { background: #28C840; }
+
+.mockup-url {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  letter-spacing: 0.05em;
+}
+
+.mockup-live { display: flex; align-items: center; gap: 0.375rem; }
+.mockup-live-text {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+.mockup-bento {
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr 185px;
+  min-height: 480px;
+}
+
+.m-header {
+  grid-column: 1 / -1;
+  background: var(--bg-2);
+  padding: 0.625rem 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.m-row { display: flex; align-items: center; gap: 0.75rem; }
+.m-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-2);
+}
+.m-sep { color: var(--text-3); font-size: 10px; }
+.m-val { font-family: var(--code); font-size: 12px; color: var(--text-1); }
+.m-cost { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); }
+
+.m-tree { padding: 1rem 1.125rem; overflow: hidden; }
+.m-metrics { padding: 1rem 1.125rem; background: var(--bg-2); }
+
+.m-cell-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-2);
+  margin-bottom: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Tree */
+.tree { font-family: var(--code); font-size: 11px; line-height: 1.7; }
+.tl   { display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
+.tl-1 { padding-left: 1rem; }
+.tl-2 { padding-left: 2rem; }
+.tl-3 { padding-left: 3rem; }
+
+/* Chart */
+.m-chart { font-family: var(--code); font-size: 11px; }
+.chart-row { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.4rem; }
+.chart-lbl { font-size: 9px; width: 42px; flex-shrink: 0; color: var(--text-2); }
+.chart-bar { flex: 1; height: 3px; background: var(--border-2); overflow: hidden; }
+.chart-fill { display: block; height: 100%; background: var(--accent); opacity: 0.75; }
+.bar-c { background: var(--cyan); }
+.bar-a { background: var(--amber); }
+.chart-val { font-size: 10px; width: 36px; text-align: right; }
+.chart-divider { height: 1px; background: var(--border); margin: 0.75rem 0; }
+.chart-summary { display: flex; align-items: flex-end; justify-content: space-between; }
+.chart-cost { font-size: 20px; font-weight: 700; line-height: 1; }
+
+/* ─── TICKER ─────────────────────────────────── */
+.ticker {
+  position: relative;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  white-space: nowrap;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  /* Edge fade */
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%);
+  mask-image:         linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%);
+}
+
+.ticker-track {
+  display: inline-flex;
+  align-items: center;
+  animation: ticker 50s linear infinite;
+}
+
+.tick {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  padding: 0 2.75rem;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.tick-accent {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+.tick-div {
+  color: var(--text-3);
+  font-size: 7px;
+  flex-shrink: 0;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* ─── SECTION SHELL ──────────────────────────── */
+.section { padding: 5rem 0; }
+.section-inner { max-width: 1280px; margin: 0 auto; padding: 0 2.5rem; }
+.section-sep { border-top: 1px solid var(--border); }
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.75rem;
+}
+.section-line { flex: 1; height: 1px; background: var(--border); }
+.sec-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+/* ─── CAPABILITIES BENTO ─────────────────────── */
+/* Clean 2-row layout — no row spanning → no empty cells */
+.feat-bento { grid-template-columns: repeat(12, 1fr); }
+
+.fc-setup    { grid-column: span 4; }
+.fc-explorer { grid-column: span 5; }
+.fc-live     { grid-column: span 3; }
+.fc-tokens   { grid-column: span 4; }
+.fc-dual     { grid-column: span 5; }
+.fc-local    { grid-column: span 3; }
+
+.feat-cell {
+  background: var(--bg);
+  padding: 2.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+
+.feat-cell::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.feat-cell:hover { background: var(--bg-2); }
+.feat-cell:hover::before { opacity: 0.5; }
+
+.fc-label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-2);
+  margin-bottom: 1.125rem;
+  display: flex;
+  align-items: center;
+}
+
+.fc-title {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text-1);
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+.fc-desc {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.7;
+  margin: 0 0 1.5rem;
+}
+
+/* Feature terminal */
+.fc-terminal { border: 1px solid var(--border); overflow: hidden; margin-bottom: 1.5rem; }
+.ft-chrome {
+  display: flex;
+  gap: 5px;
+  padding: 6px 12px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+}
+.ft-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-2); }
+.ft-body {
+  padding: 1rem 1.125rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.ft-line { display: flex; gap: 0.25rem; line-height: 1.7; }
+
+.fc-tags { display: flex; flex-direction: column; gap: 0.375rem; }
+.fc-tag {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-2);
+  display: flex;
+  gap: 0.625rem;
+}
+
+/* Session explorer tree */
+.fc-tree {
+  font-family: var(--code);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.ftt { display: block; white-space: pre; }
+
+/* Live feed */
+.fc-live-feed { display: flex; flex-direction: column; gap: 3px; margin-bottom: 0; font-family: var(--code); font-size: 13px; }
+.live-row { display: flex; align-items: center; gap: 0.75rem; padding: 4px 0; color: var(--text-2); }
+.live-row--active { color: var(--text-1); }
+.live-time { font-size: 11px; color: var(--text-2); flex-shrink: 0; }
+
+/* Token chart */
+.fc-chart { font-family: var(--code); font-size: 13px; }
+.tkn-row { display: flex; align-items: center; gap: 0.625rem; margin-bottom: 0.625rem; }
+.tkn-lbl { font-size: 11px; width: 46px; flex-shrink: 0; color: var(--text-2); }
+.tkn-bar { flex: 1; height: 5px; background: var(--border-2); overflow: hidden; }
+.tkn-fill { display: block; height: 100%; background: var(--accent); opacity: 0.75; }
+.bc { background: var(--cyan); }
+.ba { background: var(--amber); }
+.tkn-val { font-size: 12px; width: 44px; text-align: right; }
+.tkn-div { height: 1px; background: var(--border); margin: 1rem 0; }
+.tkn-sum { display: flex; justify-content: space-between; }
+.tkn-total { font-size: 16px; font-weight: 700; margin-top: 4px; }
+
+/* Dual interface */
+.fc-dual-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.25rem; align-items: start; }
+.dual-sep { width: 1px; background: var(--border); align-self: stretch; }
+.dual-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.875rem;
+}
+.dual-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--text-1);
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.875rem;
+}
+.dual-meta {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* Local first */
+.fc-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.local-item {
+  font-family: var(--sans);
+  font-size: 14px;
+  display: flex;
+  gap: 0.75rem;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+/* ─── STEPS ──────────────────────────────────── */
+.steps-grid { grid-template-columns: repeat(3, 1fr); }
+
+.step { background: var(--bg); padding: 2.5rem; }
+
+.step-num {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.step-title {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+  margin-bottom: 0.875rem;
+}
+
+.step-desc {
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--text-2);
+  line-height: 1.7;
+  margin: 0 0 1.5rem;
+}
+
+.step-term { border: 1px solid var(--border); overflow: hidden; }
+.sterm-chrome {
+  display: flex;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+}
+.sterm-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-2); }
+.sterm-body {
+  padding: 1rem 1.125rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.sterm-line { display: flex; line-height: 1.75; }
+
+/* ─── INSTALL ─────────────────────────────────── */
+.install-grid { grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem; }
+
+.inst-block { background: var(--bg); padding: 2rem; }
+
+.inst-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.25rem; }
+
+.inst-method {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+  margin-bottom: 3px;
+}
+
+.inst-note {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.inst-code {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 1rem 1.125rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.inst-line { display: flex; gap: 0.375rem; line-height: 1.65; }
+
+.inst-footer {
+  text-align: center;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.inst-docs-link {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+.inst-docs-link:hover { text-decoration: underline; }
+
+/* ─── RESPONSIVE ─────────────────────────────── */
+@media (max-width: 1024px) {
+  .hero-inner { grid-template-columns: 1fr; min-height: auto; gap: 3rem; }
+  .mockup { max-width: 580px; }
+
+  .feat-bento { grid-template-columns: repeat(6, 1fr); }
+  .fc-setup    { grid-column: span 6; }
+  .fc-explorer { grid-column: span 4; }
+  .fc-live     { grid-column: span 2; }
+  .fc-tokens   { grid-column: span 3; }
+  .fc-dual     { grid-column: span 3; }
+  .fc-local    { grid-column: span 6; }
+
+  .steps-grid   { grid-template-columns: 1fr; }
+  .install-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .hero-inner { padding: 3.5rem 1.5rem 3rem; }
+  .section-inner { padding: 0 1.5rem; }
+
+  .feat-bento { grid-template-columns: 1fr; }
+  .fc-setup, .fc-explorer, .fc-live,
+  .fc-tokens, .fc-dual, .fc-local { grid-column: span 1; }
+}
+</style>
