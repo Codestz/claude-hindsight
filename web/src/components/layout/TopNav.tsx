@@ -3,26 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SearchIcon } from "@/components/icons/SearchIcon";
 import { CommandPalette } from "./CommandPalette";
-
-function SearchIcon() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ flexShrink: 0 }}
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.35-4.35" />
-    </svg>
-  );
-}
 
 const NAV = [
   { href: "/",        label: "Dashboard" },
@@ -43,6 +25,7 @@ export function TopNav() {
   const pathname = usePathname();
   const [cmdOpen, setCmdOpen] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
+  const [searchHovered, setSearchHovered] = useState(false);
 
   // ⌘K / Ctrl+K shortcut
   useEffect(() => {
@@ -169,6 +152,8 @@ export function TopNav() {
           {/* ── Search trigger (⌘K) ────────────────────────── */}
           <button
             onClick={() => setCmdOpen(true)}
+            onMouseEnter={() => setSearchHovered(true)}
+            onMouseLeave={() => setSearchHovered(false)}
             aria-label="Open search (⌘K)"
             style={{
               marginLeft: "auto",
@@ -177,24 +162,14 @@ export function TopNav() {
               gap: "8px",
               padding: "5px 10px 5px 8px",
               background: "var(--bg-1)",
-              border: "1px solid var(--border-2)",
+              border: `1px solid ${searchHovered ? "var(--border-3)" : "var(--border-2)"}`,
               borderRadius: "var(--radius-md)",
               cursor: "pointer",
-              color: "var(--text-3)",
+              color: searchHovered ? "var(--text-2)" : "var(--text-3)",
               fontSize: "12px",
               fontFamily: "var(--font-sans)",
               transition: "border-color 0.12s, color 0.12s",
               minWidth: "180px",
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLButtonElement;
-              el.style.borderColor = "var(--border-3)";
-              el.style.color = "var(--text-2)";
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLButtonElement;
-              el.style.borderColor = "var(--border-2)";
-              el.style.color = "var(--text-3)";
             }}
           >
             <SearchIcon />
