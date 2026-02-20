@@ -21,7 +21,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
         <!-- Badge -->
         <div class="hero-badge">
           <span class="dot dot--pulse" aria-hidden="true"></span>
-          <span>v1.0.0 &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; MIT License</span>
+          <span>v1.0.1 &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; MIT License</span>
         </div>
 
         <!-- Headline -->
@@ -34,7 +34,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
         <p class="hero-sub">
           You gave Claude Code a task. Four minutes later,
           it was done. But what actually happened in there —
-          the decisions, the tools, the dead ends, the cost?
+          the decisions, the tools, the dead ends, the errors?
           <strong>Now you can know.</strong>
         </p>
 
@@ -59,17 +59,17 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="snippet-lines">
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
-                <span class="bright">brew tap Codestz/hindsight</span>
+                <span class="bright">brew tap Codestz/claude-hindsight</span>
               </div>
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
-                <span class="bright">brew install hindsight</span>
+                <span class="bright">brew install claude-hindsight</span>
               </div>
             </div>
             <button
               class="copy-btn"
               onclick="
-                navigator.clipboard.writeText('brew tap Codestz/hindsight\nbrew install hindsight');
+                navigator.clipboard.writeText('brew tap Codestz/claude-hindsight\nbrew install claude-hindsight');
                 this.textContent = 'COPIED';
                 setTimeout(() => this.textContent = 'COPY', 2000);
               "
@@ -89,7 +89,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <span class="mdot mdot-y"></span>
             <span class="mdot mdot-g"></span>
           </div>
-          <div class="mockup-url">hindsight · localhost:7227</div>
+          <div class="mockup-url">claude-hindsight · localhost:7227</div>
           <div class="mockup-live">
             <span class="dot dot--pulse dot--red" aria-hidden="true"></span>
             <span class="mockup-live-text">LIVE</span>
@@ -108,9 +108,9 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="m-row">
               <span class="m-label">4m 12s</span>
               <span class="m-sep">·</span>
-              <span class="m-label">22,050 tokens</span>
+              <span class="m-label">claude-sonnet-4-6</span>
               <span class="m-sep">·</span>
-              <span class="m-cost">$0.0084</span>
+              <span class="m-label">0 errors</span>
             </div>
           </div>
 
@@ -131,16 +131,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             </div>
           </div>
 
-          <!-- Token metrics -->
+          <!-- Tool usage metrics -->
           <div class="m-metrics">
             <div class="m-cell-label">
-              <span class="accent" aria-hidden="true">◎</span> TOKENS
+              <span class="accent" aria-hidden="true">◎</span> TOP TOOLS
             </div>
             <div class="m-chart">
               {[
-                { lbl: "INPUT ", w: "78%", cls: "",      val: "12,847", vcls: "bright" },
-                { lbl: "CACHE ", w: "42%", cls: "bar-c", val: " 5,291", vcls: "cyan"   },
-                { lbl: "OUTPUT", w: "31%", cls: "bar-a", val: " 3,912", vcls: "amber"  },
+                { lbl: "Glob  ", w: "78%", cls: "",      val: "14", vcls: "bright" },
+                { lbl: "Bash  ", w: "52%", cls: "bar-c", val: " 9", vcls: "cyan"   },
+                { lbl: "Edit  ", w: "35%", cls: "bar-a", val: " 6", vcls: "amber"  },
               ].map((r) => (
                 <div class="chart-row">
                   <span class="chart-lbl">{r.lbl}</span>
@@ -152,8 +152,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
               ))}
               <div class="chart-divider"></div>
               <div class="chart-summary">
-                <span class="m-label">COST EST.</span>
-                <span class="accent chart-cost">$0.0084</span>
+                <span class="m-label">SUBAGENTS</span>
+                <span class="accent chart-cost">2</span>
               </div>
             </div>
           </div>
@@ -198,7 +198,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
         <span class="sec-num">[02]</span>
         <span class="label">CAPABILITIES</span>
         <span class="section-line"></span>
-        <span class="label muted">// what hindsight gives you</span>
+        <span class="label muted">// what claude-hindsight gives you</span>
       </div>
 
       <div class="feat-bento bento">
@@ -216,11 +216,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
               <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
             </div>
             <div class="ft-body">
-              <div class="ft-line"><span class="accent">$</span><span class="bright"> brew install hindsight</span></div>
-              <div class="ft-line muted"><span class="dim">✓&nbsp;</span>hindsight 1.0.0 installed</div>
-              <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> hindsight init</span></div>
+              <div class="ft-line"><span class="accent">$</span><span class="bright"> brew install claude-hindsight</span></div>
+              <div class="ft-line muted"><span class="dim">✓&nbsp;</span>claude-hindsight 1.0.1 installed</div>
+              <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> claude-hindsight init</span></div>
               <div class="ft-line muted"><span class="dim">✓&nbsp;</span>Indexed 142 sessions across 8 projects</div>
-              <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> hindsight serve --open</span></div>
+              <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> claude-hindsight serve --open</span></div>
               <div class="ft-line"><span class="cyan">→&nbsp;</span>http://localhost:7227</div>
             </div>
           </div>
@@ -262,7 +262,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
           <h3 class="fc-title">Watch sessions as<br/>they happen.</h3>
           <p class="fc-desc">
-            <code>hindsight watch</code> tails an active session in real time.
+            <code>claude-hindsight watch</code> tails an active session in real time.
             New nodes stream in as Claude works — powered by SSE, not polling.
           </p>
           <div class="fc-live-feed">
@@ -282,19 +282,19 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
         </div>
 
-        <!-- ── TOKEN ANALYTICS ────────────────── -->
+        <!-- ── ERROR TRACKING ────────────────── -->
         <div class="feat-cell fc-tokens">
-          <div class="fc-label label"><span class="amber">◐</span>&ensp;TOKEN ANALYTICS</div>
-          <h3 class="fc-title">Exactly where<br/>your tokens go.</h3>
+          <div class="fc-label label"><span class="amber">◐</span>&ensp;ERROR TRACKING</div>
+          <h3 class="fc-title">Find failures<br/>instantly.</h3>
           <p class="fc-desc">
-            Track input, output, and cache tokens per session and across all projects.
-            Cost estimates are model-aware — Opus, Sonnet, and Haiku priced separately.
+            Track errors across all sessions and projects.
+            Jump directly to failed tool calls and see exactly what went wrong.
           </p>
           <div class="fc-chart">
             {[
-              { lbl: "INPUT ", pct: "80%", cls: "",   val: "12,847", vcls: "bright"  },
-              { lbl: "CACHE ", pct: "43%", cls: "bc", val: " 5,291", vcls: "cyan"    },
-              { lbl: "OUTPUT", pct: "32%", cls: "ba", val: " 3,912", vcls: "amber"   },
+              { lbl: "Glob  ", pct: "80%", cls: "",   val: "47 calls", vcls: "bright"  },
+              { lbl: "Bash  ", pct: "53%", cls: "bc", val: "31 calls", vcls: "cyan"    },
+              { lbl: "Edit  ", pct: "32%", cls: "ba", val: "19 calls", vcls: "amber"   },
             ].map((r) => (
               <div class="tkn-row">
                 <span class="tkn-lbl">{r.lbl}</span>
@@ -305,12 +305,12 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="tkn-div"></div>
             <div class="tkn-sum">
               <div>
-                <div class="label muted">TOTAL TOKENS</div>
-                <div class="bright tkn-total">22,050</div>
+                <div class="label muted">TOTAL SESSIONS</div>
+                <div class="bright tkn-total">142</div>
               </div>
               <div style="text-align:right">
-                <div class="label muted">COST ESTIMATE</div>
-                <div class="accent tkn-total">$0.0084</div>
+                <div class="label muted">ERRORS FOUND</div>
+                <div class="accent tkn-total">3</div>
               </div>
             </div>
           </div>
@@ -328,10 +328,10 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="dual-panel">
               <div class="dual-label accent">TERMINAL UI</div>
               <div class="dual-code">
-                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight</span></div>
-                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight list</span></div>
-                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight watch</span></div>
-                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight show &lt;id&gt;</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">claude-hindsight</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">claude-hindsight list</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">claude-hindsight watch</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">claude-hindsight show &lt;id&gt;</span></div>
               </div>
               <div class="dual-meta">ratatui · crossterm · j/k navigation</div>
             </div>
@@ -339,7 +339,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="dual-panel">
               <div class="dual-label cyan">WEB DASHBOARD</div>
               <div class="dual-code">
-                <div><span class="dim">$&nbsp;</span><span class="bright">hindsight serve</span></div>
+                <div><span class="dim">$&nbsp;</span><span class="bright">claude-hindsight serve</span></div>
                 <div><span class="cyan">→&nbsp;localhost:7227</span></div>
                 <div class="muted" style="margin-top:0.375rem">Sessions · Analytics</div>
                 <div class="muted">Live feed · Search</div>
@@ -396,10 +396,10 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             num: "01", title: "INSTALL",
             desc: "One command via Homebrew or cargo install. Pre-built binaries have zero external dependencies — no Node.js, no Python, nothing.",
             lines: [
-              { t: "prompt",  text: "brew tap Codestz/hindsight"      },
-              { t: "dim",     text: "==> Tapping Codestz/hindsight..." },
-              { t: "prompt",  text: "brew install hindsight"           },
-              { t: "success", text: "✓  hindsight 1.0.0 installed"     },
+              { t: "prompt",  text: "brew tap Codestz/claude-hindsight"      },
+              { t: "dim",     text: "==> Tapping Codestz/claude-hindsight..." },
+              { t: "prompt",  text: "brew install claude-hindsight"           },
+              { t: "success", text: "✓  claude-hindsight 1.0.1 installed"     },
             ],
           },
           {
@@ -469,12 +469,12 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           {
             method: "HOMEBREW",
             note: "macOS &amp; Linux — Recommended",
-            lines: ["brew tap Codestz/hindsight", "brew install hindsight"],
+            lines: ["brew tap Codestz/claude-hindsight", "brew install claude-hindsight"],
           },
           {
             method: "CARGO",
             note: "Rust toolchain required",
-            lines: ["cargo install hindsight"],
+            lines: ["cargo install claude-hindsight"],
           },
           {
             method: "BUILD FROM SOURCE",
