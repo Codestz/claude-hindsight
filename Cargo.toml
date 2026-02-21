@@ -26,7 +26,7 @@ clap = { version = "4.5", features = ["derive", "cargo", "env"] }
 axum = { version = "0.8", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 rust-embed = { version = "8", features = ["mime-guess"] }
 mime_guess = "2"
 tokio-stream = "0.1"
