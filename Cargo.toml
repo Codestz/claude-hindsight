@@ -45,7 +45,7 @@ notify = { version = "8.2", default-features = false, features = ["macos_kqueue"
 # Terminal UI
 ratatui = "0.28"
 crossterm = { version = "0.28", features = ["event-stream"] }
-tui-tree-widget = "0.22"
+tui-tree-widget = "0.24"
 
 # Error handling
 thiserror = "1.0"
