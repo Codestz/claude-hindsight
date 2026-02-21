@@ -1099,11 +1099,42 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 }
 
 @media (max-width: 640px) {
-  .hero-inner { padding: 3.5rem 1.5rem 3rem; }
-  .section-inner { padding: 0 1.5rem; }
+  /* Hero */
+  .hero-inner    { padding: 3rem 1.25rem 2.5rem; }
+  .section       { padding: 3rem 0; }
+  .section-inner { padding: 0 1.25rem; }
 
+  /* Hide the decorative // comment labels in section headers */
+  .section-header .label.muted { display: none; }
+
+  /* Hero actions — stack vertically on narrow */
+  .hero-actions { flex-direction: column; align-items: flex-start; }
+
+  /* Mockup — full width, single column bento */
+  .mockup        { max-width: 100%; }
+  .mockup-bento  { grid-template-columns: 1fr; }
+  .m-header      { grid-column: 1; }
+  .m-metrics     { display: none; }   /* hide sidebar metrics at mobile */
+
+  /* Capabilities bento */
   .feat-bento { grid-template-columns: 1fr; }
   .fc-setup, .fc-explorer, .fc-live,
   .fc-tokens, .fc-dual, .fc-local { grid-column: span 1; }
+  .feat-cell { padding: 1.5rem; }
+
+  /* Feature tree — allow horizontal scroll instead of overflow */
+  .fc-tree { overflow-x: auto; }
+  .ftt { white-space: pre; }
+
+  /* Dual grid — stack panels */
+  .fc-dual-grid { grid-template-columns: 1fr; }
+  .dual-sep     { display: none; }
+
+  /* Steps */
+  .step { padding: 1.5rem; }
+
+  /* Install snippet */
+  .snippet-block  { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+  .snippet-lines  { width: 100%; overflow-x: auto; }
 }
 </style>
