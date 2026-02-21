@@ -93,10 +93,22 @@ const currentPath = Astro.url.pathname;
   <body>
     <Nav />
 
+    <!-- Mobile sidebar toggle -->
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="docs-sidebar">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect y="2" width="14" height="1.2" fill="currentColor"/>
+        <rect y="6.4" width="14" height="1.2" fill="currentColor"/>
+        <rect y="10.8" width="14" height="1.2" fill="currentColor"/>
+      </svg>
+      MENU
+    </button>
+    <div id="sidebar-overlay"></div>
+
     <div class="docs-layout">
 
       <!-- ── Left Sidebar ─────────────────────── -->
       <aside id="docs-sidebar">
+        <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button>
         {sections.map((section) => (
           <div class="sb-group">
             <div class="sb-group-label">{section.label}</div>
@@ -165,6 +177,30 @@ const currentPath = Astro.url.pathname;
     <Footer />
   </body>
 </html>
+
+<!-- Mobile sidebar toggle -->
+<script>
+  const toggle   = document.getElementById("sidebar-toggle")!;
+  const closeBtn = document.getElementById("sidebar-close")!;
+  const overlay  = document.getElementById("sidebar-overlay")!;
+  const sidebar  = document.getElementById("docs-sidebar")!;
+
+  function openSidebar() {
+    sidebar.classList.add("is-open");
+    overlay.classList.add("is-open");
+    toggle.setAttribute("aria-expanded", "true");
+  }
+  function closeSidebar() {
+    sidebar.classList.remove("is-open");
+    overlay.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
+  }
+
+  toggle.addEventListener("click", openSidebar);
+  closeBtn.addEventListener("click", closeSidebar);
+  overlay.addEventListener("click", closeSidebar);
+  sidebar.querySelectorAll("a").forEach((a) => a.addEventListener("click", closeSidebar));
+</script>
 
 <!-- Active ToC highlight via IntersectionObserver -->
 <script>
@@ -508,12 +544,72 @@ body {
 .callout-icon { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
 .callout p { margin: 0; color: var(--text-2); font-size: 0.9rem; }
 
+/* ── Mobile sidebar toggle ───────────────────── */
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  z-index: 150;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  color: var(--text-1);
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: border-color 0.15s;
+}
+.sidebar-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+.sidebar-close {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-2);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 1rem;
+  transition: color 0.15s;
+}
+.sidebar-close:hover { color: var(--text-1); }
+
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 48px 0 0 0;
+  z-index: 148;
+  background: rgba(0,0,0,0.6);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+#sidebar-overlay.is-open { opacity: 1; }
+
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 1100px) {
   #docs-toc { display: none; }
 }
 @media (max-width: 767px) {
-  #docs-sidebar { display: none; }
-  .docs-main { padding: 1.75rem 1.5rem; }
+  #docs-sidebar {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    height: calc(100vh - 48px);
+    z-index: 149;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  #docs-sidebar.is-open { transform: translateX(0); }
+  #sidebar-overlay      { display: block; }
+  .sidebar-toggle       { display: flex; }
+  .sidebar-close        { display: block; }
+  .docs-main            { padding: 1.75rem 1.25rem 5rem; }
 }
 </style>
