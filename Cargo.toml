@@ -23,7 +23,7 @@ include = [
 clap = { version = "4.5", features = ["derive", "cargo", "env"] }
 
 # Web server (for `claude-hindsight serve`)
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
