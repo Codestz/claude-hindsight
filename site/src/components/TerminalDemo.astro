@@ -5,15 +5,11 @@ interface Props {
   showCopyButton?: boolean;
 }
 const { lines, title = "bash", showCopyButton = false } = Astro.props;
+const copyText = lines.map((l) => (l.prompt ? "$ " : "  ") + l.text).join("\n");
 ---
-<div style="background: var(--surface-1); border: 1px solid var(--border-1); border-radius: 6px; overflow: hidden;">
-  <div style="
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid var(--border-1);
-    background: var(--surface-2);
-  ">
-    <div style="display: flex; align-items: center; gap: 0.375rem;">
+<div class="terminal" data-copy={copyText}>
+  <div class="terminal-chrome">
+    <div class="terminal-dots">
       <span style="width: 10px; height: 10px; border-radius: 50%; background: #F85149; opacity: 0.6;" aria-hidden="true"></span>
       <span style="width: 10px; height: 10px; border-radius: 50%; background: #D29922; opacity: 0.6;" aria-hidden="true"></span>
       <span style="width: 10px; height: 10px; border-radius: 50%; background: #3FB950; opacity: 0.6;" aria-hidden="true"></span>
@@ -21,14 +17,19 @@ const { lines, title = "bash", showCopyButton = false } = Astro.props;
     </div>
     {showCopyButton && (
       <button
-        style="font-size: 0.6875rem; color: var(--text-3); background: none; border: none; cursor: pointer; font-family: 'JetBrains Mono', monospace;"
+        class="copy-btn"
         aria-label="Copy code to clipboard"
-      >
-        Copy
-      </button>
+        onclick="
+          const text = this.closest('[data-copy]').dataset.copy;
+          navigator.clipboard.writeText(text).then(() => {
+            this.textContent = 'COPIED';
+            setTimeout(() => this.textContent = 'COPY', 2000);
+          });
+        "
+      >COPY</button>
     )}
   </div>
-  <div style="padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.375rem;">
+  <div class="terminal-body">
     {lines.map((line) => (
       <div class="mono" style="font-size: 0.8125rem; line-height: 1.6; display: flex; align-items: flex-start; gap: 0.625rem;">
         {line.prompt && <span style="color: var(--accent); flex-shrink: 0;" aria-hidden="true">$</span>}
@@ -39,3 +40,31 @@ const { lines, title = "bash", showCopyButton = false } = Astro.props;
     ))}
   </div>
 </div>
+
+<style>
+  .terminal {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .terminal-chrome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-3);
+  }
+  .terminal-dots {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .terminal-body {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+</style>
