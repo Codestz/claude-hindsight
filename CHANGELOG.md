@@ -31,7 +31,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This pr
 
 ---
 
-## [1.0.1] — 2025-01-XX
+## [1.0.1] — 2026-02-20
 
 ### Changed
 - Renamed binary and crate from `hindsight` to `claude-hindsight` for clarity
@@ -43,7 +43,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This pr
 
 ---
 
-## [1.0.0] — 2025-01-XX
+## [1.0.0] — 2026-02-19
 
 First stable release.
 
