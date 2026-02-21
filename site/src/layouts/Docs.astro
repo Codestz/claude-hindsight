@@ -32,8 +32,7 @@ const sections = [
   {
     label: "CLI Reference",
     pages: [
-      { href: `${base}/docs/commands`, label: "claude-hindsight serve" },
-      { href: `${base}/docs/commands`, label: "claude-hindsight list" },
+      { href: `${base}/docs/commands`, label: "Commands" },
     ],
   },
   {
@@ -134,7 +133,7 @@ const currentPath = Astro.url.pathname;
         <nav class="breadcrumb" aria-label="Breadcrumb">
           <a href={`${base}/docs/getting-started`} class="bc-link">Docs</a>
           <span class="bc-sep">›</span>
-          <span class="bc-current">Getting Started</span>
+          <span class="bc-current">{title.split(" — ")[0]}</span>
         </nav>
 
         <article class="prose-doc">
@@ -432,13 +431,12 @@ body {
 
 /* h4 */
 .prose-doc h4 {
-  font-size: 0.9375rem;
+  font-size: 0.75rem;
   font-weight: 600;
   margin: 1.5rem 0 0.5rem;
   color: var(--text-1);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  font-size: 0.75rem;
 }
 
 .prose-doc p { margin: 0 0 1.125rem; }
