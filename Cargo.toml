@@ -23,10 +23,10 @@ include = [
 clap = { version = "4.5", features = ["derive", "cargo", "env"] }
 
 # Web server (for `claude-hindsight serve`)
-axum = { version = "0.7", features = ["macros"] }
+axum = { version = "0.8", features = ["macros"] }
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 rust-embed = { version = "8", features = ["mime-guess"] }
 mime_guess = "2"
 tokio-stream = "0.1"
@@ -37,15 +37,15 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Database
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.38", features = ["bundled"] }
 
 # File watching
-notify = { version = "6.1", default-features = false, features = ["macos_kqueue"] }
+notify = { version = "8.2", default-features = false, features = ["macos_kqueue"] }
 
 # Terminal UI
-ratatui = "0.28"
+ratatui = "0.30"
 crossterm = { version = "0.28", features = ["event-stream"] }
-tui-tree-widget = "0.22"
+tui-tree-widget = "0.24"
 
 # Error handling
 thiserror = "1.0"
@@ -53,8 +53,8 @@ anyhow = "1.0"
 
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
-dirs = "5.0"
-toml = "0.8"
+dirs = "6.0"
+toml = "1.0"
 
 # Performance
 once_cell = "1.19"
