@@ -87,17 +87,28 @@ The server exposes a minimal JSON API consumed by the dashboard:
 ```
 src/
   main.rs          Entry point, CLI dispatch
+  lib.rs           Library exports
+  error.rs         Shared error types (thiserror)
   server/          HTTP server and API handlers
     mod.rs
     routes.rs
     analytics.rs
-  indexer/         JSONL parsing and SQLite writes
+  storage/         JSONL parsing and SQLite index
     mod.rs
+    index.rs
     parser.rs
-    db.rs
+  search/          Full-text search (FTS5)
+    mod.rs
+  api/             JSON response types
+    responses.rs
+  commands/        CLI subcommands
+    mod.rs
+    export.rs
+    reindex.rs
+    watch.rs
   tui/             Terminal UI (ratatui)
     mod.rs
-  watcher.rs       Live session file tail
+    app.rs
 ```
 
 Key dependencies: `axum`, `rusqlite`, `rust-embed`, `ratatui`, `tokio`, `serde`, `clap`.
