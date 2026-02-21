@@ -2,6 +2,7 @@
 import Landing from "../layouts/Landing.astro";
 import Nav     from "../components/Nav.astro";
 import Footer  from "../components/Footer.astro";
+import { VERSION } from "../lib/version";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 ---
 <Landing>
@@ -21,7 +22,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
         <!-- Badge -->
         <div class="hero-badge">
           <span class="dot dot--pulse" aria-hidden="true"></span>
-          <span>v1.0.1 &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; MIT License</span>
+          <span>v{VERSION} &nbsp;·&nbsp; Open Source &nbsp;·&nbsp; MIT License</span>
         </div>
 
         <!-- Headline -->
@@ -217,7 +218,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             </div>
             <div class="ft-body">
               <div class="ft-line"><span class="accent">$</span><span class="bright"> brew install claude-hindsight</span></div>
-              <div class="ft-line muted"><span class="dim">✓&nbsp;</span>claude-hindsight 1.0.1 installed</div>
+              <div class="ft-line muted"><span class="dim">✓&nbsp;</span>claude-hindsight {VERSION} installed</div>
               <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> claude-hindsight init</span></div>
               <div class="ft-line muted"><span class="dim">✓&nbsp;</span>Indexed 142 sessions across 8 projects</div>
               <div class="ft-line" style="margin-top:0.5rem"><span class="accent">$</span><span class="bright"> claude-hindsight serve --open</span></div>
@@ -399,7 +400,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
               { t: "prompt",  text: "brew tap Codestz/claude-hindsight"      },
               { t: "dim",     text: "==> Tapping Codestz/claude-hindsight..." },
               { t: "prompt",  text: "brew install claude-hindsight"           },
-              { t: "success", text: "✓  claude-hindsight 1.0.1 installed"     },
+              { t: "success", text: `✓  claude-hindsight ${VERSION} installed` },
             ],
           },
           {
