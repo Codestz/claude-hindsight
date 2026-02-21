@@ -7,13 +7,13 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <!-- Brand -->
     <a href={`${base}/`} class="nav-brand" aria-label="Hindsight home">
       <span class="nav-logo">HINDSIGHT</span>
-      <span class="nav-version">v1.0.0</span>
+      <span class="nav-version">v1.0.1</span>
     </a>
 
     <!-- Spacer -->
     <div style="flex:1"></div>
 
-    <!-- Links -->
+    <!-- Desktop links -->
     <nav class="nav-links" aria-label="Main navigation">
       <a href={`${base}/docs`} class="nav-link">DOCS</a>
       <a
@@ -25,14 +25,57 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       <a href="#install" class="nav-link nav-cta">INSTALL</a>
     </nav>
 
+    <!-- Mobile hamburger -->
+    <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
+      <span></span><span></span><span></span>
+    </button>
+
   </div>
 </header>
+
+<!-- Mobile drawer -->
+<div id="nav-drawer" aria-hidden="true">
+  <a href={`${base}/docs`} class="drawer-link">DOCS</a>
+  <a
+    href="https://github.com/Codestz/claude-hindsight"
+    class="drawer-link"
+    target="_blank"
+    rel="noopener noreferrer"
+  >GITHUB</a>
+  <a href="#install" class="drawer-link drawer-cta">INSTALL</a>
+</div>
+<div id="nav-overlay" aria-hidden="true"></div>
+
+<script>
+  const btn     = document.getElementById("nav-hamburger")!;
+  const drawer  = document.getElementById("nav-drawer")!;
+  const overlay = document.getElementById("nav-overlay")!;
+
+  function open() {
+    drawer.classList.add("is-open");
+    overlay.classList.add("is-open");
+    btn.setAttribute("aria-expanded", "true");
+    drawer.setAttribute("aria-hidden", "false");
+  }
+  function close() {
+    drawer.classList.remove("is-open");
+    overlay.classList.remove("is-open");
+    btn.setAttribute("aria-expanded", "false");
+    drawer.setAttribute("aria-hidden", "true");
+  }
+
+  btn.addEventListener("click", () =>
+    drawer.classList.contains("is-open") ? close() : open()
+  );
+  overlay.addEventListener("click", close);
+  drawer.querySelectorAll("a").forEach((a) => a.addEventListener("click", close));
+</script>
 
 <style>
   #nav {
     position: fixed;
     top: 0; left: 0; right: 0;
-    z-index: 100;
+    z-index: 200;
     height: 48px;
     background: rgba(5,5,5,0.97);
     border-bottom: 1px solid var(--border);
@@ -75,22 +118,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     letter-spacing: 0.05em;
   }
 
-  .nav-status {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-  }
-
-  .nav-status-text {
-    font-family: "Space Mono", monospace;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: var(--text-3);
-  }
-
   .nav-links {
     display: flex;
     align-items: center;
@@ -122,8 +149,81 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     opacity: 1;
   }
 
+  /* ── Hamburger ── */
+  .nav-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    padding: 0 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .nav-hamburger span {
+    display: block;
+    height: 1px;
+    background: var(--text-1);
+    transition: opacity 0.15s;
+  }
+  .nav-hamburger:hover span { opacity: 0.7; }
+
+  /* ── Mobile drawer ── */
+  #nav-drawer {
+    display: none;
+    position: fixed;
+    top: 48px; right: 0;
+    width: 240px;
+    background: rgba(9,9,9,0.98);
+    border-left: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 199;
+    padding: 1rem 0;
+    transform: translateX(100%);
+    transition: transform 0.2s ease;
+  }
+  #nav-drawer.is-open { transform: translateX(0); }
+
+  .drawer-link {
+    display: block;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text-2);
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .drawer-link:hover { color: var(--text-1); }
+  .drawer-cta {
+    color: var(--accent);
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  #nav-overlay {
+    display: none;
+    position: fixed;
+    inset: 48px 0 0 0;
+    z-index: 198;
+    background: rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  #nav-overlay.is-open { opacity: 1; }
+
   @media (max-width: 640px) {
-    .nav-status { display: none; }
-    .nav-inner  { gap: 1rem; }
+    .nav-links      { display: none; }
+    .nav-hamburger  { display: flex; }
+    #nav-drawer     { display: block; }
+    #nav-overlay    { display: block; }
+    .nav-inner      { gap: 1rem; padding: 0 1.25rem; }
   }
 </style>

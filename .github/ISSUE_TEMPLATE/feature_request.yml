@@ -1,0 +1,59 @@
+name: Feature Request
+description: Suggest an idea or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea? We'd love to hear it. The more context you provide, the easier it is to evaluate and prioritize.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the problem or limitation you're running into.
+      placeholder: I find it frustrating when I have to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or change you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you've thought about or tried?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the tool does this affect?
+      options:
+        - TUI (terminal interface)
+        - Web dashboard
+        - CLI commands
+        - Storage / indexing
+        - File watching
+        - Configuration
+        - Distribution / install
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this isn't a duplicate
+          required: true
+        - label: I'd be willing to help implement this
+          required: false
