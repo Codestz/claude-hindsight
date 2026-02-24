@@ -104,3 +104,86 @@ jobs:
 
       - name: Publish
         run: cargo publish --allow-dirty --token ${{ secrets.CRATES_IO_TOKEN }}
+
+  homebrew:
+    name: Update Homebrew formula
+    needs: build
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Wait for release assets to be available
+        run: sleep 30
+
+      - name: Download release assets and compute SHAs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+          for target in aarch64-apple-darwin x86_64-apple-darwin aarch64-unknown-linux-gnu x86_64-unknown-linux-gnu; do
+            ASSET="claude-hindsight-${target}.tar.gz"
+            gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern "$ASSET" --dir /tmp/dl
+            SHA=$(sha256sum "/tmp/dl/$ASSET" | awk '{print $1}')
+            # Convert target to env-friendly name: aarch64-apple-darwin -> SHA_AARCH64_APPLE_DARWIN
+            ENV_NAME="SHA_$(echo "$target" | tr '[:lower:]-' '[:upper:]_')"
+            echo "${ENV_NAME}=${SHA}" >> "$GITHUB_ENV"
+          done
+
+      - name: Generate formula
+        run: |
+          cat > /tmp/claude-hindsight.rb <<FORMULA
+          class ClaudeHindsight < Formula
+            desc "20/20 hindsight for your Claude Code sessions"
+            homepage "https://github.com/Codestz/claude-hindsight"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-aarch64-apple-darwin.tar.gz"
+                sha256 "${SHA_AARCH64_APPLE_DARWIN}"
+              else
+                url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA_X86_64_APPLE_DARWIN}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-aarch64-unknown-linux-gnu.tar.gz"
+                sha256 "${SHA_AARCH64_UNKNOWN_LINUX_GNU}"
+              else
+                url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-x86_64-unknown-linux-gnu.tar.gz"
+                sha256 "${SHA_X86_64_UNKNOWN_LINUX_GNU}"
+              end
+            end
+
+            def install
+              bin.install "claude-hindsight"
+            end
+
+            test do
+              system "#{bin}/claude-hindsight", "--version"
+            end
+          end
+          FORMULA
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' /tmp/claude-hindsight.rb
+
+      - name: Push formula to homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          CONTENT=$(base64 -w 0 /tmp/claude-hindsight.rb)
+          # Get current file SHA
+          FILE_SHA=$(curl -s \
+            -H "Authorization: token $TAP_TOKEN" \
+            "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb" \
+            | jq -r '.sha')
+
+          curl -s -X PUT \
+            -H "Authorization: token $TAP_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb" \
+            -d "{\"message\":\"chore: bump to v${VERSION}\",\"content\":\"${CONTENT}\",\"sha\":\"${FILE_SHA}\"}"
