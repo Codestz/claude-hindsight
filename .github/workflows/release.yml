@@ -175,15 +175,24 @@ jobs:
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          set -e
           CONTENT=$(base64 -w 0 /tmp/claude-hindsight.rb)
           # Get current file SHA
-          FILE_SHA=$(curl -s \
+          RESPONSE=$(curl -sf \
             -H "Authorization: token $TAP_TOKEN" \
-            "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb" \
-            | jq -r '.sha')
+            "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb")
+          FILE_SHA=$(echo "$RESPONSE" | jq -r '.sha')
 
-          curl -s -X PUT \
+          if [ "$FILE_SHA" = "null" ] || [ -z "$FILE_SHA" ]; then
+            echo "::error::Failed to get file SHA from tap repo. Check HOMEBREW_TAP_TOKEN."
+            exit 1
+          fi
+
+          RESULT=$(curl -sf -X PUT \
             -H "Authorization: token $TAP_TOKEN" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb" \
-            -d "{\"message\":\"chore: bump to v${VERSION}\",\"content\":\"${CONTENT}\",\"sha\":\"${FILE_SHA}\"}"
+            -d "{\"message\":\"chore: bump to v${VERSION}\",\"content\":\"${CONTENT}\",\"sha\":\"${FILE_SHA}\"}")
+
+          echo "Successfully updated tap formula to v${VERSION}"
+          echo "$RESULT" | jq '.commit.sha'
