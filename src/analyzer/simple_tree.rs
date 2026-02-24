@@ -53,8 +53,30 @@ fn deduplicate_progress(nodes: Vec<ExecutionNode>) -> Vec<ExecutionNode> {
     result
 }
 
+/// Returns true if this user node is a local command (slash command, stdout, caveat)
+/// rather than a real user message. These are injected by the Claude Code client
+/// and should be hidden from the execution tree.
+fn is_local_command_node(node: &ExecutionNode) -> bool {
+    if node.node_type != "user" {
+        return false;
+    }
+    let text = match node.message.as_ref() {
+        Some(m) => m.text_content(),
+        None => return false,
+    };
+    crate::analyzer::prompt_detect::is_local_command_text(&text)
+}
+
+/// Filter out local command nodes (slash commands, stdout, caveats)
+fn filter_local_commands(nodes: Vec<ExecutionNode>) -> Vec<ExecutionNode> {
+    nodes.into_iter().filter(|n| !is_local_command_node(n)).collect()
+}
+
 /// Build a simple parent-child tree from flat nodes
 pub fn build_simple_tree(nodes: Vec<ExecutionNode>) -> Vec<TreeNode> {
+    // Filter out local command nodes (slash commands, stdout, caveats)
+    let nodes = filter_local_commands(nodes);
+
     // Deduplicate progress nodes (collapse consecutive agent progress updates)
     let nodes = deduplicate_progress(nodes);
 

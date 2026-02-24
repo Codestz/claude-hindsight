@@ -6,6 +6,7 @@ import type {
   GlobalAnalytics,
   HealthCheck,
   NodeResponse,
+  PromptEntry,
   ProjectAnalytics,
   ProjectStats,
   SessionFile,
@@ -73,6 +74,14 @@ export const api = {
     if (opts.tool)    p.set("tool", opts.tool);
     if (opts.errors)  p.set("errors", "true");
     return get(`/search?${p.toString()}`);
+  },
+
+  prompts(opts?: { project?: string; limit?: number }): Promise<PromptEntry[]> {
+    const p = new URLSearchParams();
+    if (opts?.project) p.set("project", opts.project);
+    if (opts?.limit)   p.set("limit", String(opts.limit));
+    const qs = p.toString();
+    return get(`/prompts${qs ? `?${qs}` : ""}`);
   },
 
   globalTopFiles(): Promise<[string, number][]> {

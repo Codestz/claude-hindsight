@@ -200,7 +200,7 @@ impl SessionIndex {
                     .map(|ms| ms / 1000)
                     .unwrap_or(session.modified_at);
 
-                // First user message text preview.
+                // First user message text preview (skip local commands).
                 let first_message: Option<String> = parsed
                     .nodes
                     .iter()
@@ -211,8 +211,14 @@ impl SessionIndex {
                         if trimmed.is_empty() {
                             return None;
                         }
+                        if crate::analyzer::prompt_detect::is_local_command_text(&trimmed) {
+                            return None;
+                        }
+                        if crate::analyzer::prompt_detect::is_trivial_message(&trimmed) {
+                            return None;
+                        }
                         let preview = trimmed.replace('\n', " ");
-                        Some(preview.chars().take(80).collect::<String>())
+                        Some(preview.chars().take(300).collect::<String>())
                     });
 
                 // Build tool counts and file access counts
