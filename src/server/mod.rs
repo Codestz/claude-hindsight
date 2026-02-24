@@ -48,19 +48,24 @@ pub async fn serve(addr: SocketAddr) -> anyhow::Result<()> {
             get(routes::analytics::global_top_files),
         )
         .route(
-            "/analytics/:project",
+            "/analytics/{project}",
             get(routes::analytics::project_analytics),
         )
         .route(
-            "/analytics/:project/files",
+            "/analytics/{project}/files",
             get(routes::analytics::project_top_files),
         )
         .route("/sessions", get(routes::sessions::list_sessions))
-        .route("/sessions/:id", get(routes::sessions::get_session))
+        .route("/sessions/{id}", get(routes::sessions::get_session))
         .route(
-            "/sessions/:id/nodes",
+            "/sessions/{id}/nodes",
             get(routes::sessions::get_session_nodes),
         )
+        .route(
+            "/sessions/{id}/prompts",
+            get(routes::sessions::get_session_prompts),
+        )
+        .route("/prompts", get(routes::prompts::list_prompts))
         .route("/search", get(routes::search::search_sessions))
         .route("/events", get(routes::events::live_events));
 

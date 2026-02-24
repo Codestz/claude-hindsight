@@ -9,6 +9,7 @@ use crate::storage::SessionIndex;
 use crate::tui::app::App;
 use crate::tui::dashboard_view::{DashboardAction, DashboardView};
 use crate::tui::projects_view::{ProjectAction, ProjectsView};
+use crate::tui::prompts_view::{PromptAction, PromptsView};
 use crate::tui::search_modal::{SearchAction, SearchContext, SearchModal};
 use crate::tui::sessions_view::{SessionAction, SessionsView};
 use crossterm::event::{KeyCode, KeyEvent};
@@ -19,6 +20,7 @@ use ratatui::Frame;
 pub enum ViewMode {
     Projects,
     Dashboard,
+    Prompts,
     Sessions(String), // Project name
     #[allow(dead_code)]
     SessionDetail(String), // Session ID
@@ -37,6 +39,9 @@ pub struct Router {
 
     /// Dashboard view
     pub dashboard_view: Option<DashboardView>,
+
+    /// Prompts view
+    pub prompts_view: Option<PromptsView>,
 
     /// Sessions view
     pub sessions_view: Option<SessionsView>,
@@ -73,6 +78,7 @@ impl Router {
             view_stack: vec![],
             projects_view,
             dashboard_view: None,
+            prompts_view: None,
             sessions_view: None,
             session_detail_view: None,
             search_modal,
@@ -99,6 +105,7 @@ impl Router {
             view_stack: vec![],
             projects_view: None,
             dashboard_view: None,
+            prompts_view: None,
             sessions_view: None,
             session_detail_view,
             search_modal,
@@ -137,6 +144,11 @@ impl Router {
                     self.navigate_to_dashboard()?;
                     return Ok(());
                 }
+                // P key opens prompts view from projects view
+                if key.code == KeyCode::Char('p') || key.code == KeyCode::Char('P') {
+                    self.navigate_to_prompts()?;
+                    return Ok(());
+                }
                 if let Some(ref mut view) = self.projects_view {
                     match view.handle_key(key)? {
                         ProjectAction::None => {}
@@ -158,6 +170,23 @@ impl Router {
                             self.navigate_back()?;
                         }
                         DashboardAction::Quit => {
+                            self.should_quit = true;
+                        }
+                    }
+                }
+            }
+
+            ViewMode::Prompts => {
+                if let Some(ref mut view) = self.prompts_view {
+                    match view.handle_key(key)? {
+                        PromptAction::None => {}
+                        PromptAction::SelectSession(session_id) => {
+                            self.navigate_to_session_detail(session_id)?;
+                        }
+                        PromptAction::Back => {
+                            self.navigate_back()?;
+                        }
+                        PromptAction::Quit => {
                             self.should_quit = true;
                         }
                     }
@@ -216,6 +245,14 @@ impl Router {
         Ok(())
     }
 
+    /// Navigate to prompts view
+    fn navigate_to_prompts(&mut self) -> Result<()> {
+        self.view_stack.push(self.view_mode.clone());
+        self.prompts_view = Some(PromptsView::new()?);
+        self.view_mode = ViewMode::Prompts;
+        Ok(())
+    }
+
     /// Navigate to sessions view for a project
     fn navigate_to_sessions(&mut self, project_name: String) -> Result<()> {
         // Push current view to stack
@@ -271,6 +308,11 @@ impl Router {
                         self.dashboard_view = Some(DashboardView::new()?);
                     }
                 }
+                ViewMode::Prompts => {
+                    if self.prompts_view.is_none() {
+                        self.prompts_view = Some(PromptsView::new()?);
+                    }
+                }
                 ViewMode::Sessions(project_name) => {
                     if self.sessions_view.is_none() {
                         self.sessions_view =
@@ -291,7 +333,7 @@ impl Router {
     /// Activate search modal with appropriate context
     fn activate_search(&mut self) {
         let context = match &self.view_mode {
-            ViewMode::Projects | ViewMode::Dashboard => SearchContext::Global,
+            ViewMode::Projects | ViewMode::Dashboard | ViewMode::Prompts => SearchContext::Global,
             ViewMode::Sessions(project) => SearchContext::Project(project.clone()),
             ViewMode::SessionDetail(session_id) => SearchContext::Session(session_id.clone()),
         };
@@ -332,6 +374,12 @@ impl Router {
 
             ViewMode::Dashboard => {
                 if let Some(ref view) = self.dashboard_view {
+                    view.render(f, f.area());
+                }
+            }
+
+            ViewMode::Prompts => {
+                if let Some(ref mut view) = self.prompts_view {
                     view.render(f, f.area());
                 }
             }

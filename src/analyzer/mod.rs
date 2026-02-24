@@ -2,6 +2,7 @@
 //!
 //! Builds hierarchical tree structures from flat JSONL execution nodes.
 
+pub mod prompt_detect;
 pub mod session_analytics;
 pub mod simple_tree;
 pub mod smart_label;

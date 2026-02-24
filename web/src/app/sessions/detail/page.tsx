@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import type { ContentBlock, NodeResponse, SessionFile, TokenUsage } from "@/lib/types";
 import { getNodeMeta, getThinkingText, getTokenUsage } from "@/lib/node-meta";
 import { formatBytes, shortId, shortModel, timeAgo } from "@/lib/utils";
-import { NodeTree } from "@/components/nodes/NodeTree";
+import { NodeTree, type NodeFilter } from "@/components/nodes/NodeTree";
 import { CodeRender } from "@/components/ui/CodeRender";
 
 // ── Root export ───────────────────────────────────────────────
@@ -38,6 +38,19 @@ function SessionDetail({ id }: { id: string }) {
   const [selected, setSelected] = useState<NodeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set());
+  const [filterKeyword, setFilterKeyword] = useState("");
+
+  const nodeFilter: NodeFilter = { types: filterTypes, keyword: filterKeyword };
+
+  const toggleFilterType = (type: string) => {
+    setFilterTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
 
   useEffect(() => {
     Promise.all([api.session(id), api.sessionNodes(id)])
@@ -158,26 +171,88 @@ function SessionDetail({ id }: { id: string }) {
         >
           <div
             style={{
-              padding: "12px 16px",
               borderBottom: "1px solid var(--border-1)",
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--text-3)",
               position: "sticky",
               top: 0,
               background: "var(--bg-1)",
               zIndex: 1,
             }}
           >
-            Execution Tree
+            <div
+              style={{
+                padding: "12px 16px 8px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-3)",
+              }}
+            >
+              Execution Tree
+            </div>
+
+            {/* Filter bar */}
+            <div style={{
+              display: "flex", flexWrap: "wrap", gap: "4px",
+              padding: "0 16px 10px",
+              alignItems: "center",
+            }}>
+              {(["User", "Assistant", "Tool", "Error", "Thinking", "Prompt"] as const).map(
+                (label) => {
+                  const key = label.toLowerCase();
+                  const active = filterTypes.has(key);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => toggleFilterType(key)}
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        letterSpacing: "0.05em",
+                        padding: "2px 8px",
+                        borderRadius: "var(--radius-sm)",
+                        border: active
+                          ? "1px solid var(--accent)"
+                          : "1px solid var(--border-2)",
+                        background: active ? "rgba(0,255,136,0.08)" : "transparent",
+                        color: active ? "var(--accent)" : "var(--text-3)",
+                        cursor: "pointer",
+                        transition: "all 0.12s",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                }
+              )}
+              <input
+                type="text"
+                value={filterKeyword}
+                onChange={(e) => setFilterKeyword(e.target.value)}
+                placeholder="Search…"
+                style={{
+                  flex: 1,
+                  minWidth: "60px",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "11px",
+                  padding: "2px 8px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border-2)",
+                  background: "transparent",
+                  color: "var(--text-2)",
+                  outline: "none",
+                  caretColor: "var(--accent)",
+                }}
+              />
+            </div>
           </div>
           <NodeTree
             nodes={roots}
             onSelect={setSelected}
             selectedId={selected?.uuid ?? null}
+            filter={nodeFilter}
           />
         </div>
 

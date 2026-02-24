@@ -1,6 +1,6 @@
 //! Session routes
 
-use crate::api::responses::{NodeResponse, TreeResponse};
+use crate::api::responses::{NodeResponse, NodeResponseContext, TreeResponse};
 use crate::server::dto::SessionFileDto;
 use crate::server::{error::ApiError, AppState};
 use crate::storage::SessionIndex;
@@ -72,8 +72,11 @@ pub async fn get_session_nodes(
         let parsed = crate::parser::parse_session(&session.path)?;
         let roots = crate::analyzer::build_simple_tree(parsed.nodes);
 
-        let roots_response: Vec<NodeResponse> =
-            roots.iter().map(NodeResponse::from_tree_node).collect();
+        let mut ctx = NodeResponseContext::new();
+        let roots_response: Vec<NodeResponse> = roots
+            .iter()
+            .map(|r| NodeResponse::from_tree_node_with_context(r, &mut ctx))
+            .collect();
 
         let total_nodes = count_nodes(&roots_response);
         let max_depth = max_depth(&roots_response, 0);
@@ -88,6 +91,51 @@ pub async fn get_session_nodes(
     .map_err(|e| ApiError::Internal(e.to_string()))??;
 
     Ok(Json(result))
+}
+
+/// GET /api/sessions/:id/prompts — returns nodes with prompt_score >= 40
+pub async fn get_session_prompts(
+    State(_state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Vec<NodeResponse>>, ApiError> {
+    let result = tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
+        let index = SessionIndex::new()?;
+        let session = index
+            .find_by_id(&id)?
+            .ok_or_else(|| crate::error::HindsightError::SessionNotFound(id.clone()))?;
+
+        let parsed = crate::parser::parse_session(&session.path)?;
+        let roots = crate::analyzer::build_simple_tree(parsed.nodes);
+
+        let mut ctx = NodeResponseContext::new();
+        let roots_response: Vec<NodeResponse> = roots
+            .iter()
+            .map(|r| NodeResponse::from_tree_node_with_context(r, &mut ctx))
+            .collect();
+
+        // Collect all nodes with prompt_score >= PROMPT_THRESHOLD
+        let threshold = crate::analyzer::prompt_detect::PROMPT_THRESHOLD;
+        let mut prompts = Vec::new();
+        collect_prompts(&roots_response, threshold, &mut prompts);
+
+        Ok(prompts)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+
+    Ok(Json(result))
+}
+
+fn collect_prompts(nodes: &[NodeResponse], threshold: u8, out: &mut Vec<NodeResponse>) {
+    for node in nodes {
+        if node.prompt_score.unwrap_or(0) >= threshold {
+            // Return a flat node (no children) for the prompts endpoint
+            let mut flat = node.clone();
+            flat.children = Vec::new();
+            out.push(flat);
+        }
+        collect_prompts(&node.children, threshold, out);
+    }
 }
 
 fn count_nodes(nodes: &[NodeResponse]) -> usize {
