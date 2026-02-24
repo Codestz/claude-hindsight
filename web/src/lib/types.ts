@@ -227,6 +227,10 @@ export interface NodeResponse {
   progress: NodeProgress | null;
   token_usage: TokenUsage | null;
 
+  // ── Prompt score (0–100) — only present on user nodes
+  // Scores >= 40 indicate a meaningful prompt.
+  prompt_score?: number;
+
   // ── Extra / unknown fields (doubly flattened from ExecutionNode.extra)
   // May include: subtype, durationMs, data, snapshot, etc.
   [key: string]: unknown;
@@ -242,6 +246,16 @@ export interface TreeResponse {
 // ─────────────────────────────────────────────────────────────
 // § 6 — MISC API TYPES
 // ─────────────────────────────────────────────────────────────
+
+/** Cross-session prompt entry — from GET /api/prompts */
+export interface PromptEntry {
+  session_id: string;
+  project_name: string;
+  prompt_text: string;
+  prompt_score: number;
+  timestamp: number | null;
+  model: string | null;
+}
 
 /** Health check — from GET /api/health */
 export interface HealthCheck {

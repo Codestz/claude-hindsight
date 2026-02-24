@@ -263,6 +263,16 @@ export function getTokenUsage(node: NodeResponse) {
 }
 
 /**
+ * Returns the prompt score for a node, or null if not applicable.
+ * Scores >= 40 indicate a meaningful prompt.
+ */
+export function getPromptScore(node: NodeResponse): number | null {
+  return node.prompt_score != null && node.prompt_score >= 40
+    ? node.prompt_score
+    : null;
+}
+
+/**
  * True if the node is purely decorative / internal (no user-facing content).
  * These can be collapsed by default in the tree view.
  */

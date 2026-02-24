@@ -7,6 +7,7 @@ pub mod code_render;
 pub mod dashboard_view;
 pub mod events;
 pub mod projects_view;
+pub mod prompts_view;
 pub mod render;
 pub mod router;
 pub mod search;

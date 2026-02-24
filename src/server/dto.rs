@@ -105,6 +105,17 @@ pub struct SessionFileDto {
     pub subagent_models: Option<Vec<String>>,
 }
 
+/// Cross-session prompt entry
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromptEntryDto {
+    pub session_id: String,
+    pub project_name: String,
+    pub prompt_text: String,
+    pub prompt_score: u8,
+    pub timestamp: Option<i64>,
+    pub model: Option<String>,
+}
+
 impl From<SessionFile> for SessionFileDto {
     fn from(s: SessionFile) -> Self {
         let subagent_models = s.subagent_models.map(|m| {

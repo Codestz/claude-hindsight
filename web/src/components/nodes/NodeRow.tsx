@@ -10,6 +10,7 @@ interface NodeRowProps {
   isExpanded: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  promptScore?: number;
 }
 
 // Milliseconds → HH:MM:SS display
@@ -32,8 +33,14 @@ export function NodeRow({
   isExpanded,
   onSelect,
   onToggle,
+  promptScore,
 }: NodeRowProps) {
   const selectedBg = "rgba(0, 255, 136, 0.06)";
+
+  // Prompt badge color intensity scales with score
+  const promptBadgeOpacity = promptScore != null && promptScore >= 40
+    ? 0.5 + (promptScore / 100) * 0.5
+    : 0;
 
   return (
     <div
@@ -133,6 +140,26 @@ export function NodeRow({
       >
         {node.summary || node.label}
       </span>
+
+      {/* Prompt score badge */}
+      {promptScore != null && promptScore >= 40 && (
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "10px",
+            fontWeight: 600,
+            color: "var(--green)",
+            opacity: promptBadgeOpacity,
+            flexShrink: 0,
+            padding: "1px 5px",
+            borderRadius: "var(--radius-sm)",
+            background: "rgba(0, 255, 136, 0.08)",
+            border: "1px solid rgba(0, 255, 136, 0.15)",
+          }}
+        >
+          P:{promptScore}%
+        </span>
+      )}
 
       {/* Timestamp */}
       {node.timestamp != null && (
