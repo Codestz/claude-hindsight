@@ -18,6 +18,11 @@ pub struct NodeResponse {
     pub timestamp: Option<i64>,
     pub children: Vec<NodeResponse>,
 
+    /// Prompt confidence score (0–100). Only present on user nodes.
+    /// Scores >= 40 indicate a meaningful prompt.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_score: Option<u8>,
+
     #[serde(flatten)]
     pub data: serde_json::Value, // Original node data
 }
@@ -30,10 +35,70 @@ pub struct TreeResponse {
     pub max_depth: usize,
 }
 
+/// Context for building NodeResponses with prompt scoring
+pub struct NodeResponseContext {
+    /// Track whether we've seen the first user node
+    pub seen_first_user: bool,
+    /// The node_type of the previously visited node (for is_first_after_assistant)
+    pub prev_node_type: Option<String>,
+}
+
+impl NodeResponseContext {
+    pub fn new() -> Self {
+        Self {
+            seen_first_user: false,
+            prev_node_type: None,
+        }
+    }
+}
+
 impl NodeResponse {
-    /// Convert TreeNode to API response
+    /// Convert TreeNode to API response (without prompt scoring, for backward compat)
     pub fn from_tree_node(node: &TreeNode) -> Self {
+        let mut ctx = NodeResponseContext::new();
+        Self::from_tree_node_with_context(node, &mut ctx)
+    }
+
+    /// Convert TreeNode to API response with prompt scoring context
+    pub fn from_tree_node_with_context(node: &TreeNode, ctx: &mut NodeResponseContext) -> Self {
         let (label, color) = crate::analyzer::smart_label::get_node_label(node, None);
+
+        // Compute prompt score for user nodes
+        let prompt_score = if node.node.node_type == "user" {
+            let is_first = !ctx.seen_first_user;
+            let is_after_assistant = ctx
+                .prev_node_type
+                .as_deref()
+                .map(|t| t == "assistant")
+                .unwrap_or(false);
+
+            ctx.seen_first_user = true;
+
+            let score =
+                crate::analyzer::prompt_detect::prompt_score(&node.node, is_first, is_after_assistant);
+            if score > 0 { Some(score) } else { None }
+        } else {
+            None
+        };
+
+        // Track this node type for the next sibling
+        ctx.prev_node_type = Some(node.node.node_type.clone());
+
+        // Build children with a fresh sub-context (children share parent's context)
+        let mut child_ctx = NodeResponseContext {
+            seen_first_user: ctx.seen_first_user,
+            prev_node_type: None,
+        };
+        let children: Vec<NodeResponse> = node
+            .children
+            .iter()
+            .map(|child| {
+                let resp = Self::from_tree_node_with_context(child, &mut child_ctx);
+                // Propagate seen_first_user back up
+                ctx.seen_first_user = child_ctx.seen_first_user;
+                resp
+            })
+            .collect();
 
         Self {
             uuid: node.node.uuid.clone(),
@@ -43,17 +108,14 @@ impl NodeResponse {
             summary: String::new(),
             depth: node.depth,
             has_error: {
-                // Explicit is_error flag on top-level tool_result
                 let tr = node.node.tool_result.as_ref();
                 let flag_error = tr.and_then(|r| r.is_error).unwrap_or(false);
 
-                // Content string containing <tool_use_error> tag
                 let tag_error = tr
                     .and_then(|r| r.content.as_deref())
                     .map(|c| c.contains("<tool_use_error>"))
                     .unwrap_or(false);
 
-                // ToolResult blocks inside message.content with is_error or error tag
                 let block_error = node
                     .node
                     .message
@@ -78,7 +140,8 @@ impl NodeResponse {
                 flag_error || tag_error || block_error
             },
             timestamp: node.node.timestamp,
-            children: node.children.iter().map(Self::from_tree_node).collect(),
+            children,
+            prompt_score,
             data: serde_json::to_value(&*node.node).unwrap_or(serde_json::Value::Null),
         }
     }

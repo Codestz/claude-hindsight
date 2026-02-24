@@ -7,8 +7,9 @@ import { SearchIcon } from "@/components/icons/SearchIcon";
 import { CommandPalette } from "./CommandPalette";
 
 const NAV = [
-  { href: "/",        label: "Dashboard" },
+  { href: "/",         label: "Dashboard" },
   { href: "/projects", label: "Projects" },
+  { href: "/prompts",  label: "Prompts" },
 ];
 
 // A href is active when the current path is at or below it.

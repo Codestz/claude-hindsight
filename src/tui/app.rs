@@ -2,6 +2,7 @@
 //!
 //! Manages the state of the interactive terminal UI.
 
+use crate::analyzer::prompt_detect;
 use crate::analyzer::{build_simple_tree, SessionAnalytics, TreeNode};
 use crate::error::Result;
 use crate::parser::models::ContentBlock;
@@ -130,6 +131,10 @@ pub struct App {
     // ── #18: Diff view ───────────────────────────────────────────────────
     /// Show old/new diff for Edit tool calls (d to toggle)
     pub show_diff: bool,
+
+    // ── Prompt scores ──────────────────────────────────────────────────
+    /// UUID → prompt confidence score (0–100) for user nodes
+    pub prompt_scores: HashMap<String, u8>,
 }
 
 impl App {
@@ -238,6 +243,30 @@ impl App {
             }
         }
 
+        // Compute prompt scores for user nodes (tracking position context)
+        let prompt_scores = {
+            let mut scores = HashMap::new();
+            let mut seen_first_user = false;
+            let mut prev_node_type: Option<&str> = None;
+            for node in &session.nodes {
+                if node.node_type == "user" {
+                    if let Some(ref uuid) = node.uuid {
+                        let is_first = !seen_first_user;
+                        let is_after_assistant =
+                            prev_node_type.map(|t| t == "assistant").unwrap_or(false);
+                        let score =
+                            prompt_detect::prompt_score(node, is_first, is_after_assistant);
+                        if score > 0 {
+                            scores.insert(uuid.clone(), score);
+                        }
+                        seen_first_user = true;
+                    }
+                }
+                prev_node_type = Some(&node.node_type);
+            }
+            scores
+        };
+
         // Build simple hierarchical tree from parent_uuid relationships
         let tree_roots = build_simple_tree(session.nodes.clone());
 
@@ -248,22 +277,47 @@ impl App {
         }
 
         // Build tree items for tui-tree-widget (using UUIDs as identifiers)
-        let tree_items = build_tree_items(&tree_roots, &None, &tool_correlation);
+        let tree_items = build_tree_items(&tree_roots, &None, &tool_correlation, &prompt_scores);
 
         let mut tree_state = tui_tree_widget::TreeState::default();
         tree_state.select_first();
 
         // ── #7 / #14: collect error nodes ───────────────────────────────
+        // Broadened to match Session::new() error detection: top-level tool_result.is_error,
+        // <tool_use_error> tags in content, and ContentBlock::ToolResult with is_error.
         let (error_node_uuids, error_nodes_info) = {
             let mut uuids = vec![];
             let mut info = vec![];
             for node in &session.nodes {
-                let is_err = node.node_type == "error"
-                    || node
-                        .tool_result
-                        .as_ref()
-                        .map(|r| r.is_error == Some(true))
-                        .unwrap_or(false);
+                let tr = node.tool_result.as_ref();
+                let flag_error = tr.and_then(|r| r.is_error).unwrap_or(false);
+                let tag_error = tr
+                    .and_then(|r| r.content.as_deref())
+                    .map(|c| c.contains("<tool_use_error>"))
+                    .unwrap_or(false);
+                let block_error = node
+                    .message
+                    .as_ref()
+                    .map(|m| {
+                        m.content_blocks().iter().any(|b| match b {
+                            ContentBlock::ToolResult {
+                                content, is_error, ..
+                            } => {
+                                is_error.unwrap_or(false)
+                                    || content
+                                        .as_ref()
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.contains("<tool_use_error>"))
+                                        .unwrap_or(false)
+                            }
+                            _ => false,
+                        })
+                    })
+                    .unwrap_or(false);
+
+                let is_err =
+                    node.node_type == "error" || flag_error || tag_error || block_error;
+
                 if is_err {
                     if let Some(ref uuid) = node.uuid {
                         let desc: String = if node.node_type == "error" {
@@ -278,7 +332,11 @@ impl App {
                         } else {
                             node.tool_result
                                 .as_ref()
-                                .and_then(|r| r.error.as_ref())
+                                .and_then(|r| {
+                                    r.error
+                                        .as_ref()
+                                        .or(r.content.as_ref())
+                                })
                                 .map(|e| e.chars().take(50).collect::<String>())
                                 .unwrap_or_else(|| "Tool error".to_string())
                         };
@@ -318,10 +376,30 @@ impl App {
             replay_mode: false,
             last_replay_tick: None,
             show_diff: false,
+            prompt_scores,
         }
     }
 
     // ── #7: Error navigation ─────────────────────────────────────────────
+
+    /// Build the full selection path from root to the given UUID.
+    ///
+    /// tui-tree-widget requires `vec![root_uuid, ..., parent_uuid, target_uuid]`
+    /// to select a nested node. This walks `parent_uuid` links upward, then reverses.
+    fn build_selection_path(&self, uuid: &str) -> Vec<String> {
+        let mut path = vec![uuid.to_string()];
+        let mut current = uuid.to_string();
+        while let Some(node) = self.uuid_to_node.get(&current) {
+            if let Some(ref parent) = node.node.parent_uuid {
+                path.push(parent.clone());
+                current = parent.clone();
+            } else {
+                break;
+            }
+        }
+        path.reverse();
+        path
+    }
 
     /// Jump to the next error node in the session
     pub fn jump_to_next_error(&mut self) {
@@ -331,7 +409,8 @@ impl App {
         }
         self.current_error_idx = (self.current_error_idx + 1) % self.error_node_uuids.len();
         let uuid = self.error_node_uuids[self.current_error_idx].clone();
-        self.tree_state.select(vec![uuid]);
+        let path = self.build_selection_path(&uuid);
+        self.tree_state.select(path);
         self.details_scroll = 0;
         self.status_message = format!(
             "Error {}/{}",
@@ -352,7 +431,8 @@ impl App {
             self.current_error_idx -= 1;
         }
         let uuid = self.error_node_uuids[self.current_error_idx].clone();
-        self.tree_state.select(vec![uuid]);
+        let path = self.build_selection_path(&uuid);
+        self.tree_state.select(path);
         self.details_scroll = 0;
         self.status_message = format!(
             "Error {}/{}",
@@ -440,7 +520,8 @@ impl App {
                 if let Some((uuid, _, _)) = self.error_nodes_info.get(self.error_summary_selection)
                 {
                     let uuid = uuid.clone();
-                    self.tree_state.select(vec![uuid]);
+                    let path = self.build_selection_path(&uuid);
+                    self.tree_state.select(path);
                     self.details_scroll = 0;
                     self.show_error_summary = false;
                 }
@@ -521,18 +602,36 @@ impl App {
         path
     }
 
-    /// Start search mode
+    /// Start type-filter search mode (`/`)
     pub fn start_search(&mut self) {
         self.input_mode = true;
         self.search_state = Some(SearchState::new(String::new()));
-        self.status_message = "Filter by node type (e.g., user,assistant,tool_use): ".to_string();
+        self.status_message =
+            "Filter by type (error, prompt, tool, user, assistant): ".to_string();
+    }
+
+    /// Start keyword search mode (`?`)
+    pub fn start_keyword_search(&mut self) {
+        self.input_mode = true;
+        self.search_state = Some(SearchState::new_keyword(String::new()));
+        self.status_message = "Search content: ".to_string();
     }
 
     /// Execute search with current query
     pub fn execute_search(&mut self) {
+        use crate::tui::search::SearchMode;
+
         let first_match_uuid = if let Some(ref mut search) = self.search_state {
-            // Parse the query into node types
-            search.parse_query();
+            match search.mode {
+                SearchMode::TypeFilter => {
+                    // Parse the query into node types
+                    search.parse_query();
+                }
+                SearchMode::KeywordSearch => {
+                    // Keyword mode doesn't need parse_query
+                }
+            }
+
             search.matches.clear();
 
             // Find all matching nodes
@@ -544,21 +643,36 @@ impl App {
 
             search.current_match = 0;
 
-            let filter_types = search
-                .node_types
-                .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<_>>()
-                .join(", ");
+            self.status_message = match search.mode {
+                SearchMode::TypeFilter => {
+                    let filter_types = search
+                        .node_types
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ");
 
-            self.status_message = if search.node_types.is_empty() {
-                "Filter cleared - showing all nodes".to_string()
-            } else {
-                format!(
-                    "Filtered: {} ({} matches)",
-                    filter_types,
-                    search.matches.len()
-                )
+                    if search.node_types.is_empty() {
+                        "Filter cleared - showing all nodes".to_string()
+                    } else {
+                        format!(
+                            "Filtered: {} ({} matches)",
+                            filter_types,
+                            search.matches.len()
+                        )
+                    }
+                }
+                SearchMode::KeywordSearch => {
+                    if search.query.is_empty() {
+                        "Search cleared - showing all nodes".to_string()
+                    } else {
+                        format!(
+                            "Search: \"{}\" ({} matches)",
+                            search.query,
+                            search.matches.len()
+                        )
+                    }
+                }
             };
 
             search.current_match_uuid().map(|s| s.to_string())
@@ -570,8 +684,9 @@ impl App {
         self.rebuild_tree_items();
 
         // Jump to first match if any
-        if let Some(uuid) = first_match_uuid {
-            self.tree_state.select(vec![uuid]);
+        if let Some(ref uuid) = first_match_uuid {
+            let path = self.build_selection_path(uuid);
+            self.tree_state.select(path);
             self.details_scroll = 0;
         }
 
@@ -582,7 +697,8 @@ impl App {
     pub fn select_node_by_uuid(&mut self, uuid: &str) {
         // Check if the UUID exists in our mapping
         if self.uuid_to_node.contains_key(uuid) {
-            self.tree_state.select(vec![uuid.to_string()]);
+            let path = self.build_selection_path(uuid);
+            self.tree_state.select(path);
             self.details_scroll = 0;
             self.status_message = format!("Jumped to node: {}", &uuid[..8.min(uuid.len())]);
         } else {
@@ -633,33 +749,45 @@ impl App {
 
     /// Jump to next search match
     pub fn next_search_match(&mut self) {
-        if let Some(ref mut search) = self.search_state {
+        let info = if let Some(ref mut search) = self.search_state {
             search.next_match();
-            if let Some(uuid) = search.current_match_uuid() {
-                self.tree_state.select(vec![uuid.to_string()]);
-                self.details_scroll = 0;
-                self.status_message = format!(
-                    "Match {}/{}",
+            search.current_match_uuid().map(|uuid| {
+                (
+                    uuid.to_string(),
                     search.current_match + 1,
-                    search.matches.len()
-                );
-            }
+                    search.matches.len(),
+                )
+            })
+        } else {
+            None
+        };
+        if let Some((uuid, current, total)) = info {
+            let path = self.build_selection_path(&uuid);
+            self.tree_state.select(path);
+            self.details_scroll = 0;
+            self.status_message = format!("Match {}/{}", current, total);
         }
     }
 
     /// Jump to previous search match
     pub fn prev_search_match(&mut self) {
-        if let Some(ref mut search) = self.search_state {
+        let info = if let Some(ref mut search) = self.search_state {
             search.prev_match();
-            if let Some(uuid) = search.current_match_uuid() {
-                self.tree_state.select(vec![uuid.to_string()]);
-                self.details_scroll = 0;
-                self.status_message = format!(
-                    "Match {}/{}",
+            search.current_match_uuid().map(|uuid| {
+                (
+                    uuid.to_string(),
                     search.current_match + 1,
-                    search.matches.len()
-                );
-            }
+                    search.matches.len(),
+                )
+            })
+        } else {
+            None
+        };
+        if let Some((uuid, current, total)) = info {
+            let path = self.build_selection_path(&uuid);
+            self.tree_state.select(path);
+            self.details_scroll = 0;
+            self.status_message = format!("Match {}/{}", current, total);
         }
     }
 
@@ -673,8 +801,12 @@ impl App {
 
     /// Rebuild tree items (used when search state changes)
     pub fn rebuild_tree_items(&mut self) {
-        self.tree_items =
-            build_tree_items(&self.tree_roots, &self.search_state, &self.tool_correlation);
+        self.tree_items = build_tree_items(
+            &self.tree_roots,
+            &self.search_state,
+            &self.tool_correlation,
+            &self.prompt_scores,
+        );
     }
 
     /// Handle keyboard input
@@ -706,9 +838,14 @@ impl App {
                 self.should_quit = true;
             }
 
-            // Start search
+            // Start type filter search
             (KeyCode::Char('/'), KeyModifiers::NONE) => {
                 self.start_search();
+            }
+
+            // Start keyword content search
+            (KeyCode::Char('?'), KeyModifiers::SHIFT) => {
+                self.start_keyword_search();
             }
 
             // Next match
@@ -910,12 +1047,15 @@ fn build_tree_items(
     roots: &[TreeNode],
     search_state: &Option<SearchState>,
     correlation: &HashMap<String, String>,
+    prompt_scores: &HashMap<String, u8>,
 ) -> Vec<TreeItem<'static, String>> {
     // Use the first root node's timestamp as session start for latency deltas
     let session_start = roots.iter().filter_map(|n| n.node.timestamp).next();
     roots
         .iter()
-        .filter_map(|root| build_tree_item(root, search_state, correlation, session_start))
+        .filter_map(|root| {
+            build_tree_item(root, search_state, correlation, session_start, prompt_scores)
+        })
         .collect()
 }
 
@@ -926,6 +1066,7 @@ fn build_tree_item(
     search_state: &Option<SearchState>,
     correlation: &HashMap<String, String>,
     parent_timestamp: Option<i64>,
+    prompt_scores: &HashMap<String, u8>,
 ) -> Option<TreeItem<'static, String>> {
     use ratatui::style::{Color, Style};
     use ratatui::text::{Line, Span};
@@ -940,7 +1081,15 @@ fn build_tree_item(
     let children: Vec<TreeItem<String>> = node
         .children
         .iter()
-        .filter_map(|child| build_tree_item(child, search_state, correlation, node.node.timestamp))
+        .filter_map(|child| {
+            build_tree_item(
+                child,
+                search_state,
+                correlation,
+                node.node.timestamp,
+                prompt_scores,
+            )
+        })
         .collect();
 
     // If this node doesn't match AND has no matching children, filter it out
@@ -973,6 +1122,18 @@ fn build_tree_item(
 
     // Start with the label span
     let mut spans = vec![Span::styled(label_text, Style::default().fg(color))];
+
+    // Prompt score badge for user nodes with score >= 40
+    if let Some(uuid) = &node.node.uuid {
+        if let Some(&score) = prompt_scores.get(uuid) {
+            if score >= prompt_detect::PROMPT_THRESHOLD {
+                spans.push(Span::styled(
+                    format!(" P:{}%", score),
+                    Style::default().fg(Color::Green),
+                ));
+            }
+        }
+    }
 
     // Latency delta badge: show +Xs gap from parent/session-start (only if >= 500ms)
     if let (Some(node_ts), Some(parent_ts)) = (node.node.timestamp, parent_timestamp) {
