@@ -1,26 +1,26 @@
 class ClaudeHindsight < Formula
   desc "20/20 hindsight for your Claude Code sessions"
   homepage "https://github.com/Codestz/claude-hindsight"
-  version "1.0.1"
+  version "1.1.0"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-aarch64-apple-darwin.tar.gz"
-      sha256 "0ba9fea3490a428955c66235cde0bf916615a0e16001b157e8e73d5fa93160e0"
+      sha256 "08a8fcf14492c5e5be95b097825e3435457993ea90712c9daded9404d6691d5b"
     else
       url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-x86_64-apple-darwin.tar.gz"
-      sha256 "f75b656fc71520e7b771aefa91f3479a5ba858011deba77707f1049993f3b870"
+      sha256 "8dfa8d6eeeab2503bdac4402551f93c17982809babdf4e52cb7d95a2251c2303"
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
       url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-aarch64-unknown-linux-gnu.tar.gz"
-      sha256 "a2152a90d8998a07c50c978f437af24de26d33b890cd8b50e3c3210f5fd40f60"
+      sha256 "023d5aee10e32c2777ad114ecec0de0a7e7ab815055dc23f67215c414b120328"
     else
       url "https://github.com/Codestz/claude-hindsight/releases/download/v#{version}/claude-hindsight-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "fea269a71588602487e7bff40cc521e939d906ac6e5fb3eea8d493e7095b313c"
+      sha256 "fd515cc39a9ab2ff8ec9497c44ffd2944830af95dc0ae223d11e17505e274fce"
     end
   end
 
