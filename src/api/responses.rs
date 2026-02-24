@@ -36,6 +36,7 @@ pub struct TreeResponse {
 }
 
 /// Context for building NodeResponses with prompt scoring
+#[derive(Default)]
 pub struct NodeResponseContext {
     /// Track whether we've seen the first user node
     pub seen_first_user: bool,
@@ -45,10 +46,7 @@ pub struct NodeResponseContext {
 
 impl NodeResponseContext {
     pub fn new() -> Self {
-        Self {
-            seen_first_user: false,
-            prev_node_type: None,
-        }
+        Self::default()
     }
 }
 

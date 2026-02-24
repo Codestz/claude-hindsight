@@ -242,18 +242,17 @@ impl SearchState {
                             return true;
                         }
                     }
-                    ContentBlock::ToolResult { content, .. } => {
-                        if let Some(v) = content {
-                            let s = if let Some(s) = v.as_str() {
-                                s.to_string()
-                            } else {
-                                v.to_string()
-                            };
-                            if s.to_lowercase().contains(&query_lower) {
-                                return true;
-                            }
+                    ContentBlock::ToolResult { content: Some(v), .. } => {
+                        let s = if let Some(s) = v.as_str() {
+                            s.to_string()
+                        } else {
+                            v.to_string()
+                        };
+                        if s.to_lowercase().contains(&query_lower) {
+                            return true;
                         }
                     }
+                    ContentBlock::ToolResult { content: None, .. } => {}
                     _ => {}
                 }
             }
