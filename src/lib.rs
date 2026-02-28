@@ -6,6 +6,7 @@ pub mod analyzer;
 pub mod api;
 pub mod config;
 pub mod error;
+pub mod otel;
 pub mod parser;
 pub mod search;
 pub mod server;

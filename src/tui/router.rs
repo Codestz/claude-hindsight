@@ -57,6 +57,12 @@ pub struct Router {
 
     /// Application configuration
     pub config: Config,
+
+    /// Path of the currently open session file (for live watching)
+    session_watch_path: Option<std::path::PathBuf>,
+
+    /// File watcher for live session refresh
+    session_watcher: Option<crate::watcher::SessionWatcher>,
 }
 
 impl Router {
@@ -84,6 +90,8 @@ impl Router {
             search_modal,
             should_quit: false,
             config,
+            session_watch_path: None,
+            session_watcher: None,
         })
     }
 
@@ -111,16 +119,33 @@ impl Router {
             search_modal,
             should_quit: false,
             config,
+            session_watch_path: None,
+            session_watcher: None,
         })
     }
 
     /// Handle keyboard input
-    /// Process periodic updates (debounced search, etc.)
+    /// Process periodic updates (debounced search, file watching, etc.)
     pub fn tick(&mut self) {
-        // Call tick on session detail view to handle debounced search
         if let ViewMode::SessionDetail(_) = &self.view_mode {
+            // Call tick on session detail view to handle debounced search
             if let Some(ref mut view) = self.session_detail_view {
                 view.tick();
+            }
+
+            // Poll file watcher; reload session on change
+            let has_changes = if let Some(ref mut watcher) = self.session_watcher {
+                watcher.poll().map(|nodes| !nodes.is_empty()).unwrap_or(false)
+            } else {
+                false
+            };
+
+            if has_changes {
+                if let Some(ref path) = self.session_watch_path.clone() {
+                    if let Ok(updated_session) = parse_session(path) {
+                        self.session_detail_view = Some(App::new(updated_session));
+                    }
+                }
             }
         }
     }
@@ -280,6 +305,10 @@ impl Router {
 
         let session = parse_session(&session_file.path)?;
 
+        // Start a live file watcher so the TUI refreshes as new nodes arrive
+        self.session_watch_path = Some(session_file.path.clone());
+        self.session_watcher = crate::watcher::SessionWatcher::new(&session_file.path).ok();
+
         // Create session detail view
         self.session_detail_view = Some(App::new(session));
 
@@ -291,6 +320,10 @@ impl Router {
 
     /// Navigate back to previous view
     fn navigate_back(&mut self) -> Result<()> {
+        // Drop file watcher when leaving session detail
+        self.session_watcher = None;
+        self.session_watch_path = None;
+
         if let Some(prev_view) = self.view_stack.pop() {
             self.view_mode = prev_view;
 

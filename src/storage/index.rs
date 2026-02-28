@@ -50,7 +50,7 @@ impl SessionIndex {
             .query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
         if version == 0 {
-            // Fresh database: create schema v6 with all tables
+            // Fresh database: create all tables at latest schema version
             self.conn.execute_batch(
                 r#"
                 CREATE TABLE IF NOT EXISTS sessions (
@@ -66,7 +66,12 @@ impl SessionIndex {
                     error_count INTEGER NOT NULL DEFAULT 0,
                     first_message TEXT,
                     source_dir TEXT NOT NULL DEFAULT '',
-                    subagent_models TEXT
+                    subagent_models TEXT,
+                    input_tokens INTEGER NOT NULL DEFAULT 0,
+                    output_tokens INTEGER NOT NULL DEFAULT 0,
+                    cache_read_tokens INTEGER NOT NULL DEFAULT 0,
+                    cache_creation_tokens INTEGER NOT NULL DEFAULT 0,
+                    cost_usd REAL NOT NULL DEFAULT 0.0
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_project_name ON sessions(project_name);
@@ -100,9 +105,114 @@ impl SessionIndex {
                     searchable_text,
                     tokenize='porter ascii'
                 );
+
+                CREATE TABLE IF NOT EXISTS otel_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    received_at INTEGER NOT NULL,
+                    session_id TEXT,
+                    event_name TEXT NOT NULL,
+                    model TEXT,
+                    cost_usd REAL,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    cache_read_tokens INTEGER,
+                    cache_creation_tokens INTEGER,
+                    duration_ms INTEGER,
+                    attributes TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS hook_tool_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    hook_event TEXT NOT NULL,
+                    tool_name TEXT,
+                    tool_input TEXT,
+                    tool_result TEXT,
+                    error_message TEXT,
+                    is_interrupt INTEGER,
+                    tool_use_id TEXT,
+                    cwd TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS hook_subagent_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    hook_event TEXT NOT NULL,
+                    agent_type TEXT,
+                    agent_name TEXT,
+                    cwd TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS hook_compaction_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    compaction_trigger TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS hook_permission_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    tool_name TEXT,
+                    tool_input TEXT,
+                    cwd TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS hook_lifecycle_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    event_name TEXT NOT NULL,
+                    attributes TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS otel_metrics (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    received_at     INTEGER NOT NULL,
+                    session_id      TEXT,
+                    metric_name     TEXT NOT NULL,
+                    token_type      TEXT,
+                    model           TEXT,
+                    value_int       INTEGER,
+                    value_double    REAL,
+                    time_unix_nano  TEXT,
+                    service_name    TEXT,
+                    service_version TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_otel_metrics_session ON otel_metrics(session_id);
+                CREATE INDEX IF NOT EXISTS idx_otel_metrics_name    ON otel_metrics(metric_name);
+                CREATE INDEX IF NOT EXISTS idx_otel_metrics_time    ON otel_metrics(received_at DESC);
+
+                CREATE TABLE IF NOT EXISTS otel_logs (
+                    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                    received_at           INTEGER NOT NULL,
+                    session_id            TEXT,
+                    event_name            TEXT,
+                    model                 TEXT,
+                    cost_usd              REAL,
+                    input_tokens          INTEGER,
+                    output_tokens         INTEGER,
+                    cache_read_tokens     INTEGER,
+                    cache_creation_tokens INTEGER,
+                    duration_ms           INTEGER,
+                    tool_name             TEXT,
+                    success               INTEGER,
+                    error_message         TEXT,
+                    status_code           INTEGER,
+                    severity              TEXT,
+                    body                  TEXT,
+                    attributes            TEXT,
+                    time_unix_nano        TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_otel_logs_session ON otel_logs(session_id);
+                CREATE INDEX IF NOT EXISTS idx_otel_logs_event   ON otel_logs(event_name);
+                CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 8", [])?;
+            self.conn.execute("PRAGMA user_version = 12", [])?;
         } else {
             // Incremental migrations
             if version < 4 {
@@ -173,6 +283,153 @@ impl SessionIndex {
                 // are left in place — SQLite handles unused columns gracefully.
                 self.conn.execute("PRAGMA user_version = 8", [])?;
             }
+
+            if version < 9 {
+                // v8 → v9: add cost_usd (first attempt, may be incomplete on some DBs)
+                let _ = self.conn.execute(
+                    "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0.0",
+                    [],
+                );
+                self.conn.execute_batch(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS otel_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        received_at INTEGER NOT NULL,
+                        session_id TEXT,
+                        event_name TEXT NOT NULL,
+                        model TEXT,
+                        cost_usd REAL,
+                        input_tokens INTEGER,
+                        output_tokens INTEGER,
+                        cache_read_tokens INTEGER,
+                        cache_creation_tokens INTEGER,
+                        duration_ms INTEGER,
+                        attributes TEXT
+                    );
+                    "#,
+                )?;
+                self.conn.execute("PRAGMA user_version = 9", [])?;
+            }
+
+            if version < 10 {
+                // v9 → v10: ensure all token columns exist (may be missing on DBs that
+                // skipped the v7 migration path and were initialised fresh at v8/v9).
+                for stmt in &[
+                    "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0.0",
+                ] {
+                    let _ = self.conn.execute(stmt, []);
+                }
+                self.conn.execute("PRAGMA user_version = 10", [])?;
+            }
+
+            if version < 11 {
+                // v10 → v11: add 5 hook event tables
+                self.conn.execute_batch(
+                    r#"
+                    CREATE TABLE IF NOT EXISTS hook_tool_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        occurred_at INTEGER NOT NULL,
+                        hook_event TEXT NOT NULL,
+                        tool_name TEXT,
+                        tool_input TEXT,
+                        tool_result TEXT,
+                        error_message TEXT,
+                        is_interrupt INTEGER,
+                        tool_use_id TEXT,
+                        cwd TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS hook_subagent_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        occurred_at INTEGER NOT NULL,
+                        hook_event TEXT NOT NULL,
+                        agent_type TEXT,
+                        agent_name TEXT,
+                        cwd TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS hook_compaction_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        occurred_at INTEGER NOT NULL,
+                        compaction_trigger TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS hook_permission_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        occurred_at INTEGER NOT NULL,
+                        tool_name TEXT,
+                        tool_input TEXT,
+                        cwd TEXT
+                    );
+                    CREATE TABLE IF NOT EXISTS hook_lifecycle_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        occurred_at INTEGER NOT NULL,
+                        event_name TEXT NOT NULL,
+                        attributes TEXT
+                    );
+                    "#,
+                )?;
+                self.conn.execute("PRAGMA user_version = 11", [])?;
+            }
+
+            if version < 12 {
+                // v11 → v12: add otel_metrics and otel_logs tables.
+                // Drop-then-create handles any partial state from failed previous attempts.
+                self.conn.execute_batch(
+                    r#"
+                    DROP TABLE IF EXISTS otel_metrics;
+                    DROP TABLE IF EXISTS otel_logs;
+                    CREATE TABLE IF NOT EXISTS otel_metrics (
+                        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                        received_at     INTEGER NOT NULL,
+                        session_id      TEXT,
+                        metric_name     TEXT NOT NULL,
+                        token_type      TEXT,
+                        model           TEXT,
+                        value_int       INTEGER,
+                        value_double    REAL,
+                        time_unix_nano  TEXT,
+                        service_name    TEXT,
+                        service_version TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_otel_metrics_session ON otel_metrics(session_id);
+                    CREATE INDEX IF NOT EXISTS idx_otel_metrics_name    ON otel_metrics(metric_name);
+                    CREATE INDEX IF NOT EXISTS idx_otel_metrics_time    ON otel_metrics(received_at DESC);
+
+                    CREATE TABLE IF NOT EXISTS otel_logs (
+                        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                        received_at           INTEGER NOT NULL,
+                        session_id            TEXT,
+                        event_name            TEXT,
+                        model                 TEXT,
+                        cost_usd              REAL,
+                        input_tokens          INTEGER,
+                        output_tokens         INTEGER,
+                        cache_read_tokens     INTEGER,
+                        cache_creation_tokens INTEGER,
+                        duration_ms           INTEGER,
+                        tool_name             TEXT,
+                        success               INTEGER,
+                        error_message         TEXT,
+                        status_code           INTEGER,
+                        severity              TEXT,
+                        body                  TEXT,
+                        attributes            TEXT,
+                        time_unix_nano        TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_otel_logs_session ON otel_logs(session_id);
+                    CREATE INDEX IF NOT EXISTS idx_otel_logs_event   ON otel_logs(event_name);
+                    CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
+                    "#,
+                )?;
+                self.conn.execute("PRAGMA user_version = 12", [])?;
+            }
         }
 
         Ok(())
@@ -188,7 +445,8 @@ impl SessionIndex {
             .unwrap_or(0);
 
         // Try to parse session for rich analytics; fall back to defaults on failure
-        let (model, error_count, first_message, tool_counts, file_counts, created_at) =
+        let (model, error_count, first_message, tool_counts, file_counts, created_at,
+             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd) =
             if let Ok(parsed) = crate::parser::parse_session(&session.path) {
                 let analytics = crate::analyzer::SessionAnalytics::from_session(&parsed);
 
@@ -248,6 +506,26 @@ impl SessionIndex {
                     }
                 }
 
+                // Aggregate token usage across all assistant nodes
+                let mut agg_input: i64 = 0;
+                let mut agg_output: i64 = 0;
+                let mut agg_cache_read: i64 = 0;
+                let mut agg_cache_creation: i64 = 0;
+                for node in &parsed.nodes {
+                    if let Some(tu) = node.effective_token_usage() {
+                        agg_input += tu.input_tokens.unwrap_or(0);
+                        agg_output += tu.output_tokens.unwrap_or(0);
+                        agg_cache_read += tu.cache_read_input_tokens.unwrap_or(0);
+                        agg_cache_creation += tu.cache_creation_input_tokens.unwrap_or(0);
+                    }
+                }
+                // Cost estimate (Claude Sonnet pricing per million tokens)
+                let cost = (agg_input as f64 * 3.0
+                    + agg_output as f64 * 15.0
+                    + agg_cache_creation as f64 * 3.75
+                    + agg_cache_read as f64 * 0.30)
+                    / 1_000_000.0;
+
                 (
                     parsed.model.clone(),
                     analytics.error_count as i64,
@@ -255,6 +533,11 @@ impl SessionIndex {
                     Some(tool_counts),
                     Some(file_counts),
                     created_at,
+                    agg_input,
+                    agg_output,
+                    agg_cache_read,
+                    agg_cache_creation,
+                    cost,
                 )
             } else {
                 (
@@ -264,6 +547,11 @@ impl SessionIndex {
                     None,
                     None,
                     session.modified_at,
+                    0i64,
+                    0i64,
+                    0i64,
+                    0i64,
+                    0.0f64,
                 )
             };
 
@@ -301,8 +589,9 @@ impl SessionIndex {
             r#"
             INSERT OR REPLACE INTO sessions
             (session_id, project_name, file_path, file_size, created_at, modified_at, has_subagents, indexed_at,
-             model, error_count, first_message, source_dir, subagent_models)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+             model, error_count, first_message, source_dir, subagent_models,
+             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
             "#,
             params![
                 session.session_id,
@@ -318,6 +607,11 @@ impl SessionIndex {
                 first_message,
                 session.source_dir,
                 subagent_models_str,
+                input_tokens,
+                output_tokens,
+                cache_read_tokens,
+                cache_creation_tokens,
+                cost_usd,
             ],
         )?;
 
@@ -896,6 +1190,398 @@ impl SessionIndex {
         }
     }
 
+    /// Sync only new sessions (not already in the DB) — fast startup auto-index.
+    ///
+    /// Discovers all sessions on disk, compares against indexed session IDs, and
+    /// indexes only the ones not already present. Does NOT re-parse existing sessions.
+    /// Returns the number of newly indexed sessions.
+    pub fn sync_new_only(&mut self) -> Result<usize> {
+        // Collect known IDs into an owned set so we don't hold a borrow on self.conn
+        let known_ids: std::collections::HashSet<String> = {
+            let mut stmt = self.conn.prepare("SELECT session_id FROM sessions")?;
+            let ids: std::result::Result<Vec<String>, _> =
+                stmt.query_map([], |row| row.get(0))?.collect();
+            ids?.into_iter().collect()
+        };
+
+        // Discover sessions on disk; tolerate "none found" gracefully
+        let all_sessions = match crate::storage::discover_sessions() {
+            Ok(sessions) => sessions,
+            Err(crate::error::HindsightError::NoSessionsFound) => return Ok(0),
+            Err(e) => return Err(e),
+        };
+
+        let new_sessions: Vec<_> = all_sessions
+            .into_iter()
+            .filter(|s| !known_ids.contains(&s.session_id))
+            .collect();
+
+        let count = new_sessions.len();
+        for session in &new_sessions {
+            // Swallow per-session errors; a bad file shouldn't block the command.
+            let _ = self.index_session(session);
+        }
+
+        Ok(count)
+    }
+
+    /// Insert a raw OTLP event payload into the `otel_events` table.
+    pub fn insert_otel_event(&mut self, event_name: &str, payload: &serde_json::Value) -> Result<()> {
+        let received_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .unwrap_or(0);
+
+        let attributes = serde_json::to_string(payload).unwrap_or_default();
+        self.conn.execute(
+            "INSERT INTO otel_events (received_at, event_name, attributes) VALUES (?1, ?2, ?3)",
+            params![received_at, event_name, attributes],
+        )?;
+        Ok(())
+    }
+
+    // ── OTLP insert methods ───────────────────────────────────────────────────
+
+    /// Insert a batch of parsed metric data points into `otel_metrics`.
+    pub fn insert_otel_metrics(&self, records: &[crate::otel::OtelMetricRecord]) -> Result<()> {
+        let mut stmt = self.conn.prepare(
+            "INSERT INTO otel_metrics \
+             (received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+              time_unix_nano,service_name,service_version) \
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+        )?;
+        for r in records {
+            stmt.execute(params![
+                r.received_at,
+                r.session_id,
+                r.metric_name,
+                r.token_type,
+                r.model,
+                r.value_int,
+                r.value_double,
+                r.time_unix_nano,
+                r.service_name,
+                r.service_version,
+            ])?;
+        }
+        Ok(())
+    }
+
+    /// Insert a batch of parsed log records into `otel_logs`.
+    pub fn insert_otel_logs(&self, records: &[crate::otel::OtelLogRecord]) -> Result<()> {
+        let mut stmt = self.conn.prepare(
+            "INSERT INTO otel_logs \
+             (received_at,session_id,event_name,model,cost_usd,input_tokens,output_tokens,\
+              cache_read_tokens,cache_creation_tokens,duration_ms,tool_name,success,\
+              error_message,status_code,severity,body,attributes,time_unix_nano) \
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18)",
+        )?;
+        for r in records {
+            stmt.execute(params![
+                r.received_at,
+                r.session_id,
+                r.event_name,
+                r.model,
+                r.cost_usd,
+                r.input_tokens,
+                r.output_tokens,
+                r.cache_read_tokens,
+                r.cache_creation_tokens,
+                r.duration_ms,
+                r.tool_name,
+                r.success.map(|b| if b { 1i64 } else { 0i64 }),
+                r.error_message,
+                r.status_code,
+                r.severity,
+                r.body,
+                r.attributes,
+                r.time_unix_nano,
+            ])?;
+        }
+        Ok(())
+    }
+
+    // ── OTLP query methods ────────────────────────────────────────────────────
+
+    pub fn get_otel_metrics(
+        &self,
+        session_id: &str,
+        metric: Option<&str>,
+    ) -> Result<Vec<crate::otel::OtelMetricRecord>> {
+        let sql = if metric.is_some() {
+            "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+             time_unix_nano,service_name,service_version \
+             FROM otel_metrics WHERE session_id=?1 AND metric_name=?2 ORDER BY received_at"
+                .to_string()
+        } else {
+            "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+             time_unix_nano,service_name,service_version \
+             FROM otel_metrics WHERE session_id=?1 ORDER BY received_at"
+                .to_string()
+        };
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let mapper = |row: &rusqlite::Row| {
+            Ok(crate::otel::OtelMetricRecord {
+                received_at: row.get(0)?,
+                session_id: row.get(1)?,
+                metric_name: row.get(2)?,
+                token_type: row.get(3)?,
+                model: row.get(4)?,
+                value_int: row.get(5)?,
+                value_double: row.get(6)?,
+                time_unix_nano: row.get(7)?,
+                service_name: row.get(8)?,
+                service_version: row.get(9)?,
+            })
+        };
+
+        let rows = if let Some(m) = metric {
+            stmt.query_map(params![session_id, m], mapper)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            stmt.query_map(params![session_id], mapper)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        Ok(rows)
+    }
+
+    pub fn get_otel_logs(
+        &self,
+        session_id: &str,
+        event: Option<&str>,
+    ) -> Result<Vec<crate::otel::OtelLogRecord>> {
+        let sql = if event.is_some() {
+            "SELECT received_at,session_id,event_name,model,cost_usd,input_tokens,output_tokens,\
+             cache_read_tokens,cache_creation_tokens,duration_ms,tool_name,success,\
+             error_message,status_code,severity,body,attributes,time_unix_nano \
+             FROM otel_logs WHERE session_id=?1 AND event_name=?2 ORDER BY received_at"
+                .to_string()
+        } else {
+            "SELECT received_at,session_id,event_name,model,cost_usd,input_tokens,output_tokens,\
+             cache_read_tokens,cache_creation_tokens,duration_ms,tool_name,success,\
+             error_message,status_code,severity,body,attributes,time_unix_nano \
+             FROM otel_logs WHERE session_id=?1 ORDER BY received_at"
+                .to_string()
+        };
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let mapper = |row: &rusqlite::Row| {
+            Ok(crate::otel::OtelLogRecord {
+                received_at: row.get(0)?,
+                session_id: row.get(1)?,
+                event_name: row.get(2)?,
+                model: row.get(3)?,
+                cost_usd: row.get(4)?,
+                input_tokens: row.get(5)?,
+                output_tokens: row.get(6)?,
+                cache_read_tokens: row.get(7)?,
+                cache_creation_tokens: row.get(8)?,
+                duration_ms: row.get(9)?,
+                tool_name: row.get(10)?,
+                success: row.get::<_, Option<i64>>(11)?.map(|v| v != 0),
+                error_message: row.get(12)?,
+                status_code: row.get(13)?,
+                severity: row.get(14)?,
+                body: row.get(15)?,
+                attributes: row.get(16)?,
+                time_unix_nano: row.get(17)?,
+            })
+        };
+
+        let rows = if let Some(e) = event {
+            stmt.query_map(params![session_id, e], mapper)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            stmt.query_map(params![session_id], mapper)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        Ok(rows)
+    }
+
+    /// Aggregated tokens + cost from `otel_logs` for a single session.
+    pub fn get_otel_session_summary(&self, session_id: &str) -> Result<OtelSessionSummary> {
+        let row = self.conn.query_row(
+            "SELECT \
+                COALESCE(SUM(input_tokens),0), \
+                COALESCE(SUM(output_tokens),0), \
+                COALESCE(SUM(cache_read_tokens),0), \
+                COALESCE(SUM(cache_creation_tokens),0), \
+                COALESCE(SUM(cost_usd),0.0), \
+                COUNT(*) \
+             FROM otel_logs \
+             WHERE session_id=?1 AND event_name='claude_code.api_request'",
+            params![session_id],
+            |row| {
+                Ok(OtelSessionSummary {
+                    session_id: session_id.to_owned(),
+                    input_tokens: row.get(0)?,
+                    output_tokens: row.get(1)?,
+                    cache_read_tokens: row.get(2)?,
+                    cache_creation_tokens: row.get(3)?,
+                    cost_usd: row.get(4)?,
+                    api_requests: row.get::<_, i64>(5)? as usize,
+                })
+            },
+        )?;
+        Ok(row)
+    }
+
+    /// Aggregate across all sessions from `otel_logs`.
+    pub fn get_otel_global_summary(&self) -> Result<OtelGlobalSummary> {
+        let row = self.conn.query_row(
+            "SELECT \
+                COUNT(DISTINCT session_id), \
+                COALESCE(SUM(input_tokens),0), \
+                COALESCE(SUM(output_tokens),0), \
+                COALESCE(SUM(cache_read_tokens),0), \
+                COALESCE(SUM(cache_creation_tokens),0), \
+                COALESCE(SUM(cost_usd),0.0), \
+                COUNT(*) \
+             FROM otel_logs \
+             WHERE event_name='claude_code.api_request'",
+            [],
+            |row| {
+                Ok(OtelGlobalSummary {
+                    total_sessions: row.get::<_, i64>(0)? as usize,
+                    input_tokens: row.get(1)?,
+                    output_tokens: row.get(2)?,
+                    cache_read_tokens: row.get(3)?,
+                    cache_creation_tokens: row.get(4)?,
+                    cost_usd: row.get(5)?,
+                    api_requests: row.get::<_, i64>(6)? as usize,
+                })
+            },
+        )?;
+        Ok(row)
+    }
+
+    /// Get aggregated telemetry summary — prefers OTLP data, falls back to JSONL.
+    pub fn get_telemetry_summary(&self) -> Result<crate::server::routes::telemetry::TelemetrySummary> {
+        // Check if we have any OTLP log data for api_request events.
+        let otel_count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM otel_logs WHERE event_name='claude_code.api_request'",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        if otel_count > 0 {
+            // Use OTLP data (more accurate — real-time from Claude Code telemetry).
+            let row = self.conn.query_row(
+                "SELECT \
+                    (SELECT COUNT(*) FROM sessions), \
+                    COALESCE(SUM(input_tokens),0), \
+                    COALESCE(SUM(output_tokens),0), \
+                    COALESCE(SUM(cache_read_tokens),0), \
+                    COALESCE(SUM(cache_creation_tokens),0), \
+                    COALESCE(SUM(cost_usd),0.0) \
+                 FROM otel_logs \
+                 WHERE event_name='claude_code.api_request'",
+                [],
+                |row| {
+                    Ok(crate::server::routes::telemetry::TelemetrySummary {
+                        total_sessions: row.get::<_, i64>(0)? as usize,
+                        input_tokens: row.get(1)?,
+                        output_tokens: row.get(2)?,
+                        cache_read_tokens: row.get(3)?,
+                        cache_creation_tokens: row.get(4)?,
+                        cost_usd: row.get(5)?,
+                    })
+                },
+            )?;
+            return Ok(row);
+        }
+
+        // Fall back to JSONL-derived columns in the sessions table.
+        let row = self.conn.query_row(
+            "SELECT COUNT(*), \
+                    COALESCE(SUM(input_tokens),0), \
+                    COALESCE(SUM(output_tokens),0), \
+                    COALESCE(SUM(cache_read_tokens),0), \
+                    COALESCE(SUM(cache_creation_tokens),0), \
+                    COALESCE(SUM(cost_usd),0.0) \
+             FROM sessions",
+            [],
+            |row| {
+                Ok(crate::server::routes::telemetry::TelemetrySummary {
+                    total_sessions: row.get::<_, i64>(0)? as usize,
+                    input_tokens: row.get(1)?,
+                    output_tokens: row.get(2)?,
+                    cache_read_tokens: row.get(3)?,
+                    cache_creation_tokens: row.get(4)?,
+                    cost_usd: row.get(5)?,
+                })
+            },
+        )?;
+        Ok(row)
+    }
+
+    /// Get per-session telemetry — prefers OTLP data, falls back to JSONL.
+    pub fn get_telemetry_per_session(&self) -> Result<Vec<crate::server::routes::telemetry::SessionTelemetry>> {
+        // Check if we have any OTLP log data.
+        let otel_count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM otel_logs WHERE event_name='claude_code.api_request'",
+            [],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        if otel_count > 0 {
+            // Use OTLP data grouped by session; join sessions for project_name.
+            let mut stmt = self.conn.prepare(
+                "SELECT l.session_id, \
+                        COALESCE(s.project_name, l.session_id), \
+                        COALESCE(SUM(l.input_tokens),0), \
+                        COALESCE(SUM(l.output_tokens),0), \
+                        COALESCE(SUM(l.cache_read_tokens),0), \
+                        COALESCE(SUM(l.cache_creation_tokens),0), \
+                        COALESCE(SUM(l.cost_usd),0.0) \
+                 FROM otel_logs l \
+                 LEFT JOIN sessions s ON l.session_id = s.session_id \
+                 WHERE l.event_name='claude_code.api_request' \
+                 GROUP BY l.session_id \
+                 ORDER BY SUM(l.cost_usd) DESC",
+            )?;
+            let rows = stmt
+                .query_map([], |row| {
+                    Ok(crate::server::routes::telemetry::SessionTelemetry {
+                        session_id: row.get(0)?,
+                        project_name: row.get(1)?,
+                        input_tokens: row.get(2)?,
+                        output_tokens: row.get(3)?,
+                        cache_read_tokens: row.get(4)?,
+                        cache_creation_tokens: row.get(5)?,
+                        cost_usd: row.get(6)?,
+                    })
+                })?
+                .collect::<std::result::Result<Vec<_>, _>>()?;
+            return Ok(rows);
+        }
+
+        // Fall back to JSONL-derived sessions table.
+        let mut stmt = self.conn.prepare(
+            "SELECT session_id, project_name, \
+                    COALESCE(input_tokens,0), COALESCE(output_tokens,0), \
+                    COALESCE(cache_read_tokens,0), COALESCE(cache_creation_tokens,0), \
+                    COALESCE(cost_usd,0.0) \
+             FROM sessions \
+             ORDER BY cost_usd DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(crate::server::routes::telemetry::SessionTelemetry {
+                    session_id: row.get(0)?,
+                    project_name: row.get(1)?,
+                    input_tokens: row.get(2)?,
+                    output_tokens: row.get(3)?,
+                    cache_read_tokens: row.get(4)?,
+                    cache_creation_tokens: row.get(5)?,
+                    cost_usd: row.get(6)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
     fn search_sessions_impl(
         &self,
         text: &str,
@@ -955,6 +1641,261 @@ impl SessionIndex {
         Ok(sessions)
     }
 
+    // ── Hook event insert methods ─────────────────────────────────────────────
+
+    pub fn insert_hook_tool_event(
+        &self,
+        session_id: &str,
+        hook_event: &str,
+        tool_name: Option<&str>,
+        tool_input: Option<&str>,
+        tool_result: Option<&str>,
+        error_message: Option<&str>,
+        is_interrupt: Option<bool>,
+        tool_use_id: Option<&str>,
+        cwd: Option<&str>,
+    ) -> Result<()> {
+        let now = now_secs();
+        self.conn.execute(
+            "INSERT INTO hook_tool_events \
+             (session_id, occurred_at, hook_event, tool_name, tool_input, tool_result, \
+              error_message, is_interrupt, tool_use_id, cwd) \
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+            params![
+                session_id,
+                now,
+                hook_event,
+                tool_name,
+                tool_input,
+                tool_result,
+                error_message,
+                is_interrupt.map(|b| if b { 1i64 } else { 0i64 }),
+                tool_use_id,
+                cwd,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn insert_hook_subagent_event(
+        &self,
+        session_id: &str,
+        hook_event: &str,
+        agent_type: Option<&str>,
+        agent_name: Option<&str>,
+        cwd: Option<&str>,
+    ) -> Result<()> {
+        let now = now_secs();
+        self.conn.execute(
+            "INSERT INTO hook_subagent_events \
+             (session_id, occurred_at, hook_event, agent_type, agent_name, cwd) \
+             VALUES (?1,?2,?3,?4,?5,?6)",
+            params![session_id, now, hook_event, agent_type, agent_name, cwd],
+        )?;
+        Ok(())
+    }
+
+    pub fn insert_hook_compaction_event(
+        &self,
+        session_id: &str,
+        compaction_trigger: Option<&str>,
+    ) -> Result<()> {
+        let now = now_secs();
+        self.conn.execute(
+            "INSERT INTO hook_compaction_events (session_id, occurred_at, compaction_trigger) \
+             VALUES (?1,?2,?3)",
+            params![session_id, now, compaction_trigger],
+        )?;
+        Ok(())
+    }
+
+    pub fn insert_hook_permission_event(
+        &self,
+        session_id: &str,
+        tool_name: Option<&str>,
+        tool_input: Option<&str>,
+        cwd: Option<&str>,
+    ) -> Result<()> {
+        let now = now_secs();
+        self.conn.execute(
+            "INSERT INTO hook_permission_events \
+             (session_id, occurred_at, tool_name, tool_input, cwd) VALUES (?1,?2,?3,?4,?5)",
+            params![session_id, now, tool_name, tool_input, cwd],
+        )?;
+        Ok(())
+    }
+
+    pub fn insert_hook_lifecycle_event(
+        &self,
+        session_id: &str,
+        event_name: &str,
+        attributes: Option<&str>,
+    ) -> Result<()> {
+        let now = now_secs();
+        self.conn.execute(
+            "INSERT INTO hook_lifecycle_events (session_id, occurred_at, event_name, attributes) \
+             VALUES (?1,?2,?3,?4)",
+            params![session_id, now, event_name, attributes],
+        )?;
+        Ok(())
+    }
+
+    // ── Hook event query methods ──────────────────────────────────────────────
+
+    pub fn get_tool_events(
+        &self,
+        session_id: &str,
+        event_filter: Option<&str>,
+    ) -> Result<Vec<HookToolEvent>> {
+        let (sql, p2) = if let Some(ev) = event_filter {
+            (
+                "SELECT id,session_id,occurred_at,hook_event,tool_name,tool_input,tool_result,\
+                 error_message,is_interrupt,tool_use_id,cwd \
+                 FROM hook_tool_events WHERE session_id=?1 AND hook_event=?2 ORDER BY occurred_at"
+                    .to_string(),
+                Some(ev.to_string()),
+            )
+        } else {
+            (
+                "SELECT id,session_id,occurred_at,hook_event,tool_name,tool_input,tool_result,\
+                 error_message,is_interrupt,tool_use_id,cwd \
+                 FROM hook_tool_events WHERE session_id=?1 ORDER BY occurred_at"
+                    .to_string(),
+                None,
+            )
+        };
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = if let Some(ref ev) = p2 {
+            stmt.query_map(params![session_id, ev], hook_tool_event_from_row)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            stmt.query_map(params![session_id], hook_tool_event_from_row)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        Ok(rows)
+    }
+
+    pub fn get_tool_failures(&self, session_id: &str) -> Result<Vec<HookToolEvent>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id,session_id,occurred_at,hook_event,tool_name,tool_input,tool_result,\
+             error_message,is_interrupt,tool_use_id,cwd \
+             FROM hook_tool_events WHERE session_id=?1 AND hook_event='PostToolUseFailure' \
+             ORDER BY occurred_at",
+        )?;
+        let rows = stmt
+            .query_map(params![session_id], hook_tool_event_from_row)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_subagent_events(&self, session_id: &str) -> Result<Vec<HookSubagentEvent>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id,session_id,occurred_at,hook_event,agent_type,agent_name,cwd \
+             FROM hook_subagent_events WHERE session_id=?1 ORDER BY occurred_at",
+        )?;
+        let rows = stmt
+            .query_map(params![session_id], |row| {
+                Ok(HookSubagentEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    hook_event: row.get(3)?,
+                    agent_type: row.get(4)?,
+                    agent_name: row.get(5)?,
+                    cwd: row.get(6)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_compaction_events(&self, session_id: &str) -> Result<Vec<HookCompactionEvent>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id,session_id,occurred_at,compaction_trigger \
+             FROM hook_compaction_events WHERE session_id=?1 ORDER BY occurred_at",
+        )?;
+        let rows = stmt
+            .query_map(params![session_id], |row| {
+                Ok(HookCompactionEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    compaction_trigger: row.get(3)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_permission_events(&self, session_id: &str) -> Result<Vec<HookPermissionEvent>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id,session_id,occurred_at,tool_name,tool_input,cwd \
+             FROM hook_permission_events WHERE session_id=?1 ORDER BY occurred_at",
+        )?;
+        let rows = stmt
+            .query_map(params![session_id], |row| {
+                Ok(HookPermissionEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    tool_name: row.get(3)?,
+                    tool_input: row.get(4)?,
+                    cwd: row.get(5)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_lifecycle_events(
+        &self,
+        session_id: &str,
+        event_filter: Option<&str>,
+    ) -> Result<Vec<HookLifecycleEvent>> {
+        let (sql, p2) = if let Some(ev) = event_filter {
+            (
+                "SELECT id,session_id,occurred_at,event_name,attributes \
+                 FROM hook_lifecycle_events WHERE session_id=?1 AND event_name=?2 \
+                 ORDER BY occurred_at"
+                    .to_string(),
+                Some(ev.to_string()),
+            )
+        } else {
+            (
+                "SELECT id,session_id,occurred_at,event_name,attributes \
+                 FROM hook_lifecycle_events WHERE session_id=?1 ORDER BY occurred_at"
+                    .to_string(),
+                None,
+            )
+        };
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = if let Some(ref ev) = p2 {
+            stmt.query_map(params![session_id, ev], |row| {
+                Ok(HookLifecycleEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    event_name: row.get(3)?,
+                    attributes: row.get(4)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            stmt.query_map(params![session_id], |row| {
+                Ok(HookLifecycleEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    event_name: row.get(3)?,
+                    attributes: row.get(4)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        Ok(rows)
+    }
 }
 
 /// Standard column list for all session SELECT queries.
@@ -1035,6 +1976,111 @@ pub struct ProjectAnalytics {
     pub top_tools: Vec<(String, usize)>,
     pub last_activity: Option<i64>,
     pub total_errors: usize,
+}
+
+fn now_secs() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Aggregated OTLP token/cost summary for a single session.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OtelSessionSummary {
+    pub session_id: String,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub cache_creation_tokens: i64,
+    pub cost_usd: f64,
+    pub api_requests: usize,
+}
+
+/// Aggregated OTLP token/cost summary across all sessions.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OtelGlobalSummary {
+    pub total_sessions: usize,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub cache_read_tokens: i64,
+    pub cache_creation_tokens: i64,
+    pub cost_usd: f64,
+    pub api_requests: usize,
+}
+
+fn hook_tool_event_from_row(row: &rusqlite::Row) -> rusqlite::Result<HookToolEvent> {
+    Ok(HookToolEvent {
+        id: row.get(0)?,
+        session_id: row.get(1)?,
+        occurred_at: row.get(2)?,
+        hook_event: row.get(3)?,
+        tool_name: row.get(4)?,
+        tool_input: row.get(5)?,
+        tool_result: row.get(6)?,
+        error_message: row.get(7)?,
+        is_interrupt: row.get::<_, Option<i64>>(8)?.map(|v| v != 0),
+        tool_use_id: row.get(9)?,
+        cwd: row.get(10)?,
+    })
+}
+
+/// Hook tool event record (PreToolUse, PostToolUse, PostToolUseFailure)
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct HookToolEvent {
+    pub id: i64,
+    pub session_id: String,
+    pub occurred_at: i64,
+    pub hook_event: String,
+    pub tool_name: Option<String>,
+    pub tool_input: Option<String>,
+    pub tool_result: Option<String>,
+    pub error_message: Option<String>,
+    pub is_interrupt: Option<bool>,
+    pub tool_use_id: Option<String>,
+    pub cwd: Option<String>,
+}
+
+/// Hook subagent event record (SubagentStart, SubagentStop)
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct HookSubagentEvent {
+    pub id: i64,
+    pub session_id: String,
+    pub occurred_at: i64,
+    pub hook_event: String,
+    pub agent_type: Option<String>,
+    pub agent_name: Option<String>,
+    pub cwd: Option<String>,
+}
+
+/// Hook compaction event record (PreCompact)
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct HookCompactionEvent {
+    pub id: i64,
+    pub session_id: String,
+    pub occurred_at: i64,
+    pub compaction_trigger: Option<String>,
+}
+
+/// Hook permission event record (PermissionRequest)
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct HookPermissionEvent {
+    pub id: i64,
+    pub session_id: String,
+    pub occurred_at: i64,
+    pub tool_name: Option<String>,
+    pub tool_input: Option<String>,
+    pub cwd: Option<String>,
+}
+
+/// Hook lifecycle event record (TaskCompleted, WorktreeCreate, WorktreeRemove, ConfigChange)
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct HookLifecycleEvent {
+    pub id: i64,
+    pub session_id: String,
+    pub occurred_at: i64,
+    pub event_name: String,
+    pub attributes: Option<String>,
 }
 
 #[cfg(test)]

@@ -29,6 +29,35 @@ pub struct Config {
     /// Path settings
     #[serde(default)]
     pub paths: PathsConfig,
+
+    /// Telemetry settings
+    #[serde(default)]
+    pub telemetry: TelemetryConfig,
+}
+
+/// Telemetry configuration (OTLP receiver)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TelemetryConfig {
+    /// Whether OTLP telemetry collection is enabled
+    #[serde(default)]
+    pub otel_enabled: bool,
+
+    /// Port for the OTLP daemon listener (default: 7228)
+    #[serde(default = "default_otel_port")]
+    pub otel_port: u16,
+}
+
+fn default_otel_port() -> u16 {
+    7228
+}
+
+impl Default for TelemetryConfig {
+    fn default() -> Self {
+        TelemetryConfig {
+            otel_enabled: false,
+            otel_port: default_otel_port(),
+        }
+    }
 }
 
 /// A single configured Claude session directory with optional display name.

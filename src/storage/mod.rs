@@ -6,7 +6,11 @@ pub mod discovery;
 pub mod index;
 
 pub use discovery::{discover_sessions, SessionFile};
-pub use index::{GlobalAnalytics, ProjectAnalytics, ProjectStats, SessionIndex};
+pub use index::{
+    GlobalAnalytics, HookCompactionEvent, HookLifecycleEvent, HookPermissionEvent,
+    HookSubagentEvent, HookToolEvent, OtelGlobalSummary, OtelSessionSummary, ProjectAnalytics,
+    ProjectStats, SessionIndex,
+};
 
 use crate::error::Result;
 

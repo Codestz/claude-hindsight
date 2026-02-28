@@ -11,6 +11,7 @@ mod api;
 mod commands;
 mod config;
 mod error;
+mod otel;
 mod parser;
 mod search;
 mod server;
@@ -137,7 +138,85 @@ enum Commands {
         /// Open browser after starting
         #[arg(long)]
         open: bool,
+
+        /// Port for the embedded OTLP receiver (0 = disable)
+        #[arg(long, default_value = "7228")]
+        otel_port: u16,
     },
+
+    /// Reset Hindsight state (delete database or entire config directory)
+    Clean {
+        /// Delete only the sessions database (default)
+        #[arg(long)]
+        db: bool,
+
+        /// Delete the entire Hindsight config directory (DB + config + all files)
+        #[arg(long)]
+        all: bool,
+
+        /// Skip confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
+    },
+
+    /// Install Claude Code lifecycle hooks for automatic session indexing
+    Integrate {
+        /// Remove Hindsight hooks (leave other hooks intact)
+        #[arg(long)]
+        remove: bool,
+
+        /// Show which settings files have Hindsight hooks installed
+        #[arg(long)]
+        status: bool,
+
+        /// Install in all configured settings files without prompting
+        #[arg(long)]
+        all: bool,
+
+        /// Remove and reinstall hooks even if already present (picks up new hooks)
+        #[arg(long)]
+        force: bool,
+
+        /// Also write OTLP telemetry env vars into settings.json (skips if already set)
+        #[arg(long)]
+        otel: bool,
+    },
+
+    /// Start the OTLP telemetry daemon (background listener on port 7228)
+    Daemon {
+        /// Port to listen on
+        #[arg(short, long, default_value = "7228")]
+        port: u16,
+    },
+
+    /// (Internal) Index a session from a Claude Code hook payload on stdin
+    #[command(hide = true)]
+    HookIndex,
+
+    /// (Internal) Claude Code lifecycle hook dispatcher
+    #[command(hide = true)]
+    Hook {
+        #[command(subcommand)]
+        event: HookCommand,
+    },
+}
+
+#[derive(Subcommand)]
+enum HookCommand {
+    SessionStart,
+    Stop,
+    SessionEnd,
+    PreToolUse,
+    PostToolUse,
+    PostToolUseFailure,
+    SubagentStart,
+    SubagentStop,
+    PreCompact,
+    PermissionRequest,
+    TaskCompleted,
+    WorktreeCreate,
+    WorktreeRemove,
+    ConfigChange,
 }
 
 #[derive(Subcommand)]
@@ -207,6 +286,29 @@ fn run() -> Result<()> {
         }
     };
 
+    // Auto-index new sessions silently before any command (except those that
+    // manage indexing themselves, or the hidden hook-index command).
+    let skip_auto_index = matches!(
+        command,
+        Commands::Init { .. }
+            | Commands::Reindex { .. }
+            | Commands::HookIndex
+            | Commands::Hook { .. }
+            | Commands::Clean { .. }
+            | Commands::Daemon { .. }
+    );
+
+    if !skip_auto_index {
+        if let Ok(mut index) = storage::SessionIndex::new() {
+            match index.sync_new_only() {
+                Ok(n) if n > 0 => {
+                    eprintln!("  {} new session(s) indexed.", n);
+                }
+                _ => {}
+            }
+        }
+    }
+
     match command {
         Commands::Init { enable_otel } => {
             commands::init::run(enable_otel)?;
@@ -257,9 +359,37 @@ fn run() -> Result<()> {
         Commands::Reindex { verbose } => {
             commands::reindex::run(verbose)?;
         }
-        Commands::Serve { port, open } => {
-            commands::serve::run(port, open)?;
+        Commands::Serve { port, open, otel_port } => {
+            commands::serve::run(port, open, otel_port)?;
         }
+        Commands::Clean { db, all, yes } => {
+            commands::clean::run(db, all, yes)?;
+        }
+        Commands::Integrate { remove, status, all, force, otel } => {
+            commands::integrate::run(remove, status, all, force, otel)?;
+        }
+        Commands::Daemon { port } => {
+            commands::daemon::run(port)?;
+        }
+        Commands::HookIndex => {
+            commands::hook_index::run()?;
+        }
+        Commands::Hook { event } => match event {
+            HookCommand::SessionStart => commands::hook::run_session_start()?,
+            HookCommand::Stop => commands::hook::run_stop()?,
+            HookCommand::SessionEnd => commands::hook::run_session_end()?,
+            HookCommand::PreToolUse => commands::hook::run_pre_tool_use()?,
+            HookCommand::PostToolUse => commands::hook::run_post_tool_use()?,
+            HookCommand::PostToolUseFailure => commands::hook::run_post_tool_use_failure()?,
+            HookCommand::SubagentStart => commands::hook::run_subagent_start()?,
+            HookCommand::SubagentStop => commands::hook::run_subagent_stop()?,
+            HookCommand::PreCompact => commands::hook::run_pre_compact()?,
+            HookCommand::PermissionRequest => commands::hook::run_permission_request()?,
+            HookCommand::TaskCompleted => commands::hook::run_task_completed()?,
+            HookCommand::WorktreeCreate => commands::hook::run_worktree_create()?,
+            HookCommand::WorktreeRemove => commands::hook::run_worktree_remove()?,
+            HookCommand::ConfigChange => commands::hook::run_config_change()?,
+        },
     }
 
     Ok(())

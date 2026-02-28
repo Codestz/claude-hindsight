@@ -1,8 +1,8 @@
-//! `hindsight serve` — start the web dashboard server
+//! `hindsight serve` — start the web dashboard server (+ optional embedded OTLP listener)
 
 use crate::error::Result;
 
-pub fn run(port: u16, open: bool) -> Result<()> {
+pub fn run(port: u16, open: bool, otel_port: u16) -> Result<()> {
     let addr: std::net::SocketAddr =
         format!("0.0.0.0:{port}")
             .parse()
@@ -28,7 +28,7 @@ pub fn run(port: u16, open: bool) -> Result<()> {
         .enable_all()
         .build()
         .map_err(|e| crate::error::HindsightError::Config(e.to_string()))?
-        .block_on(async { crate::server::serve(addr).await })
+        .block_on(async { crate::server::serve(addr, otel_port).await })
         .map_err(|e| crate::error::HindsightError::Config(e.to_string()))?;
 
     Ok(())

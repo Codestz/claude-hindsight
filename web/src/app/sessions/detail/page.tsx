@@ -64,6 +64,27 @@ function SessionDetail({ id }: { id: string }) {
       .finally(() => setLoading(false));
   }, [id]);
 
+  // Live SSE subscription — appends new nodes as they arrive from the server.
+  // Each session tab connects to its own stream so multiple concurrent sessions work.
+  useEffect(() => {
+    const seenUuids = new Set<string>();
+    const es = new EventSource(api.eventsUrl(id));
+
+    es.onmessage = (evt) => {
+      try {
+        const node: NodeResponse = JSON.parse(evt.data);
+        const uid = node.uuid ?? node.node_type + Math.random();
+        if (seenUuids.has(uid)) return;
+        seenUuids.add(uid);
+        setRoots((prev) => [...prev, node]);
+      } catch {
+        // ignore parse errors / heartbeats
+      }
+    };
+
+    return () => es.close();
+  }, [id]);
+
   if (loading) return <FullPageMessage>Loading…</FullPageMessage>;
   if (error || !session)
     return <FullPageMessage error>{error ?? "Session not found"}</FullPageMessage>;

@@ -89,6 +89,20 @@ pub async fn live_events(
     Ok(response)
 }
 
+/// GET /api/sessions/:id/stream — SSE stream for a session (web dashboard live updates).
+///
+/// Identical to `live_events` but takes session ID from the URL path instead of a query param.
+pub async fn session_stream(
+    State(state): State<AppState>,
+    axum::extract::Path(session_id): axum::extract::Path<String>,
+) -> Result<Response, ApiError> {
+    live_events(
+        State(state),
+        Query(EventsQuery { session_id }),
+    )
+    .await
+}
+
 /// Read new JSONL lines starting at `offset` bytes.
 /// Must run inside spawn_blocking — uses Rc internally via TreeNode.
 fn tail_new_nodes(path: &std::path::Path, offset: u64) -> (Vec<NodeResponse>, u64) {
