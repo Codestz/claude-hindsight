@@ -43,8 +43,6 @@ fn store_metrics(payload: Value) -> crate::error::Result<()> {
 }
 
 fn store_logs(payload: Value) -> crate::error::Result<()> {
-    eprintln!("[otel] /v1/logs raw keys: {:?}", payload.as_object().map(|o| o.keys().collect::<Vec<_>>()));
-    eprintln!("[otel] /v1/logs payload (first 500): {}", serde_json::to_string(&payload).unwrap_or_default().chars().take(500).collect::<String>());
     let req: crate::otel::parser::ExportLogsRequest = match serde_json::from_value(payload) {
         Ok(r) => r,
         Err(e) => {
@@ -52,9 +50,7 @@ fn store_logs(payload: Value) -> crate::error::Result<()> {
             return Ok(());
         }
     };
-    eprintln!("[otel] /v1/logs received: {} resourceLogs, parsing...", req.resource_logs.len());
     let records = crate::otel::extract_log_records(&req);
-    eprintln!("[otel] extracted {} log records", records.len());
     if records.is_empty() {
         return Ok(());
     }
