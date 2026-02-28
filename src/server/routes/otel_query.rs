@@ -77,6 +77,7 @@ pub async fn get_metrics(
 ) -> Result<Json<Vec<OtelMetricDto>>, ApiError> {
     let session_id = q.session_id.unwrap_or_default();
     let metric = q.metric;
+    // Empty string signals "no filter" to the storage layer.
 
     let rows = tokio::task::spawn_blocking(move || -> crate::error::Result<Vec<OtelMetricDto>> {
         let index = SessionIndex::new()?;

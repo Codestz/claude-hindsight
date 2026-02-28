@@ -24,10 +24,52 @@ pub struct KeyValue {
 #[serde(default, rename_all = "camelCase")]
 pub struct AnyValue {
     pub string_value: Option<String>,
-    /// OTLP encodes 64-bit ints as strings to avoid JSON precision loss.
+    /// OTLP spec encodes 64-bit ints as strings, but some producers (e.g.
+    /// Claude Code) send them as native JSON integers. Accept both.
+    #[serde(deserialize_with = "deserialize_int_value", default)]
     pub int_value: Option<String>,
     pub double_value: Option<f64>,
     pub bool_value: Option<bool>,
+}
+
+/// Accept both `"61"` (string) and `61` (integer) for int_value fields.
+fn deserialize_int_value<'de, D>(deserializer: D) -> std::result::Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de;
+
+    struct IntOrString;
+
+    impl<'de> de::Visitor<'de> for IntOrString {
+        type Value = Option<String>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("an integer or a string")
+        }
+
+        fn visit_i64<E: de::Error>(self, v: i64) -> std::result::Result<Self::Value, E> {
+            Ok(Some(v.to_string()))
+        }
+
+        fn visit_u64<E: de::Error>(self, v: u64) -> std::result::Result<Self::Value, E> {
+            Ok(Some(v.to_string()))
+        }
+
+        fn visit_str<E: de::Error>(self, v: &str) -> std::result::Result<Self::Value, E> {
+            Ok(Some(v.to_owned()))
+        }
+
+        fn visit_none<E: de::Error>(self) -> std::result::Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E: de::Error>(self) -> std::result::Result<Self::Value, E> {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(IntOrString)
 }
 
 impl AnyValue {
@@ -90,12 +132,15 @@ pub struct Gauge {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct NumberDataPoint {
-    /// Token counts arrive as quoted 64-bit integers.
+    /// Token counts — accept both string and integer representations.
+    #[serde(deserialize_with = "deserialize_int_value", default)]
     pub as_int: Option<String>,
     /// Cost/rate values arrive as f64.
     pub as_double: Option<f64>,
     pub attributes: Vec<KeyValue>,
+    #[serde(deserialize_with = "deserialize_int_value", default)]
     pub start_time_unix_nano: Option<String>,
+    #[serde(deserialize_with = "deserialize_int_value", default)]
     pub time_unix_nano: Option<String>,
 }
 
@@ -123,6 +168,7 @@ pub struct ScopeLog {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct LogRecord {
+    #[serde(deserialize_with = "deserialize_int_value", default)]
     pub time_unix_nano: Option<String>,
     pub body: Option<AnyValue>,
     pub attributes: Vec<KeyValue>,

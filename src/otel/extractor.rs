@@ -92,10 +92,20 @@ pub fn extract_log_records(req: &ExportLogsRequest) -> Vec<OtelLogRecord> {
                 )
                 .ok();
 
+                // Claude Code puts the event name in body.stringValue;
+                // fall back to the event.name attribute for other producers.
+                let event_name = get_attr_string(attrs, "event.name").or_else(|| {
+                    record
+                        .body
+                        .as_ref()
+                        .and_then(AnyValue::as_str)
+                        .map(str::to_owned)
+                });
+
                 out.push(OtelLogRecord {
                     received_at: now,
                     session_id,
-                    event_name: get_attr_string(attrs, "event.name"),
+                    event_name,
                     model: get_attr_string(attrs, "model"),
                     cost_usd: get_attr_double(attrs, "cost_usd"),
                     input_tokens: get_attr_int(attrs, "input_tokens"),
@@ -134,6 +144,8 @@ fn get_attr_int(attrs: &[KeyValue], key: &str) -> Option<i64> {
         kv.value
             .as_i64()
             .or_else(|| kv.value.as_f64().map(|f| f as i64))
+            // Claude Code sends numeric values as stringValue
+            .or_else(|| kv.value.as_str().and_then(|s| s.parse::<i64>().ok()))
     })
 }
 
@@ -142,14 +154,18 @@ fn get_attr_double(attrs: &[KeyValue], key: &str) -> Option<f64> {
         kv.value
             .as_f64()
             .or_else(|| kv.value.as_i64().map(|i| i as f64))
+            // Claude Code sends numeric values as stringValue
+            .or_else(|| kv.value.as_str().and_then(|s| s.parse::<f64>().ok()))
     })
 }
 
 fn get_attr_bool(attrs: &[KeyValue], key: &str) -> Option<bool> {
-    attrs
-        .iter()
-        .find(|kv| kv.key == key)
-        .and_then(|kv| kv.value.bool_value)
+    attrs.iter().find(|kv| kv.key == key).and_then(|kv| {
+        kv.value
+            .bool_value
+            // Claude Code may send bools as stringValue
+            .or_else(|| kv.value.as_str().and_then(|s| s.parse::<bool>().ok()))
+    })
 }
 
 fn anyvalue_to_json(v: &super::parser::AnyValue) -> serde_json::Value {

@@ -200,7 +200,7 @@ const OTEL_ENV_VARS: &[(&str, &str)] = &[
     ("OTEL_METRICS_EXPORTER", "otlp"),
     ("OTEL_LOGS_EXPORTER", "otlp"),
     ("OTEL_EXPORTER_OTLP_PROTOCOL", "http/json"),
-    ("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:7228"),
+    ("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:7228"),
 ];
 
 /// Write OTLP env vars into a settings file.
