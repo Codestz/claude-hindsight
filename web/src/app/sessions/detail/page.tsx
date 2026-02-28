@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { ContentBlock, NodeResponse, SessionFile, TokenUsage } from "@/lib/types";
+import type { ContentBlock, NodeResponse, OtelSessionSummary, SessionFile, TokenUsage } from "@/lib/types";
 import { getNodeMeta, getThinkingText, getTokenUsage } from "@/lib/node-meta";
-import { formatBytes, shortId, shortModel, timeAgo } from "@/lib/utils";
+import { formatBytes, formatCost, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
 import { NodeTree, type NodeFilter } from "@/components/nodes/NodeTree";
 import { CodeRender } from "@/components/ui/CodeRender";
 
@@ -36,6 +36,7 @@ function SessionDetail({ id }: { id: string }) {
   const [session, setSession] = useState<SessionFile | null>(null);
   const [roots, setRoots] = useState<NodeResponse[]>([]);
   const [selected, setSelected] = useState<NodeResponse | null>(null);
+  const [otelSummary, setOtelSummary] = useState<OtelSessionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set());
@@ -53,10 +54,15 @@ function SessionDetail({ id }: { id: string }) {
   };
 
   useEffect(() => {
-    Promise.all([api.session(id), api.sessionNodes(id)])
-      .then(([s, tree]) => {
+    Promise.all([
+      api.session(id),
+      api.sessionNodes(id),
+      api.otelSessionSummary(id).catch(() => null),
+    ])
+      .then(([s, tree, otel]) => {
         setSession(s);
         setRoots(tree.roots);
+        setOtelSummary(otel);
         const firstUser = findFirst(tree.roots, (n) => n.node_type === "user");
         setSelected(firstUser ?? tree.roots[0] ?? null);
       })
@@ -130,7 +136,7 @@ function SessionDetail({ id }: { id: string }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: session.subagent_models?.length ? "repeat(5, 1fr)" : "repeat(4, 1fr)",
+          gridTemplateColumns: `repeat(${4 + (otelSummary?.cost_usd ? 1 : 0) + (otelSummary?.api_requests ? 1 : 0) + (session.subagent_models?.length ? 1 : 0)}, 1fr)`,
           background: "var(--bg-1)",
           border: "1px solid var(--border-1)",
           borderRadius: "var(--radius-lg)",
@@ -145,6 +151,14 @@ function SessionDetail({ id }: { id: string }) {
         </MetaCell>
         <MetaCell label="Size">{formatBytes(session.file_size)}</MetaCell>
         <MetaCell label="Created">{timeAgo(session.created_at)}</MetaCell>
+        {otelSummary && otelSummary.cost_usd > 0 && (
+          <MetaCell label="Cost" color="var(--amber)">{formatCost(otelSummary.cost_usd)}</MetaCell>
+        )}
+        {otelSummary && otelSummary.api_requests > 0 && (
+          <MetaCell label="Tokens" color="var(--cyan)">
+            {formatTokens(otelSummary.input_tokens + otelSummary.output_tokens + otelSummary.cache_read_tokens + otelSummary.cache_creation_tokens)}
+          </MetaCell>
+        )}
         {session.subagent_models?.length ? (
           <MetaCell label="Sub-agents" color="var(--purple)">
             <span style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>

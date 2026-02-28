@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { GlobalAnalytics, SessionFile } from "@/lib/types";
-import { formatBytes } from "@/lib/utils";
+import type { GlobalAnalytics, OtelLogDto, SessionFile, TelemetrySummary } from "@/lib/types";
+import { formatBytes, formatCost, formatTokens } from "@/lib/utils";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DayChart } from "@/components/charts/DayChart";
 import { BarChart } from "@/components/charts/BarChart";
+import { TokenBreakdownBar } from "@/components/charts/TokenBreakdownBar";
 import { SessionTable } from "@/components/sessions/SessionTable";
 
 // ── Layout constants ──────────────────────────────────────────
@@ -42,6 +43,8 @@ export default function DashboardPage() {
   const [sparkline, setSparkline] = useState<number[]>([]);
   const [recent, setRecent] = useState<SessionFile[]>([]);
   const [topFiles, setTopFiles] = useState<[string, number][]>([]);
+  const [telemetry, setTelemetry] = useState<TelemetrySummary | null>(null);
+  const [otelLogs, setOtelLogs] = useState<OtelLogDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,12 +54,16 @@ export default function DashboardPage() {
       api.globalSparkline(14),
       api.sessions({ limit: 10 }),
       api.globalTopFiles().catch(() => [] as [string, number][]),
+      api.telemetrySummary().catch(() => null),
+      api.otelLogs({ event: "api_request" }).catch(() => [] as OtelLogDto[]),
     ])
-      .then(([a, spark, sessions, files]) => {
+      .then(([a, spark, sessions, files, telem, logs]) => {
         setAnalytics(a);
         setSparkline(spark);
         setRecent(sessions);
         setTopFiles(files);
+        setTelemetry(telem);
+        setOtelLogs(logs);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -75,6 +82,24 @@ export default function DashboardPage() {
   const mcpServers = extractMcpServers(analytics.top_tools);
   const nativeTools = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
   const topFilesForChart = topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]);
+
+  // Compute model cost breakdown from OTEL logs
+  const hasTelemetry = telemetry && telemetry.cost_usd > 0;
+  const modelCosts: [string, number][] = [];
+  if (otelLogs.length > 0) {
+    const byCost: Record<string, number> = {};
+    for (const log of otelLogs) {
+      if (log.model && log.cost_usd) {
+        const short = log.model.replace(/^claude-/, "").replace(/-\d{8}$/, "");
+        byCost[short] = (byCost[short] ?? 0) + log.cost_usd;
+      }
+    }
+    modelCosts.push(
+      ...Object.entries(byCost)
+        .sort((a, b) => b[1] - a[1])
+        .map(([m, c]) => [m, Math.round(c * 100) / 100] as [string, number]),
+    );
+  }
 
   return (
     <PageShell>
@@ -104,6 +129,66 @@ export default function DashboardPage() {
           />
         </div>
       </Card>
+
+      {/* ── Cost/Token KPI row ─────────────────────────────── */}
+      {hasTelemetry && (
+        <Card>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)" }}>
+            <div style={{ borderRight: "1px solid var(--border-1)" }}>
+              <StatCard
+                label="Total Cost"
+                value={formatCost(telemetry.cost_usd)}
+                sub={`${telemetry.total_sessions} sessions with telemetry`}
+                valueColor="var(--amber)"
+              />
+            </div>
+            <div style={{ borderRight: "1px solid var(--border-1)" }}>
+              <StatCard
+                label="Input Tokens"
+                value={formatTokens(telemetry.input_tokens)}
+              />
+            </div>
+            <div style={{ borderRight: "1px solid var(--border-1)" }}>
+              <StatCard
+                label="Output Tokens"
+                value={formatTokens(telemetry.output_tokens)}
+              />
+            </div>
+            <StatCard
+              label="Cache Tokens"
+              value={formatTokens(telemetry.cache_read_tokens + telemetry.cache_creation_tokens)}
+              sub={`${formatTokens(telemetry.cache_read_tokens)} read · ${formatTokens(telemetry.cache_creation_tokens)} created`}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* ── Token Breakdown + Cost by Model ────────────────── */}
+      {hasTelemetry && (
+        <Card>
+          <div style={{ display: "grid", gridTemplateColumns: modelCosts.length > 0 ? "2fr 1fr" : "1fr" }}>
+            <div style={{ padding: "24px 28px", borderRight: modelCosts.length > 0 ? "1px solid var(--border-1)" : "none" }}>
+              <div style={{ marginBottom: "18px" }}>
+                <SectionHeader title="Token Breakdown" />
+              </div>
+              <TokenBreakdownBar
+                input={telemetry.input_tokens}
+                output={telemetry.output_tokens}
+                cacheRead={telemetry.cache_read_tokens}
+                cacheCreation={telemetry.cache_creation_tokens}
+              />
+            </div>
+            {modelCosts.length > 0 && (
+              <div style={{ padding: "24px 28px" }}>
+                <div style={{ marginBottom: "18px" }}>
+                  <SectionHeader title="Cost by Model" />
+                </div>
+                <BarChart data={modelCosts} limit={6} color="var(--amber)" countLabel="USD" />
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* ── Charts row 1: sparkline + top tools ──────────── */}
       <Card>

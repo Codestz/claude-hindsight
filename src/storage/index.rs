@@ -1308,16 +1308,21 @@ impl SessionIndex {
         session_id: &str,
         metric: Option<&str>,
     ) -> Result<Vec<crate::otel::OtelMetricRecord>> {
-        let sql = if metric.is_some() {
-            "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+        let has_session = !session_id.is_empty();
+
+        let sql = match (has_session, metric.is_some()) {
+            (true, true) => "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
              time_unix_nano,service_name,service_version \
-             FROM otel_metrics WHERE session_id=?1 AND metric_name=?2 ORDER BY received_at"
-                .to_string()
-        } else {
-            "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+             FROM otel_metrics WHERE session_id=?1 AND metric_name=?2 ORDER BY received_at".to_string(),
+            (true, false) => "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
              time_unix_nano,service_name,service_version \
-             FROM otel_metrics WHERE session_id=?1 ORDER BY received_at"
-                .to_string()
+             FROM otel_metrics WHERE session_id=?1 ORDER BY received_at".to_string(),
+            (false, true) => "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+             time_unix_nano,service_name,service_version \
+             FROM otel_metrics WHERE metric_name=?1 ORDER BY received_at".to_string(),
+            (false, false) => "SELECT received_at,session_id,metric_name,token_type,model,value_int,value_double,\
+             time_unix_nano,service_name,service_version \
+             FROM otel_metrics ORDER BY received_at".to_string(),
         };
 
         let mut stmt = self.conn.prepare(&sql)?;
@@ -1336,13 +1341,13 @@ impl SessionIndex {
             })
         };
 
-        let rows = if let Some(m) = metric {
-            stmt.query_map(params![session_id, m], mapper)?
-                .collect::<std::result::Result<Vec<_>, _>>()?
-        } else {
-            stmt.query_map(params![session_id], mapper)?
-                .collect::<std::result::Result<Vec<_>, _>>()?
-        };
+        let rows = match (has_session, metric) {
+            (true, Some(m)) => stmt.query_map(params![session_id, m], mapper)?,
+            (true, None) => stmt.query_map(params![session_id], mapper)?,
+            (false, Some(m)) => stmt.query_map(params![m], mapper)?,
+            (false, None) => stmt.query_map([], mapper)?,
+        }
+        .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     }
 
@@ -1351,18 +1356,17 @@ impl SessionIndex {
         session_id: &str,
         event: Option<&str>,
     ) -> Result<Vec<crate::otel::OtelLogRecord>> {
-        let sql = if event.is_some() {
-            "SELECT received_at,session_id,event_name,model,cost_usd,input_tokens,output_tokens,\
+        let has_session = !session_id.is_empty();
+        let select = "SELECT received_at,session_id,event_name,model,cost_usd,input_tokens,output_tokens,\
              cache_read_tokens,cache_creation_tokens,duration_ms,tool_name,success,\
              error_message,status_code,severity,body,attributes,time_unix_nano \
-             FROM otel_logs WHERE session_id=?1 AND event_name=?2 ORDER BY received_at"
-                .to_string()
-        } else {
-            "SELECT received_at,session_id,event_name,model,cost_usd,input_tokens,output_tokens,\
-             cache_read_tokens,cache_creation_tokens,duration_ms,tool_name,success,\
-             error_message,status_code,severity,body,attributes,time_unix_nano \
-             FROM otel_logs WHERE session_id=?1 ORDER BY received_at"
-                .to_string()
+             FROM otel_logs";
+
+        let sql = match (has_session, event.is_some()) {
+            (true, true) => format!("{select} WHERE session_id=?1 AND event_name=?2 ORDER BY received_at"),
+            (true, false) => format!("{select} WHERE session_id=?1 ORDER BY received_at"),
+            (false, true) => format!("{select} WHERE event_name=?1 ORDER BY received_at"),
+            (false, false) => format!("{select} ORDER BY received_at"),
         };
 
         let mut stmt = self.conn.prepare(&sql)?;
@@ -1389,13 +1393,13 @@ impl SessionIndex {
             })
         };
 
-        let rows = if let Some(e) = event {
-            stmt.query_map(params![session_id, e], mapper)?
-                .collect::<std::result::Result<Vec<_>, _>>()?
-        } else {
-            stmt.query_map(params![session_id], mapper)?
-                .collect::<std::result::Result<Vec<_>, _>>()?
-        };
+        let rows = match (has_session, event) {
+            (true, Some(e)) => stmt.query_map(params![session_id, e], mapper)?,
+            (true, None) => stmt.query_map(params![session_id], mapper)?,
+            (false, Some(e)) => stmt.query_map(params![e], mapper)?,
+            (false, None) => stmt.query_map([], mapper)?,
+        }
+        .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     }
 
@@ -1410,7 +1414,7 @@ impl SessionIndex {
                 COALESCE(SUM(cost_usd),0.0), \
                 COUNT(*) \
              FROM otel_logs \
-             WHERE session_id=?1 AND event_name='claude_code.api_request'",
+             WHERE session_id=?1 AND event_name='api_request'",
             params![session_id],
             |row| {
                 Ok(OtelSessionSummary {
@@ -1439,7 +1443,7 @@ impl SessionIndex {
                 COALESCE(SUM(cost_usd),0.0), \
                 COUNT(*) \
              FROM otel_logs \
-             WHERE event_name='claude_code.api_request'",
+             WHERE event_name='api_request'",
             [],
             |row| {
                 Ok(OtelGlobalSummary {
@@ -1460,7 +1464,7 @@ impl SessionIndex {
     pub fn get_telemetry_summary(&self) -> Result<crate::server::routes::telemetry::TelemetrySummary> {
         // Check if we have any OTLP log data for api_request events.
         let otel_count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM otel_logs WHERE event_name='claude_code.api_request'",
+            "SELECT COUNT(*) FROM otel_logs WHERE event_name='api_request'",
             [],
             |row| row.get(0),
         ).unwrap_or(0);
@@ -1469,14 +1473,14 @@ impl SessionIndex {
             // Use OTLP data (more accurate — real-time from Claude Code telemetry).
             let row = self.conn.query_row(
                 "SELECT \
-                    (SELECT COUNT(*) FROM sessions), \
+                    COUNT(DISTINCT session_id), \
                     COALESCE(SUM(input_tokens),0), \
                     COALESCE(SUM(output_tokens),0), \
                     COALESCE(SUM(cache_read_tokens),0), \
                     COALESCE(SUM(cache_creation_tokens),0), \
                     COALESCE(SUM(cost_usd),0.0) \
                  FROM otel_logs \
-                 WHERE event_name='claude_code.api_request'",
+                 WHERE event_name='api_request'",
                 [],
                 |row| {
                     Ok(crate::server::routes::telemetry::TelemetrySummary {
@@ -1520,7 +1524,7 @@ impl SessionIndex {
     pub fn get_telemetry_per_session(&self) -> Result<Vec<crate::server::routes::telemetry::SessionTelemetry>> {
         // Check if we have any OTLP log data.
         let otel_count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM otel_logs WHERE event_name='claude_code.api_request'",
+            "SELECT COUNT(*) FROM otel_logs WHERE event_name='api_request'",
             [],
             |row| row.get(0),
         ).unwrap_or(0);
@@ -1537,7 +1541,7 @@ impl SessionIndex {
                         COALESCE(SUM(l.cost_usd),0.0) \
                  FROM otel_logs l \
                  LEFT JOIN sessions s ON l.session_id = s.session_id \
-                 WHERE l.event_name='claude_code.api_request' \
+                 WHERE l.event_name='api_request' \
                  GROUP BY l.session_id \
                  ORDER BY SUM(l.cost_usd) DESC",
             )?;

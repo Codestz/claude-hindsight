@@ -102,7 +102,7 @@ export function TopNav() {
                 padding: "1px 5px",
               }}
             >
-              v1.0
+              v2.0
             </span>
           </Link>
 

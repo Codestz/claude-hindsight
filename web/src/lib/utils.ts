@@ -30,3 +30,15 @@ export function shortModel(model: string | null): string {
   if (!model) return "—";
   return model.replace(/^claude-/, "").replace(/-\d{8}$/, "");
 }
+
+// 1234 → "1.2K", 1234567 → "1.2M"
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+// 0.05 → "$0.05", 1.234 → "$1.23"
+export function formatCost(usd: number): string {
+  return `$${usd.toFixed(2)}`;
+}

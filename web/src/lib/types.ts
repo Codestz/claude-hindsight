@@ -269,3 +269,91 @@ export interface HealthCheck {
  * From GET /api/analytics/global/sparkline?days=N
  */
 export type Sparkline = number[];
+
+// ─────────────────────────────────────────────────────────────
+// § 7 — OTEL TELEMETRY TYPES
+//       GET /api/telemetry/summary
+//       GET /api/telemetry/sessions
+//       GET /api/otel/session-summary
+//       GET /api/otel/global-summary
+//       GET /api/otel/logs
+//       GET /api/otel/metrics
+// ─────────────────────────────────────────────────────────────
+
+/** Aggregated telemetry summary — from GET /api/telemetry/summary */
+export interface TelemetrySummary {
+  total_sessions: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+}
+
+/** Per-session telemetry — from GET /api/telemetry/sessions */
+export interface SessionTelemetry {
+  session_id: string;
+  project_name: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+}
+
+/** OTEL session summary — from GET /api/otel/session-summary?session_id= */
+export interface OtelSessionSummary {
+  session_id: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+  api_requests: number;
+}
+
+/** OTEL global summary — from GET /api/otel/global-summary */
+export interface OtelGlobalSummary {
+  total_sessions: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+  api_requests: number;
+}
+
+/** OTEL log record — from GET /api/otel/logs */
+export interface OtelLogDto {
+  received_at: number;
+  session_id: string | null;
+  event_name: string | null;
+  model: string | null;
+  cost_usd: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cache_read_tokens: number | null;
+  cache_creation_tokens: number | null;
+  duration_ms: number | null;
+  tool_name: string | null;
+  success: boolean | null;
+  error_message: string | null;
+  status_code: number | null;
+  severity: string | null;
+  body: string | null;
+  time_unix_nano: string | null;
+}
+
+/** OTEL metric record — from GET /api/otel/metrics */
+export interface OtelMetricDto {
+  received_at: number;
+  session_id: string | null;
+  metric_name: string;
+  token_type: string | null;
+  model: string | null;
+  value_int: number | null;
+  value_double: number | null;
+  time_unix_nano: string | null;
+  service_name: string | null;
+  service_version: string | null;
+}

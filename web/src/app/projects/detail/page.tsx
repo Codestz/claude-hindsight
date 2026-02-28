@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import type { ProjectAnalytics, SessionFile } from "@/lib/types";
-import { formatBytes } from "@/lib/utils";
+import type { ProjectAnalytics, SessionFile, SessionTelemetry } from "@/lib/types";
+import { formatBytes, formatCost, formatTokens } from "@/lib/utils";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { BarChart } from "@/components/charts/BarChart";
+import { TokenBreakdownBar } from "@/components/charts/TokenBreakdownBar";
 import { SessionTable } from "@/components/sessions/SessionTable";
 
 // ── Layout constants ──────────────────────────────────────────
@@ -65,6 +66,7 @@ function ProjectDetail({ name }: { name: string }) {
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null);
   const [sessions, setSessions] = useState<SessionFile[]>([]);
   const [topFiles, setTopFiles] = useState<[string, number][]>([]);
+  const [projectTelemetry, setProjectTelemetry] = useState<{ cost: number; input: number; output: number; cacheRead: number; cacheCreation: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,11 +75,25 @@ function ProjectDetail({ name }: { name: string }) {
       api.projectAnalytics(name),
       api.sessions({ project: name }),
       api.projectTopFiles(name).catch(() => [] as [string, number][]),
+      api.telemetrySessions().catch(() => [] as SessionTelemetry[]),
     ])
-      .then(([a, s, files]) => {
+      .then(([a, s, files, allTelem]) => {
         setAnalytics(a);
         setSessions(s);
         setTopFiles(files);
+        // Aggregate telemetry for this project
+        const projectSessions = allTelem.filter((t) => t.project_name === name);
+        if (projectSessions.length > 0) {
+          const agg = { cost: 0, input: 0, output: 0, cacheRead: 0, cacheCreation: 0 };
+          for (const t of projectSessions) {
+            agg.cost += t.cost_usd;
+            agg.input += t.input_tokens;
+            agg.output += t.output_tokens;
+            agg.cacheRead += t.cache_read_tokens;
+            agg.cacheCreation += t.cache_creation_tokens;
+          }
+          if (agg.cost > 0) setProjectTelemetry(agg);
+        }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -110,13 +126,23 @@ function ProjectDetail({ name }: { name: string }) {
 
       {/* Stats bento */}
       <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <div style={{ display: "grid", gridTemplateColumns: projectTelemetry ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
             <StatCard label="Sessions" value={analytics.total_sessions.toLocaleString()} sub={sessionsSub || undefined} accent />
           </div>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
             <StatCard label="Size" value={formatBytes(analytics.total_size)} sub={`avg ${formatBytes(analytics.avg_session_size)}/session`} />
           </div>
+          {projectTelemetry && (
+            <div style={{ borderRight: "1px solid var(--border-1)" }}>
+              <StatCard
+                label="Cost"
+                value={formatCost(projectTelemetry.cost)}
+                sub={`${formatTokens(projectTelemetry.input + projectTelemetry.output)} tokens`}
+                valueColor="var(--amber)"
+              />
+            </div>
+          )}
           <StatCard
             label="Errors"
             value={analytics.total_errors.toLocaleString()}
@@ -125,6 +151,21 @@ function ProjectDetail({ name }: { name: string }) {
           />
         </div>
       </Card>
+
+      {/* Token Breakdown */}
+      {projectTelemetry && (
+        <Card>
+          <div style={{ padding: "24px 28px" }}>
+            <div style={{ marginBottom: "18px" }}><SectionHeader title="Token Breakdown" /></div>
+            <TokenBreakdownBar
+              input={projectTelemetry.input}
+              output={projectTelemetry.output}
+              cacheRead={projectTelemetry.cacheRead}
+              cacheCreation={projectTelemetry.cacheCreation}
+            />
+          </div>
+        </Card>
+      )}
 
       {/* Tools + MCPs */}
       {(nativeTools.length > 0 || mcpServers.length > 0) && (

@@ -6,11 +6,16 @@ import type {
   GlobalAnalytics,
   HealthCheck,
   NodeResponse,
+  OtelGlobalSummary,
+  OtelLogDto,
+  OtelSessionSummary,
   PromptEntry,
   ProjectAnalytics,
   ProjectStats,
   SessionFile,
+  SessionTelemetry,
   Sparkline,
+  TelemetrySummary,
   TreeResponse,
 } from "./types";
 
@@ -94,6 +99,30 @@ export const api = {
 
   eventsUrl(sessionId: string): string {
     return `${BASE}/events?session_id=${encodeURIComponent(sessionId)}`;
+  },
+
+  telemetrySummary(): Promise<TelemetrySummary> {
+    return get("/telemetry/summary");
+  },
+
+  telemetrySessions(): Promise<SessionTelemetry[]> {
+    return get("/telemetry/sessions");
+  },
+
+  otelSessionSummary(sessionId: string): Promise<OtelSessionSummary> {
+    return get(`/otel/session-summary?session_id=${encodeURIComponent(sessionId)}`);
+  },
+
+  otelGlobalSummary(): Promise<OtelGlobalSummary> {
+    return get("/otel/global-summary");
+  },
+
+  otelLogs(opts?: { session_id?: string; event?: string }): Promise<OtelLogDto[]> {
+    const p = new URLSearchParams();
+    if (opts?.session_id) p.set("session_id", opts.session_id);
+    if (opts?.event)      p.set("event", opts.event);
+    const qs = p.toString();
+    return get(`/otel/logs${qs ? `?${qs}` : ""}`);
   },
 };
 
