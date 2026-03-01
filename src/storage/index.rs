@@ -132,7 +132,8 @@ impl SessionIndex {
                     error_message TEXT,
                     is_interrupt INTEGER,
                     tool_use_id TEXT,
-                    cwd TEXT
+                    cwd TEXT,
+                    source TEXT NOT NULL DEFAULT 'hook'
                 );
 
                 CREATE TABLE IF NOT EXISTS hook_subagent_events (
@@ -430,6 +431,15 @@ impl SessionIndex {
                 )?;
                 self.conn.execute("PRAGMA user_version = 12", [])?;
             }
+
+            if version < 13 {
+                // v12 → v13: add source column to hook_tool_events for JSONL backfill
+                let _ = self.conn.execute(
+                    "ALTER TABLE hook_tool_events ADD COLUMN source TEXT NOT NULL DEFAULT 'hook'",
+                    [],
+                );
+                self.conn.execute("PRAGMA user_version = 13", [])?;
+            }
         }
 
         Ok(())
@@ -445,8 +455,20 @@ impl SessionIndex {
             .unwrap_or(0);
 
         // Try to parse session for rich analytics; fall back to defaults on failure
+        // Each JSONL tool event extracted during parsing
+        struct JsonlToolEvent {
+            occurred_at: i64,
+            hook_event: String, // "ToolUse" or "ToolResult"
+            tool_name: Option<String>,
+            tool_input: Option<String>,
+            tool_result: Option<String>,
+            error_message: Option<String>,
+            tool_use_id: Option<String>,
+        }
+
         let (model, error_count, first_message, tool_counts, file_counts, created_at,
-             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd) =
+             input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost_usd,
+             jsonl_tool_events) =
             if let Ok(parsed) = crate::parser::parse_session(&session.path) {
                 let analytics = crate::analyzer::SessionAnalytics::from_session(&parsed);
 
@@ -526,6 +548,83 @@ impl SessionIndex {
                     + agg_cache_read as f64 * 0.30)
                     / 1_000_000.0;
 
+                // Extract individual tool events from JSONL nodes for Activity page.
+                // Build a map of tool_use_id → tool_result for pairing.
+                let mut result_map: HashMap<String, (Option<String>, Option<String>, Option<bool>)> = HashMap::new();
+                for node in &parsed.nodes {
+                    // Top-level tool_result
+                    if let Some(ref tr) = node.tool_result {
+                        if let Some(ref tuid) = tr.tool_use_id {
+                            let content = tr.content.clone();
+                            let err = tr.error.clone();
+                            let is_err = tr.is_error;
+                            result_map.insert(tuid.clone(), (content, err, is_err));
+                        }
+                    }
+                    // ContentBlock::ToolResult
+                    for block in node.message.as_ref().map(|m| m.content_blocks()).unwrap_or(&[]) {
+                        if let crate::parser::models::ContentBlock::ToolResult { tool_use_id, content, is_error } = block {
+                            let content_str = content.as_ref().map(|v| {
+                                if let Some(s) = v.as_str() { s.to_string() } else { v.to_string() }
+                            });
+                            result_map.insert(tool_use_id.clone(), (content_str, None, *is_error));
+                        }
+                    }
+                }
+
+                let mut jte: Vec<JsonlToolEvent> = Vec::new();
+                for node in &parsed.nodes {
+                    let ts = node.timestamp.map(|ms| ms / 1000).unwrap_or(created_at);
+
+                    // Top-level tool_use
+                    if let Some(ref tu) = node.tool_use {
+                        let input_str = serde_json::to_string(&tu.input).ok();
+                        let tuid = tu.id.clone();
+                        let (result, error, is_err) = tuid.as_ref()
+                            .and_then(|id| result_map.get(id))
+                            .cloned()
+                            .unwrap_or((None, None, None));
+                        let hook_event = if is_err == Some(true) || error.is_some() {
+                            "PostToolUse".to_string()
+                        } else {
+                            "PostToolUse".to_string()
+                        };
+                        jte.push(JsonlToolEvent {
+                            occurred_at: ts,
+                            hook_event,
+                            tool_name: Some(tu.name.clone()),
+                            tool_input: input_str,
+                            tool_result: result,
+                            error_message: error,
+                            tool_use_id: tuid,
+                        });
+                    }
+
+                    // ContentBlock::ToolUse
+                    for block in node.message.as_ref().map(|m| m.content_blocks()).unwrap_or(&[]) {
+                        if let crate::parser::models::ContentBlock::ToolUse { id, name, input } = block {
+                            let input_str = serde_json::to_string(input).ok();
+                            let (result, error, is_err) = result_map.get(id.as_str())
+                                .cloned()
+                                .unwrap_or((None, None, None));
+                            let hook_event = if is_err == Some(true) || error.is_some() {
+                                "PostToolUse".to_string()
+                            } else {
+                                "PostToolUse".to_string()
+                            };
+                            jte.push(JsonlToolEvent {
+                                occurred_at: ts,
+                                hook_event,
+                                tool_name: Some(name.clone()),
+                                tool_input: input_str,
+                                tool_result: result,
+                                error_message: error,
+                                tool_use_id: Some(id.clone()),
+                            });
+                        }
+                    }
+                }
+
                 (
                     parsed.model.clone(),
                     analytics.error_count as i64,
@@ -538,6 +637,7 @@ impl SessionIndex {
                     agg_cache_read,
                     agg_cache_creation,
                     cost,
+                    jte,
                 )
             } else {
                 (
@@ -552,6 +652,7 @@ impl SessionIndex {
                     0i64,
                     0i64,
                     0.0f64,
+                    Vec::new(),
                 )
             };
 
@@ -662,6 +763,55 @@ impl SessionIndex {
 
             for (file_path, count) in file_counts {
                 stmt.execute(params![session.session_id, file_path, count as i64])?;
+            }
+        }
+
+        // Backfill tool events from JSONL — delete stale jsonl rows, then re-insert.
+        // Hook-sourced rows are never touched.
+        if !jsonl_tool_events.is_empty() {
+            tx.execute(
+                "DELETE FROM hook_tool_events WHERE session_id = ?1 AND source = 'jsonl'",
+                params![session.session_id],
+            )?;
+
+            // Collect existing hook tool_use_ids so we skip duplicates
+            let mut existing_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+            {
+                let mut id_stmt = tx.prepare(
+                    "SELECT tool_use_id FROM hook_tool_events WHERE session_id = ?1 AND source = 'hook' AND tool_use_id IS NOT NULL",
+                )?;
+                let rows = id_stmt.query_map(params![session.session_id], |row| row.get::<_, String>(0))?;
+                for r in rows {
+                    if let Ok(id) = r {
+                        existing_ids.insert(id);
+                    }
+                }
+            }
+
+            let mut ins_stmt = tx.prepare(
+                "INSERT INTO hook_tool_events \
+                 (session_id, occurred_at, hook_event, tool_name, tool_input, tool_result, \
+                  error_message, is_interrupt, tool_use_id, cwd, source) \
+                 VALUES (?1,?2,?3,?4,?5,?6,?7,NULL,?8,NULL,'jsonl')",
+            )?;
+
+            for evt in &jsonl_tool_events {
+                // Skip if hook already captured this tool_use_id
+                if let Some(ref tuid) = evt.tool_use_id {
+                    if existing_ids.contains(tuid) {
+                        continue;
+                    }
+                }
+                ins_stmt.execute(params![
+                    session.session_id,
+                    evt.occurred_at,
+                    evt.hook_event,
+                    evt.tool_name,
+                    evt.tool_input,
+                    evt.tool_result,
+                    evt.error_message,
+                    evt.tool_use_id,
+                ])?;
             }
         }
 
@@ -1899,6 +2049,230 @@ impl SessionIndex {
             .collect::<std::result::Result<Vec<_>, _>>()?
         };
         Ok(rows)
+    }
+
+    // ── Global hook queries (no session_id filter) ─────────────────
+
+    pub fn get_global_tool_events(
+        &self,
+        event_filter: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<HookToolEvent>> {
+        let (sql, p2) = if let Some(ev) = event_filter {
+            (
+                format!(
+                    "SELECT id,session_id,occurred_at,hook_event,tool_name,tool_input,tool_result,\
+                     error_message,is_interrupt,tool_use_id,cwd \
+                     FROM hook_tool_events WHERE hook_event=?1 ORDER BY occurred_at DESC LIMIT {limit}"
+                ),
+                Some(ev.to_string()),
+            )
+        } else {
+            (
+                format!(
+                    "SELECT id,session_id,occurred_at,hook_event,tool_name,tool_input,tool_result,\
+                     error_message,is_interrupt,tool_use_id,cwd \
+                     FROM hook_tool_events ORDER BY occurred_at DESC LIMIT {limit}"
+                ),
+                None,
+            )
+        };
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = if let Some(ref ev) = p2 {
+            stmt.query_map(params![ev], hook_tool_event_from_row)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            stmt.query_map([], hook_tool_event_from_row)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        Ok(rows)
+    }
+
+    pub fn get_global_tool_failures(&self, limit: usize) -> Result<Vec<HookToolEvent>> {
+        let sql = format!(
+            "SELECT id,session_id,occurred_at,hook_event,tool_name,tool_input,tool_result,\
+             error_message,is_interrupt,tool_use_id,cwd \
+             FROM hook_tool_events WHERE error_message IS NOT NULL \
+             ORDER BY occurred_at DESC LIMIT {limit}"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt
+            .query_map([], hook_tool_event_from_row)?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_global_subagent_events(&self, limit: usize) -> Result<Vec<HookSubagentEvent>> {
+        let sql = format!(
+            "SELECT id,session_id,occurred_at,hook_event,agent_type,agent_name,cwd \
+             FROM hook_subagent_events ORDER BY occurred_at DESC LIMIT {limit}"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(HookSubagentEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    hook_event: row.get(3)?,
+                    agent_type: row.get(4)?,
+                    agent_name: row.get(5)?,
+                    cwd: row.get(6)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_global_compaction_events(&self, limit: usize) -> Result<Vec<HookCompactionEvent>> {
+        let sql = format!(
+            "SELECT id,session_id,occurred_at,compaction_trigger \
+             FROM hook_compaction_events ORDER BY occurred_at DESC LIMIT {limit}"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(HookCompactionEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    compaction_trigger: row.get(3)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_global_permission_events(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<HookPermissionEvent>> {
+        let sql = format!(
+            "SELECT id,session_id,occurred_at,tool_name,tool_input,cwd \
+             FROM hook_permission_events ORDER BY occurred_at DESC LIMIT {limit}"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(HookPermissionEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    tool_name: row.get(3)?,
+                    tool_input: row.get(4)?,
+                    cwd: row.get(5)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    pub fn get_global_lifecycle_events(
+        &self,
+        event_filter: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<HookLifecycleEvent>> {
+        let (sql, p2) = if let Some(ev) = event_filter {
+            (
+                format!(
+                    "SELECT id,session_id,occurred_at,event_name,attributes \
+                     FROM hook_lifecycle_events WHERE event_name=?1 \
+                     ORDER BY occurred_at DESC LIMIT {limit}"
+                ),
+                Some(ev.to_string()),
+            )
+        } else {
+            (
+                format!(
+                    "SELECT id,session_id,occurred_at,event_name,attributes \
+                     FROM hook_lifecycle_events ORDER BY occurred_at DESC LIMIT {limit}"
+                ),
+                None,
+            )
+        };
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = if let Some(ref ev) = p2 {
+            stmt.query_map(params![ev], |row| {
+                Ok(HookLifecycleEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    event_name: row.get(3)?,
+                    attributes: row.get(4)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            stmt.query_map([], |row| {
+                Ok(HookLifecycleEvent {
+                    id: row.get(0)?,
+                    session_id: row.get(1)?,
+                    occurred_at: row.get(2)?,
+                    event_name: row.get(3)?,
+                    attributes: row.get(4)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        Ok(rows)
+    }
+
+    pub fn get_activity_summary(&self) -> Result<crate::server::routes::hooks::HookActivitySummary> {
+        let total_tool: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM hook_tool_events", [], |r| r.get(0))
+            .unwrap_or(0);
+        let total_subagent: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM hook_subagent_events", [], |r| r.get(0))
+            .unwrap_or(0);
+        let total_lifecycle: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM hook_lifecycle_events", [], |r| {
+                r.get(0)
+            })
+            .unwrap_or(0);
+        let total_permission: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM hook_permission_events", [], |r| {
+                r.get(0)
+            })
+            .unwrap_or(0);
+
+        // Top tools by event count
+        let mut stmt = self.conn.prepare(
+            "SELECT tool_name, COUNT(*) as cnt FROM hook_tool_events \
+             WHERE tool_name IS NOT NULL GROUP BY tool_name ORDER BY cnt DESC LIMIT 10",
+        )?;
+        let tool_counts: Vec<(String, usize)> = stmt
+            .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as usize)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        // Recent errors (last 24h)
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs() as i64;
+        let cutoff = now - 86400;
+        let recent_errors: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM hook_tool_events WHERE error_message IS NOT NULL AND occurred_at > ?1",
+                params![cutoff],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+
+        Ok(crate::server::routes::hooks::HookActivitySummary {
+            total_tool_events: total_tool as usize,
+            total_subagent_events: total_subagent as usize,
+            total_lifecycle_events: total_lifecycle as usize,
+            total_permission_events: total_permission as usize,
+            tool_event_counts: tool_counts,
+            recent_errors: recent_errors as usize,
+        })
     }
 }
 

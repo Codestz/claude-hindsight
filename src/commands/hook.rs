@@ -54,9 +54,51 @@ pub fn read_payload() -> FullHookPayload {
     serde_json::from_str(raw.trim()).unwrap_or_default()
 }
 
+// ── OTLP daemon auto-spawn ─────────────────────────────────────────────────────
+
+/// Ensure the OTLP receiver is listening on port 7228.
+/// If nothing is bound, spawn a detached `<binary> daemon` process.
+fn ensure_otlp_daemon() {
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    let port: u16 = crate::config::Config::load()
+        .map(|c| c.telemetry.otel_port)
+        .unwrap_or(7228);
+
+    // Quick TCP connect check — if something is already listening, do nothing
+    if TcpStream::connect_timeout(
+        &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+        Duration::from_millis(200),
+    )
+    .is_ok()
+    {
+        return;
+    }
+
+    // Resolve our own binary path
+    let bin = match std::env::current_exe() {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    // Spawn detached daemon with idle timeout — auto-exits after 10 min of inactivity
+    let _ = std::process::Command::new(bin)
+        .arg("daemon")
+        .arg("--port")
+        .arg(port.to_string())
+        .arg("--idle-timeout")
+        .arg("600")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn(); // fire-and-forget
+}
+
 // ── Delegating events (session lifecycle already handled by hook_index) ────────
 
 pub fn run_session_start() -> Result<()> {
+    ensure_otlp_daemon();
     crate::commands::hook_index::run()
 }
 
