@@ -15,6 +15,7 @@ import {
   Shield,
   RotateCcw,
   FileText,
+  Webhook,
 } from "lucide-react";
 import { ConfigRow } from "@/components/ui/ConfigRow";
 
@@ -214,6 +215,43 @@ export default function AgentDetailPage() {
                   </Link>
                 ))}
               </div>
+            </Card>
+          )}
+
+          {/* Hooks */}
+          {agent.hooks != null && (
+            <Card>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--text-3)",
+                  padding: "14px 16px",
+                  borderBottom: "1px solid var(--border-1)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <Webhook size={12} /> Hooks
+              </div>
+              <pre
+                style={{
+                  padding: "16px",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                  color: "var(--text-2)",
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  overflowX: "auto",
+                }}
+              >
+                {String(JSON.stringify(agent.hooks, null, 2))}
+              </pre>
             </Card>
           )}
 

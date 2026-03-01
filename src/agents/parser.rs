@@ -3,7 +3,50 @@
 //! Splits on `---` delimiters, parses YAML frontmatter with serde_yaml,
 //! and captures the remaining markdown as the body.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize a field that can be either a YAML list or a comma-separated string.
+///
+/// Claude Code frontmatter uses `tools: Read, Grep, Glob` (comma-separated string)
+/// but our struct expects `Vec<String>`. This accepts both formats.
+fn deserialize_string_or_vec<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de;
+
+    struct StringOrVec;
+    impl<'de> de::Visitor<'de> for StringOrVec {
+        type Value = Option<Vec<String>>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("a string or list of strings")
+        }
+
+        fn visit_str<E: de::Error>(self, s: &str) -> Result<Self::Value, E> {
+            let items: Vec<String> = s.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            if items.is_empty() { Ok(None) } else { Ok(Some(items)) }
+        }
+
+        fn visit_seq<A: de::SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+            let mut v = Vec::new();
+            while let Some(item) = seq.next_element::<String>()? {
+                v.push(item);
+            }
+            if v.is_empty() { Ok(None) } else { Ok(Some(v)) }
+        }
+
+        fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+
+        fn visit_unit<E: de::Error>(self) -> Result<Self::Value, E> {
+            Ok(None)
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec)
+}
 
 /// A supplementary reference or rule file associated with a skill.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,7 +63,7 @@ pub struct AgentConfig {
     pub name: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_vec")]
     pub tools: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -28,7 +71,7 @@ pub struct AgentConfig {
     pub permission_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_turns: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_vec")]
     pub skills: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hooks: Option<serde_json::Value>,
@@ -64,7 +107,7 @@ pub struct SkillConfig {
     pub description: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user_invocable: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_vec")]
     pub allowed_tools: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -240,5 +283,38 @@ mod tests {
         let skill = parse_skill(content, "/path/to/commit/SKILL.md", "global", None).unwrap();
         assert_eq!(skill.name, "commit");
         assert_eq!(skill.user_invocable, Some(true));
+    }
+
+    #[test]
+    fn test_parse_agent_with_csv_tools() {
+        // Claude Code uses comma-separated strings for tools, not YAML arrays
+        let content = "---\nname: data-researcher\ndescription: Researches data\ntools: Read, Grep, Glob, WebFetch, WebSearch\nmodel: haiku\n---\nYou are a researcher.";
+        let agent = parse_agent(content, "/path/to/AGENTS.md", "global", None);
+        assert!(agent.is_some(), "Agent with CSV tools field should parse successfully");
+        let agent = agent.unwrap();
+        assert_eq!(agent.name, "data-researcher");
+        assert!(agent.tools.is_some(), "tools should be parsed");
+    }
+
+    #[test]
+    fn test_parse_agent_with_hooks() {
+        let content = r#"---
+name: safe-agent
+description: Agent with hooks
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "./scripts/validate-readonly-query.sh"
+---
+You are a safe agent."#;
+        let agent = parse_agent(content, "/path/to/AGENTS.md", "global", None);
+        assert!(agent.is_some(), "Agent with hooks should parse successfully");
+        let agent = agent.unwrap();
+        assert_eq!(agent.name, "safe-agent");
+        assert!(agent.hooks.is_some(), "hooks should be parsed");
+        let hooks = agent.hooks.unwrap();
+        assert!(hooks.get("PreToolUse").is_some(), "PreToolUse key should exist");
     }
 }

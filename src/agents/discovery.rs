@@ -1,12 +1,15 @@
 //! Agent & Skill discovery across global, per-project, and plugin directories.
 //!
 //! Scans:
-//! 1. Global:      `~/.claude/agents/*.md`, `~/.claude/skills/*/SKILL.md`
-//! 2. Per-project: For each encoded project dir in `claude_dirs`, decode back to real path,
-//!    then scan `<real_path>/.claude/agents/` and `<real_path>/.claude/skills/`
-//! 3. Plugins:     `~/.claude/plugins/**/agents/*.md`, `~/.claude/plugins/**/skills/*/SKILL.md`
+//! 1. Global: `~/.claude/agents/*.md`, `~/.claude/agents/*/AGENTS.md`,
+//!    `~/.claude/skills/*/SKILL.md`
+//! 2. Per-project: For each encoded project dir in `claude_dirs`, decode to real path,
+//!    then scan `.claude/agents/`, `.agents/agents/`, `.claude/skills/`, `.agents/skills/`
+//!    (symlink-aware dedup via canonical paths)
+//! 3. Plugins: `~/.claude/plugins/**/agents/*.md`, `~/.claude/plugins/**/skills/*/SKILL.md`
 
 use super::parser::{self, AgentConfig, SkillConfig, SkillReference};
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -75,7 +78,11 @@ fn decode_dir_name(encoded: &str) -> PathBuf {
     })
 }
 
-/// Scan a directory for `*.md` files and parse each as an agent.
+/// Scan a directory for agent definitions.
+///
+/// Supports two layouts:
+/// - Flat files: `agents/*.md` (e.g. `agents/reviewer.md`)
+/// - Subdirectories: `agents/*/AGENTS.md` (e.g. `agents/data-researcher/AGENTS.md`)
 fn scan_agents_dir(dir: &Path, scope: &str, project_name: Option<&str>) -> Vec<AgentConfig> {
     let mut agents = Vec::new();
     let entries = match fs::read_dir(dir) {
@@ -85,7 +92,9 @@ fn scan_agents_dir(dir: &Path, scope: &str, project_name: Option<&str>) -> Vec<A
 
     for entry in entries.flatten() {
         let path = entry.path();
+
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
+            // Flat file: agents/reviewer.md
             if let Ok(content) = fs::read_to_string(&path) {
                 if let Some(agent) = parser::parse_agent(
                     &content,
@@ -94,6 +103,21 @@ fn scan_agents_dir(dir: &Path, scope: &str, project_name: Option<&str>) -> Vec<A
                     project_name,
                 ) {
                     agents.push(agent);
+                }
+            }
+        } else if path.is_dir() {
+            // Subdirectory: agents/data-researcher/AGENTS.md
+            let agent_file = path.join("AGENTS.md");
+            if agent_file.is_file() {
+                if let Ok(content) = fs::read_to_string(&agent_file) {
+                    if let Some(agent) = parser::parse_agent(
+                        &content,
+                        &agent_file.to_string_lossy(),
+                        scope,
+                        project_name,
+                    ) {
+                        agents.push(agent);
+                    }
                 }
             }
         }
@@ -211,9 +235,18 @@ pub fn discover_agents() -> Vec<AgentConfig> {
                 .and_then(|s| s.to_str())
                 .unwrap_or(dir_name);
 
-            // Scan <real_project_path>/.claude/agents/
-            let project_agents_dir = real_path.join(".claude").join("agents");
-            all.extend(scan_agents_dir(&project_agents_dir, project_name, Some(project_name)));
+            // Scan <real_project_path>/.claude/agents/ and .agents/agents/
+            // Deduplicate by canonical path (handles symlinks)
+            let mut seen_paths: HashSet<PathBuf> = HashSet::new();
+            for agents_dir in &[
+                real_path.join(".claude").join("agents"),
+                real_path.join(".agents").join("agents"),
+            ] {
+                let canonical = agents_dir.canonicalize().unwrap_or_else(|_| agents_dir.clone());
+                if seen_paths.insert(canonical) {
+                    all.extend(scan_agents_dir(agents_dir, project_name, Some(project_name)));
+                }
+            }
         }
     }
 
@@ -285,8 +318,18 @@ pub fn discover_skills() -> Vec<SkillConfig> {
                 .and_then(|s| s.to_str())
                 .unwrap_or(dir_name);
 
-            let project_skills_dir = real_path.join(".claude").join("skills");
-            all.extend(scan_skills_dir(&project_skills_dir, project_name, Some(project_name)));
+            // Scan <real_project_path>/.claude/skills/ and .agents/skills/
+            // Deduplicate by canonical path (handles symlinks)
+            let mut seen_paths: HashSet<PathBuf> = HashSet::new();
+            for skills_dir in &[
+                real_path.join(".claude").join("skills"),
+                real_path.join(".agents").join("skills"),
+            ] {
+                let canonical = skills_dir.canonicalize().unwrap_or_else(|_| skills_dir.clone());
+                if seen_paths.insert(canonical) {
+                    all.extend(scan_skills_dir(skills_dir, project_name, Some(project_name)));
+                }
+            }
         }
     }
 
