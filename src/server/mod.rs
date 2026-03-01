@@ -1,8 +1,9 @@
 //! Axum HTTP server for the Hindsight web dashboard
 //!
-//! Exposes a REST + SSE API and serves the pre-built Next.js static bundle,
+//! Exposes a REST + SSE API and serves the pre-built Vite static bundle,
 //! embedded at compile time via rust-embed.
 
+pub mod daemon;
 pub mod dto;
 pub mod error;
 pub mod routes;
@@ -19,18 +20,49 @@ use serde_json::json;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 
-/// The compiled-in Next.js static bundle.
+/// The compiled-in Vite static bundle.
 #[derive(RustEmbed)]
-#[folder = "web/out/"]
+#[folder = "web/dist/"]
 struct WebAssets;
 
 /// Shared application state — no Connection here; each handler opens its own.
 #[derive(Clone)]
-pub struct AppState {}
+pub struct AppState {
+    /// Unix epoch seconds of the last OTLP request. Used by the daemon idle-timeout.
+    /// `None` for the full `serve` server (no timeout).
+    pub last_activity: Option<std::sync::Arc<std::sync::atomic::AtomicU64>>,
+}
 
-/// Start the axum server on `addr`.
-pub async fn serve(addr: SocketAddr) -> anyhow::Result<()> {
-    let state = AppState {};
+/// Start the OTLP-only listener (inner server, used by both `serve` and `daemon`).
+async fn serve_otlp(addr: SocketAddr) -> anyhow::Result<()> {
+    use axum::routing::post;
+
+    let state = AppState { last_activity: None };
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
+    let app = Router::new()
+        .route("/v1/metrics", post(routes::otel::receive_metrics))
+        .route("/v1/logs", post(routes::otel::receive_logs))
+        .layer(cors)
+        .with_state(state);
+
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            let _ = tokio::signal::ctrl_c().await;
+        })
+        .await?;
+    Ok(())
+}
+
+/// Start the axum server on `addr`, optionally also starting an OTLP listener.
+///
+/// `otel_port = 0` disables the embedded OTLP listener.
+pub async fn serve(addr: SocketAddr, otel_port: u16) -> anyhow::Result<()> {
+    let state = AppState { last_activity: None };
 
     let api_router = Router::new()
         .route("/health", get(health))
@@ -67,7 +99,27 @@ pub async fn serve(addr: SocketAddr) -> anyhow::Result<()> {
         )
         .route("/prompts", get(routes::prompts::list_prompts))
         .route("/search", get(routes::search::search_sessions))
-        .route("/events", get(routes::events::live_events));
+        .route("/events", get(routes::events::live_events))
+        .route("/sessions/{id}/stream", get(routes::events::session_stream))
+        .route("/telemetry/summary", get(routes::telemetry::telemetry_summary))
+        .route("/telemetry/sessions", get(routes::telemetry::telemetry_sessions))
+        .route("/v1/metrics", axum::routing::post(routes::otel::receive_metrics))
+        .route("/v1/logs", axum::routing::post(routes::otel::receive_logs))
+        .route("/hooks/tool-events", get(routes::hooks::get_tool_events))
+        .route("/hooks/tool-failures", get(routes::hooks::get_tool_failures))
+        .route("/hooks/subagent-events", get(routes::hooks::get_subagent_events))
+        .route("/hooks/compaction-events", get(routes::hooks::get_compaction_events))
+        .route("/hooks/permission-events", get(routes::hooks::get_permission_events))
+        .route("/hooks/lifecycle-events", get(routes::hooks::get_lifecycle_events))
+        .route("/hooks/activity-summary", get(routes::hooks::get_activity_summary))
+        .route("/otel/metrics", get(routes::otel_query::get_metrics))
+        .route("/otel/logs", get(routes::otel_query::get_logs))
+        .route("/otel/session-summary", get(routes::otel_query::get_session_summary))
+        .route("/otel/global-summary", get(routes::otel_query::get_global_summary))
+        .route("/agents", get(routes::agents::list_agents))
+        .route("/agents/{name}", get(routes::agents::get_agent))
+        .route("/skills", get(routes::agents::list_skills))
+        .route("/skills/{name}", get(routes::agents::get_skill));
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -80,12 +132,25 @@ pub async fn serve(addr: SocketAddr) -> anyhow::Result<()> {
         .with_state(state)
         .fallback(serve_embedded);
 
-    println!("Hindsight web server listening on http://{addr}  (Ctrl+C to stop)");
+    println!("Hindsight dashboard listening on  http://{addr}");
+    if otel_port > 0 {
+        println!("Hindsight OTLP receiver listening on http://0.0.0.0:{otel_port}");
+    }
+    println!("(Ctrl+C to stop)");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    let dashboard_future = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal());
+
+    if otel_port > 0 {
+        let otel_addr: SocketAddr = ([0, 0, 0, 0], otel_port).into();
+        tokio::select! {
+            r = dashboard_future => r?,
+            r = serve_otlp(otel_addr) => r?,
+        }
+    } else {
+        dashboard_future.await?;
+    }
 
     println!("Server stopped.");
     Ok(())
@@ -95,36 +160,21 @@ async fn health(State(_): State<AppState>) -> Json<serde_json::Value> {
     Json(json!({ "ok": true, "version": env!("CARGO_PKG_VERSION") }))
 }
 
-/// Serve embedded static assets from the compiled-in Next.js bundle.
+/// Serve embedded static assets from the compiled-in Vite bundle.
+/// For non-asset paths, serves index.html so react-router handles client-side routing.
 async fn serve_embedded(uri: Uri) -> Response {
     let raw = uri.path().trim_start_matches('/');
     let path = if raw.is_empty() { "index.html" } else { raw };
 
-    // Exact match.
+    // Exact match for static assets (JS, CSS, images, etc.)
     if let Some(asset) = WebAssets::get(path) {
         return make_response(StatusCode::OK, path, asset);
     }
 
-    // Next.js trailingSlash pages: try {path}/index.html.
-    let index_path = format!("{}/index.html", path.trim_end_matches('/'));
-    if let Some(asset) = WebAssets::get(&index_path) {
-        return make_response(StatusCode::OK, &index_path, asset);
-    }
-
-    // SPA sub-route fallback: /projects/foo/ → projects/detail/index.html
-    // Enables client-side routing for paths with runtime-only values
-    // (project names, session IDs) that cannot be pre-generated statically.
-    let first_seg = raw.split('/').next().unwrap_or("");
-    if !first_seg.is_empty() {
-        let shell_path = format!("{}/detail/index.html", first_seg);
-        if let Some(asset) = WebAssets::get(&shell_path) {
-            return make_response(StatusCode::OK, &shell_path, asset);
-        }
-    }
-
-    // 404 page.
-    if let Some(asset) = WebAssets::get("404.html") {
-        return make_response(StatusCode::NOT_FOUND, "404.html", asset);
+    // SPA fallback: serve index.html for all non-file paths.
+    // react-router handles routing on the client side.
+    if let Some(asset) = WebAssets::get("index.html") {
+        return make_response(StatusCode::OK, "index.html", asset);
     }
 
     StatusCode::NOT_FOUND.into_response()
@@ -139,8 +189,8 @@ fn make_response(status: StatusCode, path: &str, asset: rust_embed::EmbeddedFile
         .first_or_octet_stream()
         .to_string();
 
-    // Hashed _next/static/ assets are immutable; HTML must always revalidate.
-    let cache: &'static str = if path.starts_with("_next/static/") {
+    // Hashed assets/ chunks are immutable; HTML must always revalidate.
+    let cache: &'static str = if path.starts_with("assets/") {
         "public, max-age=31536000, immutable"
     } else if path.ends_with(".html") {
         "no-cache"

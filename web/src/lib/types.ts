@@ -257,15 +257,194 @@ export interface PromptEntry {
   model: string | null;
 }
 
-/** Health check — from GET /api/health */
-export interface HealthCheck {
-  ok: boolean;
-  version: string;
-}
-
 /**
  * 14-day (or N-day) conversation count array.
  * Index 0 = oldest day, last index = today.
  * From GET /api/analytics/global/sparkline?days=N
  */
 export type Sparkline = number[];
+
+// ─────────────────────────────────────────────────────────────
+// § 7 — OTEL TELEMETRY TYPES
+//       GET /api/telemetry/summary
+//       GET /api/telemetry/sessions
+//       GET /api/otel/session-summary
+//       GET /api/otel/global-summary
+//       GET /api/otel/logs
+//       GET /api/otel/metrics
+// ─────────────────────────────────────────────────────────────
+
+/** Aggregated telemetry summary — from GET /api/telemetry/summary */
+export interface TelemetrySummary {
+  total_sessions: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+}
+
+/** Per-session telemetry — from GET /api/telemetry/sessions */
+export interface SessionTelemetry {
+  session_id: string;
+  project_name: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+}
+
+/** OTEL session summary — from GET /api/otel/session-summary?session_id= */
+export interface OtelSessionSummary {
+  session_id: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+  api_requests: number;
+}
+
+/** OTEL global summary — from GET /api/otel/global-summary */
+export interface OtelGlobalSummary {
+  total_sessions: number;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens: number;
+  cache_creation_tokens: number;
+  cost_usd: number;
+  api_requests: number;
+}
+
+/** OTEL log record — from GET /api/otel/logs */
+export interface OtelLogDto {
+  received_at: number;
+  session_id: string | null;
+  event_name: string | null;
+  model: string | null;
+  cost_usd: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  cache_read_tokens: number | null;
+  cache_creation_tokens: number | null;
+  duration_ms: number | null;
+  tool_name: string | null;
+  success: boolean | null;
+  error_message: string | null;
+  status_code: number | null;
+  severity: string | null;
+  body: string | null;
+  time_unix_nano: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// § 8 — HOOK EVENT TYPES
+//       GET /api/hooks/tool-events
+//       GET /api/hooks/subagent-events
+//       GET /api/hooks/permission-events
+//       GET /api/hooks/lifecycle-events
+//       GET /api/hooks/activity-summary
+// ─────────────────────────────────────────────────────────────
+
+export interface HookToolEvent {
+  id: number;
+  session_id: string;
+  occurred_at: number;
+  hook_event: string;
+  tool_name: string | null;
+  tool_input: string | null;
+  tool_result: string | null;
+  error_message: string | null;
+  is_interrupt: boolean | null;
+  tool_use_id: string | null;
+  cwd: string | null;
+}
+
+export interface HookSubagentEvent {
+  id: number;
+  session_id: string;
+  occurred_at: number;
+  hook_event: string;
+  agent_type: string | null;
+  agent_name: string | null;
+  cwd: string | null;
+}
+
+export interface HookPermissionEvent {
+  id: number;
+  session_id: string;
+  occurred_at: number;
+  tool_name: string | null;
+  tool_input: string | null;
+  cwd: string | null;
+}
+
+export interface HookLifecycleEvent {
+  id: number;
+  session_id: string;
+  occurred_at: number;
+  event_name: string;
+  attributes: string | null;
+}
+
+export interface HookActivitySummary {
+  total_tool_events: number;
+  total_subagent_events: number;
+  total_lifecycle_events: number;
+  total_permission_events: number;
+  tool_event_counts: [string, number][];
+  recent_errors: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// § 9 — AGENT & SKILL TYPES
+//       GET /api/agents
+//       GET /api/agents/:name
+//       GET /api/skills
+//       GET /api/skills/:name
+// ─────────────────────────────────────────────────────────────
+
+/** Agent configuration — from GET /api/agents */
+export interface AgentConfig {
+  name: string;
+  description: string | null;
+  tools: string[] | null;
+  model: string | null;
+  permission_mode: string | null;
+  max_turns: number | null;
+  skills: string[] | null;
+  hooks: unknown | null;
+  memory: string | null;
+  background: boolean | null;
+  isolation: string | null;
+  body: string;
+  file_path: string;
+  scope: string;
+  project_name: string | null;
+}
+
+/** Supplementary reference or rule file associated with a skill */
+export interface SkillReference {
+  name: string;
+  path: string;
+  content: string;
+  category: string; // "reference" | "rule"
+}
+
+/** Skill configuration — from GET /api/skills */
+export interface SkillConfig {
+  name: string;
+  description: string | null;
+  user_invocable: boolean | null;
+  allowed_tools: string[] | null;
+  model: string | null;
+  context: string | null;
+  agent: string | null;
+  hooks: unknown | null;
+  body: string;
+  file_path: string;
+  scope: string;
+  project_name: string | null;
+  references: SkillReference[];
+}

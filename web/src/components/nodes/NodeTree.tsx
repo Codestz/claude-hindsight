@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useMemo } from "react";
 import type { NodeResponse } from "@/lib/types";
 import { getNodeMeta, isInternalNode } from "@/lib/node-meta";

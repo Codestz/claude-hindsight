@@ -14,12 +14,12 @@ fn main() {
     if Path::new("web/package.json").exists() {
         println!("cargo:rerun-if-changed=web/package.json");
     }
-    if Path::new("web/next.config.ts").exists() {
-        println!("cargo:rerun-if-changed=web/next.config.ts");
+    if Path::new("web/vite.config.ts").exists() {
+        println!("cargo:rerun-if-changed=web/vite.config.ts");
     }
 
-    // If web/out/index.html already exists, nothing to do.
-    if Path::new("web/out/index.html").exists() {
+    // If web/dist/index.html already exists, nothing to do.
+    if Path::new("web/dist/index.html").exists() {
         return;
     }
 
@@ -70,10 +70,10 @@ fn node_available() -> bool {
 }
 
 fn create_placeholder() {
-    std::fs::create_dir_all("web/out").expect("could not create web/out/");
+    std::fs::create_dir_all("web/dist").expect("could not create web/dist/");
 
     std::fs::write(
-        "web/out/index.html",
+        "web/dist/index.html",
         r#"<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,13 +102,13 @@ cd .. &amp;&amp; cargo build --release</pre>
 </html>
 "#,
     )
-    .expect("could not write web/out/index.html");
+    .expect("could not write web/dist/index.html");
 
     std::fs::write(
-        "web/out/404.html",
+        "web/dist/404.html",
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\">\
          <title>404 — Not Found</title></head>\
          <body><h1>404 — Not Found</h1></body></html>",
     )
-    .expect("could not write web/out/404.html");
+    .expect("could not write web/dist/404.html");
 }

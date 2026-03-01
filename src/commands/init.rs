@@ -41,7 +41,18 @@ pub fn run(enable_otel: bool) -> Result<()> {
     println!("   hindsight watch         - Monitor current session");
 
     if enable_otel {
-        println!("\n  OpenTelemetry integration not yet implemented");
+        let mut config = crate::config::Config::load()?;
+        config.telemetry.otel_enabled = true;
+        let port = config.telemetry.otel_port;
+        config.save()?;
+
+        println!("\n  OpenTelemetry telemetry enabled (port {}).", port);
+        println!("  Add these env vars to Claude Code:\n");
+        println!("    CLAUDE_CODE_ENABLE_TELEMETRY=1");
+        println!("    OTEL_METRICS_EXPORTER=otlp");
+        println!("    OTEL_EXPORTER_OTLP_PROTOCOL=http/json");
+        println!("    OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:{}", port);
+        println!("\n  Then run:  hindsight daemon  (to start the OTLP receiver)");
     }
 
     Ok(())

@@ -1,9 +1,6 @@
-"use client";
-
 import { useEffect, useRef, useState, useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { SearchIcon } from "@/components/icons/SearchIcon";
+import { Link, useNavigate } from "react-router-dom";
+import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { SessionFile } from "@/lib/types";
 import { shortId, shortModel, timeAgo } from "@/lib/utils";
@@ -16,7 +13,10 @@ interface Props {
 // Quick-links shown before the user types anything
 const QUICK_LINKS = [
   { label: "Dashboard", href: "/", category: "Navigate" },
+  { label: "Activity", href: "/activity", category: "Navigate" },
   { label: "Projects", href: "/projects", category: "Navigate" },
+  { label: "Sessions", href: "/sessions", category: "Navigate" },
+  { label: "Prompts", href: "/prompts", category: "Navigate" },
 ];
 
 type ResultItem =
@@ -30,7 +30,7 @@ export function CommandPalette({ open, onClose }: Props) {
   const [searching, setSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const router = useRouter();
+  const navigate = useNavigate();
 
   // Build unified result list
   const items: ResultItem[] = [];
@@ -129,9 +129,9 @@ export function CommandPalette({ open, onClose }: Props) {
           const item = items[selectedIndex];
           if (item) {
             if (item.kind === "link") {
-              router.push(item.href);
+              navigate(item.href);
             } else {
-              router.push(`/sessions/${encodeURIComponent(item.session.session_id)}/`);
+              navigate(`/sessions/${encodeURIComponent(item.session.session_id)}`);
             }
             onClose();
           }
@@ -142,7 +142,7 @@ export function CommandPalette({ open, onClose }: Props) {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose, items, selectedIndex, router]);
+  }, [open, onClose, items, selectedIndex, navigate]);
 
   if (!open) return null;
 
@@ -186,7 +186,7 @@ export function CommandPalette({ open, onClose }: Props) {
             borderBottom: "1px solid var(--border-1)",
           }}
         >
-          <SearchIcon size={14} stroke="var(--text-3)" />
+          <Search size={14} strokeWidth={2} style={{ color: "var(--text-3)" }} />
           <input
             ref={inputRef}
             value={query}
@@ -217,7 +217,7 @@ export function CommandPalette({ open, onClose }: Props) {
                 return (
                   <Link
                     key={link.href}
-                    href={link.href}
+                    to={link.href}
                     onClick={onClose}
                     onMouseEnter={() => setSelectedIndex(globalIdx)}
                     style={{
@@ -253,7 +253,7 @@ export function CommandPalette({ open, onClose }: Props) {
                   <div
                     key={session.session_id}
                     onClick={() => {
-                      router.push(`/sessions/${encodeURIComponent(session.session_id)}/`);
+                      navigate(`/sessions/${encodeURIComponent(session.session_id)}`);
                       onClose();
                     }}
                     onMouseEnter={() => setSelectedIndex(globalIdx)}

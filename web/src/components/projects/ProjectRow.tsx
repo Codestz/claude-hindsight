@@ -1,6 +1,4 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { useNavigate } from "react-router-dom";
 import type { ProjectStats } from "@/lib/types";
 import { formatBytes, timeAgo } from "@/lib/utils";
 
@@ -13,10 +11,10 @@ interface ProjectRowProps {
 }
 
 export function ProjectRow({ project: p }: ProjectRowProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   function go() {
-    router.push(`/projects/${encodeURIComponent(p.project_name)}/`);
+    navigate(`/projects/${encodeURIComponent(p.project_name)}`);
   }
 
   return (

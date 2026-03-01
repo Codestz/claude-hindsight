@@ -2,10 +2,12 @@
 //!
 //! Provides JSONL parsing and session analysis for Claude Code transcripts.
 
+pub mod agents;
 pub mod analyzer;
 pub mod api;
 pub mod config;
 pub mod error;
+pub mod otel;
 pub mod parser;
 pub mod search;
 pub mod server;

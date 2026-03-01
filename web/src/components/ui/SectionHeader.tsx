@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "react-router-dom";
 
 interface SectionHeaderProps {
   title: string;
@@ -49,7 +49,7 @@ export function SectionHeader({ title, count, action }: SectionHeaderProps) {
 
       {action && (
         <Link
-          href={action.href}
+          to={action.href}
           style={{
             fontSize: "12px",
             color: "var(--text-3)",

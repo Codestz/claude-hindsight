@@ -28,9 +28,9 @@ build/
 *.wasm
 
 # Web frontend build artifacts (embedded into binary at compile time)
-web/.next/
+web/dist/
 web/node_modules/
-web/out/
+web/tsconfig.tsbuildinfo
 
 # Test artifacts
 *.profraw
@@ -47,3 +47,5 @@ docs/.doctrees/
 
 # OS
 Thumbs.db
+
+.krait
