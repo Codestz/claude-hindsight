@@ -153,9 +153,9 @@ fn remove_hooks(existing: &mut serde_json::Value) {
             if let Some(arr) = event_arr.as_array_mut() {
                 arr.retain(|entry| {
                     let text = serde_json::to_string(entry).unwrap_or_default();
-                    !text.contains(HOOK_COMMAND_LEGACY)
-                        && !text.contains(HOOK_COMMAND_PREFIX)
-                        && !(text.contains("hindsight") && text.contains(HOOK_COMMAND_MARKER))
+                    !(text.contains(HOOK_COMMAND_LEGACY)
+                        || text.contains(HOOK_COMMAND_PREFIX)
+                        || (text.contains("hindsight") && text.contains(HOOK_COMMAND_MARKER)))
                 });
             }
         }

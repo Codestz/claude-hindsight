@@ -2,8 +2,8 @@
 //!
 //! Scans:
 //! 1. Global:      `~/.claude/agents/*.md`, `~/.claude/skills/*/SKILL.md`
-//! 2. Per-project:  For each encoded project dir in `claude_dirs`, decode back to real path,
-//!                  then scan `<real_path>/.claude/agents/` and `<real_path>/.claude/skills/`
+//! 2. Per-project: For each encoded project dir in `claude_dirs`, decode back to real path,
+//!    then scan `<real_path>/.claude/agents/` and `<real_path>/.claude/skills/`
 //! 3. Plugins:     `~/.claude/plugins/**/agents/*.md`, `~/.claude/plugins/**/skills/*/SKILL.md`
 
 use super::parser::{self, AgentConfig, SkillConfig, SkillReference};

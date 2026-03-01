@@ -463,7 +463,8 @@ impl SessionIndex {
 
                 // Extract individual tool events from JSONL nodes for Activity page.
                 // Build a map of tool_use_id → tool_result for pairing.
-                let mut result_map: HashMap<String, (Option<String>, Option<String>, Option<bool>)> = HashMap::new();
+                type ToolResult = (Option<String>, Option<String>, Option<bool>);
+                let mut result_map: HashMap<String, ToolResult> = HashMap::new();
                 for node in &parsed.nodes {
                     // Top-level tool_result
                     if let Some(ref tr) = node.tool_result {
@@ -493,18 +494,13 @@ impl SessionIndex {
                     if let Some(ref tu) = node.tool_use {
                         let input_str = serde_json::to_string(&tu.input).ok();
                         let tuid = tu.id.clone();
-                        let (result, error, is_err) = tuid.as_ref()
+                        let (result, error, _is_err) = tuid.as_ref()
                             .and_then(|id| result_map.get(id))
                             .cloned()
                             .unwrap_or((None, None, None));
-                        let hook_event = if is_err == Some(true) || error.is_some() {
-                            "PostToolUse".to_string()
-                        } else {
-                            "PostToolUse".to_string()
-                        };
                         jte.push(JsonlToolEvent {
                             occurred_at: ts,
-                            hook_event,
+                            hook_event: "PostToolUse".to_string(),
                             tool_name: Some(tu.name.clone()),
                             tool_input: input_str,
                             tool_result: result,
@@ -517,17 +513,12 @@ impl SessionIndex {
                     for block in node.message.as_ref().map(|m| m.content_blocks()).unwrap_or(&[]) {
                         if let crate::parser::models::ContentBlock::ToolUse { id, name, input } = block {
                             let input_str = serde_json::to_string(input).ok();
-                            let (result, error, is_err) = result_map.get(id.as_str())
+                            let (result, error, _is_err) = result_map.get(id.as_str())
                                 .cloned()
                                 .unwrap_or((None, None, None));
-                            let hook_event = if is_err == Some(true) || error.is_some() {
-                                "PostToolUse".to_string()
-                            } else {
-                                "PostToolUse".to_string()
-                            };
                             jte.push(JsonlToolEvent {
                                 occurred_at: ts,
-                                hook_event,
+                                hook_event: "PostToolUse".to_string(),
                                 tool_name: Some(name.clone()),
                                 tool_input: input_str,
                                 tool_result: result,
@@ -694,10 +685,8 @@ impl SessionIndex {
                     "SELECT tool_use_id FROM hook_tool_events WHERE session_id = ?1 AND source = 'hook' AND tool_use_id IS NOT NULL",
                 )?;
                 let rows = id_stmt.query_map(params![session.session_id], |row| row.get::<_, String>(0))?;
-                for r in rows {
-                    if let Ok(id) = r {
-                        existing_ids.insert(id);
-                    }
+                for id in rows.flatten() {
+                    existing_ids.insert(id);
                 }
             }
 
@@ -1288,21 +1277,6 @@ impl SessionIndex {
         Ok(count)
     }
 
-    /// Insert a raw OTLP event payload into the `otel_events` table.
-    pub fn insert_otel_event(&mut self, event_name: &str, payload: &serde_json::Value) -> Result<()> {
-        let received_at = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
-
-        let attributes = serde_json::to_string(payload).unwrap_or_default();
-        self.conn.execute(
-            "INSERT INTO otel_events (received_at, event_name, attributes) VALUES (?1, ?2, ?3)",
-            params![received_at, event_name, attributes],
-        )?;
-        Ok(())
-    }
-
     // ── OTLP insert methods ───────────────────────────────────────────────────
 
     /// Insert a batch of parsed metric data points into `otel_metrics`.
@@ -1710,6 +1684,7 @@ impl SessionIndex {
 
     // ── Hook event insert methods ─────────────────────────────────────────────
 
+    #[allow(clippy::too_many_arguments)]
     pub fn insert_hook_tool_event(
         &self,
         session_id: &str,

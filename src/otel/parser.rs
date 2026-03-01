@@ -139,8 +139,6 @@ pub struct NumberDataPoint {
     pub as_double: Option<f64>,
     pub attributes: Vec<KeyValue>,
     #[serde(deserialize_with = "deserialize_int_value", default)]
-    pub start_time_unix_nano: Option<String>,
-    #[serde(deserialize_with = "deserialize_int_value", default)]
     pub time_unix_nano: Option<String>,
 }
 
