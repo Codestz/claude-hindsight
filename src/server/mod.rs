@@ -20,20 +20,24 @@ use serde_json::json;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 
-/// The compiled-in Next.js static bundle.
+/// The compiled-in Vite static bundle.
 #[derive(RustEmbed)]
-#[folder = "web/out/"]
+#[folder = "web/dist/"]
 struct WebAssets;
 
 /// Shared application state — no Connection here; each handler opens its own.
 #[derive(Clone)]
-pub struct AppState {}
+pub struct AppState {
+    /// Unix epoch seconds of the last OTLP request. Used by the daemon idle-timeout.
+    /// `None` for the full `serve` server (no timeout).
+    pub last_activity: Option<std::sync::Arc<std::sync::atomic::AtomicU64>>,
+}
 
 /// Start the OTLP-only listener (inner server, used by both `serve` and `daemon`).
 async fn serve_otlp(addr: SocketAddr) -> anyhow::Result<()> {
     use axum::routing::post;
 
-    let state = AppState {};
+    let state = AppState { last_activity: None };
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -58,7 +62,7 @@ async fn serve_otlp(addr: SocketAddr) -> anyhow::Result<()> {
 ///
 /// `otel_port = 0` disables the embedded OTLP listener.
 pub async fn serve(addr: SocketAddr, otel_port: u16) -> anyhow::Result<()> {
-    let state = AppState {};
+    let state = AppState { last_activity: None };
 
     let api_router = Router::new()
         .route("/health", get(health))
@@ -107,10 +111,15 @@ pub async fn serve(addr: SocketAddr, otel_port: u16) -> anyhow::Result<()> {
         .route("/hooks/compaction-events", get(routes::hooks::get_compaction_events))
         .route("/hooks/permission-events", get(routes::hooks::get_permission_events))
         .route("/hooks/lifecycle-events", get(routes::hooks::get_lifecycle_events))
+        .route("/hooks/activity-summary", get(routes::hooks::get_activity_summary))
         .route("/otel/metrics", get(routes::otel_query::get_metrics))
         .route("/otel/logs", get(routes::otel_query::get_logs))
         .route("/otel/session-summary", get(routes::otel_query::get_session_summary))
-        .route("/otel/global-summary", get(routes::otel_query::get_global_summary));
+        .route("/otel/global-summary", get(routes::otel_query::get_global_summary))
+        .route("/agents", get(routes::agents::list_agents))
+        .route("/agents/{name}", get(routes::agents::get_agent))
+        .route("/skills", get(routes::agents::list_skills))
+        .route("/skills/{name}", get(routes::agents::get_skill));
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -151,36 +160,21 @@ async fn health(State(_): State<AppState>) -> Json<serde_json::Value> {
     Json(json!({ "ok": true, "version": env!("CARGO_PKG_VERSION") }))
 }
 
-/// Serve embedded static assets from the compiled-in Next.js bundle.
+/// Serve embedded static assets from the compiled-in Vite bundle.
+/// For non-asset paths, serves index.html so react-router handles client-side routing.
 async fn serve_embedded(uri: Uri) -> Response {
     let raw = uri.path().trim_start_matches('/');
     let path = if raw.is_empty() { "index.html" } else { raw };
 
-    // Exact match.
+    // Exact match for static assets (JS, CSS, images, etc.)
     if let Some(asset) = WebAssets::get(path) {
         return make_response(StatusCode::OK, path, asset);
     }
 
-    // Next.js trailingSlash pages: try {path}/index.html.
-    let index_path = format!("{}/index.html", path.trim_end_matches('/'));
-    if let Some(asset) = WebAssets::get(&index_path) {
-        return make_response(StatusCode::OK, &index_path, asset);
-    }
-
-    // SPA sub-route fallback: /projects/foo/ → projects/detail/index.html
-    // Enables client-side routing for paths with runtime-only values
-    // (project names, session IDs) that cannot be pre-generated statically.
-    let first_seg = raw.split('/').next().unwrap_or("");
-    if !first_seg.is_empty() {
-        let shell_path = format!("{}/detail/index.html", first_seg);
-        if let Some(asset) = WebAssets::get(&shell_path) {
-            return make_response(StatusCode::OK, &shell_path, asset);
-        }
-    }
-
-    // 404 page.
-    if let Some(asset) = WebAssets::get("404.html") {
-        return make_response(StatusCode::NOT_FOUND, "404.html", asset);
+    // SPA fallback: serve index.html for all non-file paths.
+    // react-router handles routing on the client side.
+    if let Some(asset) = WebAssets::get("index.html") {
+        return make_response(StatusCode::OK, "index.html", asset);
     }
 
     StatusCode::NOT_FOUND.into_response()
@@ -195,8 +189,8 @@ fn make_response(status: StatusCode, path: &str, asset: rust_embed::EmbeddedFile
         .first_or_octet_stream()
         .to_string();
 
-    // Hashed _next/static/ assets are immutable; HTML must always revalidate.
-    let cache: &'static str = if path.starts_with("_next/static/") {
+    // Hashed assets/ chunks are immutable; HTML must always revalidate.
+    let cache: &'static str = if path.starts_with("assets/") {
         "public, max-age=31536000, immutable"
     } else if path.ends_with(".html") {
         "no-cache"

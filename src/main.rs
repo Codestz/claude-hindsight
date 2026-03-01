@@ -6,6 +6,7 @@
 use clap::{Parser, Subcommand};
 use std::process;
 
+mod agents;
 mod analyzer;
 mod api;
 mod commands;
@@ -187,6 +188,9 @@ enum Commands {
         /// Port to listen on
         #[arg(short, long, default_value = "7228")]
         port: u16,
+        /// Idle timeout in seconds (0 = no timeout). Auto-spawned daemons use 600s.
+        #[arg(long, default_value = "0")]
+        idle_timeout: u64,
     },
 
     /// (Internal) Index a session from a Claude Code hook payload on stdin
@@ -368,8 +372,8 @@ fn run() -> Result<()> {
         Commands::Integrate { remove, status, all, force, otel } => {
             commands::integrate::run(remove, status, all, force, otel)?;
         }
-        Commands::Daemon { port } => {
-            commands::daemon::run(port)?;
+        Commands::Daemon { port, idle_timeout } => {
+            commands::daemon::run(port, idle_timeout)?;
         }
         Commands::HookIndex => {
             commands::hook_index::run()?;

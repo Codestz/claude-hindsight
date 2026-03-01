@@ -9,11 +9,23 @@ use std::path::PathBuf;
 
 /// Legacy hook command (kept for backward-compat detection)
 const HOOK_COMMAND_LEGACY: &str = "claude-hindsight hook-index";
-/// New hook subcommand prefix
+/// Bare-name prefix (legacy, pre-absolute-path)
 const HOOK_COMMAND_PREFIX: &str = "claude-hindsight hook ";
+/// Pattern present in all hindsight hook commands (absolute or bare)
+const HOOK_COMMAND_MARKER: &str = "hook ";
+
+/// Resolve the absolute path to the running binary.
+/// Falls back to the bare name if current_exe() fails.
+fn resolve_binary_path() -> String {
+    std::env::current_exe()
+        .ok()
+        .and_then(|p| p.to_str().map(|s| s.to_string()))
+        .unwrap_or_else(|| "claude-hindsight".to_string())
+}
 
 fn hook_entry(subcommand: &str) -> serde_json::Value {
-    serde_json::json!({ "type": "command", "command": format!("claude-hindsight hook {}", subcommand), "async": true })
+    let bin = resolve_binary_path();
+    serde_json::json!({ "type": "command", "command": format!("{} hook {}", bin, subcommand), "async": true })
 }
 
 /// Build the hooks JSON object we want to be present in settings
@@ -90,10 +102,14 @@ fn derive_settings_paths() -> Vec<(PathBuf, String)> {
     result
 }
 
-/// Check whether any Hindsight hook is already present in a settings value
+/// Check whether any Hindsight hook is already present in a settings value.
+/// Matches legacy bare-name commands, absolute-path commands, and the old hook-index form.
 fn already_installed(value: &serde_json::Value) -> bool {
     let text = serde_json::to_string(value).unwrap_or_default();
-    text.contains(HOOK_COMMAND_LEGACY) || text.contains(HOOK_COMMAND_PREFIX)
+    text.contains(HOOK_COMMAND_LEGACY)
+        || text.contains(HOOK_COMMAND_PREFIX)
+        || text.contains("claude-hindsight hook ")
+        || (text.contains("hindsight") && text.contains(HOOK_COMMAND_MARKER))
 }
 
 /// Merge our hooks into an existing JSON value (in place).
@@ -115,9 +131,12 @@ fn merge_hooks(existing: &mut serde_json::Value) {
             .or_insert_with(|| serde_json::json!([]));
 
         if let Some(arr) = arr.as_array_mut() {
-            // Only append if not already there
+            // Only append if not already there (check both bare and absolute paths)
             let text = serde_json::to_string(&arr).unwrap_or_default();
-            if !text.contains(HOOK_COMMAND_LEGACY) && !text.contains(HOOK_COMMAND_PREFIX) {
+            let has_hindsight = text.contains(HOOK_COMMAND_LEGACY)
+                || text.contains(HOOK_COMMAND_PREFIX)
+                || (text.contains("hindsight") && text.contains(HOOK_COMMAND_MARKER));
+            if !has_hindsight {
                 if let Some(entries) = desired_entries.as_array() {
                     arr.extend(entries.iter().cloned());
                 }
@@ -133,7 +152,9 @@ fn remove_hooks(existing: &mut serde_json::Value) {
             if let Some(arr) = event_arr.as_array_mut() {
                 arr.retain(|entry| {
                     let text = serde_json::to_string(entry).unwrap_or_default();
-                    !text.contains(HOOK_COMMAND_LEGACY) && !text.contains(HOOK_COMMAND_PREFIX)
+                    !text.contains(HOOK_COMMAND_LEGACY)
+                        && !text.contains(HOOK_COMMAND_PREFIX)
+                        && !(text.contains("hindsight") && text.contains(HOOK_COMMAND_MARKER))
                 });
             }
         }

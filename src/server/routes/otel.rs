@@ -7,10 +7,22 @@ use crate::server::AppState;
 use axum::{extract::State, http::StatusCode, Json};
 use serde_json::Value;
 
+/// Bump the daemon idle-timeout tracker (if present).
+fn touch_activity(state: &AppState) {
+    if let Some(ref ts) = state.last_activity {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        ts.store(now, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
 pub async fn receive_metrics(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> StatusCode {
+    touch_activity(&state);
     tokio::task::spawn_blocking(move || {
         if let Err(e) = store_metrics(payload) {
             eprintln!("[otel] store_metrics error: {e}");
@@ -20,9 +32,10 @@ pub async fn receive_metrics(
 }
 
 pub async fn receive_logs(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(payload): Json<Value>,
 ) -> StatusCode {
+    touch_activity(&state);
     tokio::task::spawn_blocking(move || {
         if let Err(e) = store_logs(payload) {
             eprintln!("[otel] store_logs error: {e}");

@@ -1,5 +1,6 @@
 //! Route modules
 
+pub mod agents;
 pub mod analytics;
 pub mod events;
 pub mod hooks;
