@@ -113,6 +113,7 @@ pub fn run_session_end() -> Result<()> {
 // ── Tool-level events ─────────────────────────────────────────────────────────
 
 pub fn run_pre_tool_use() -> Result<()> {
+    ensure_otlp_daemon();
     let p = read_payload();
     let sid = match p.session_id.as_deref() {
         Some(s) if !s.is_empty() => s,
