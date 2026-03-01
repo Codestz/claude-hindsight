@@ -3,11 +3,9 @@ import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { PromptEntry } from "@/lib/types";
 import { timeAgo, shortModel, shortId } from "@/lib/utils";
+import { PageShell } from "@/components/ui/PageShell";
+import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-
-const MAX_W = "1400px";
-const PAGE_PAD = "28px";
-const SECTION_GAP = "20px";
 
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<PromptEntry[]>([]);
@@ -102,21 +100,5 @@ export default function PromptsPage() {
         </div>
       )}
     </PageShell>
-  );
-}
-
-function PageShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ maxWidth: MAX_W, margin: "0 auto", padding: `36px ${PAGE_PAD}`, display: "flex", flexDirection: "column", gap: SECTION_GAP }}>
-      {children}
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: "var(--bg-1)", border: "1px solid var(--border-1)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-      {children}
-    </div>
   );
 }

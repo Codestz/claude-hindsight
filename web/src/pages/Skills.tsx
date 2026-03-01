@@ -6,31 +6,9 @@ import { PageShell } from "@/components/ui/PageShell";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ScopeBadge } from "@/components/ui/ScopeBadge";
+import { FilterChips } from "@/components/ui/FilterChips";
 import { Sparkles, Cpu, Wrench, Terminal } from "lucide-react";
-
-function ScopeBadge({ scope }: { scope: string }) {
-  const isGlobal = scope === "global";
-  const isPlugin = scope.startsWith("plugin:");
-  const label = isPlugin ? scope.replace("plugin:", "") : scope;
-  const color = isGlobal ? "var(--cyan)" : isPlugin ? "var(--purple)" : "var(--amber)";
-
-  return (
-    <span
-      style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: "10px",
-        fontWeight: 600,
-        color,
-        background: `color-mix(in srgb, ${color} 12%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
-        borderRadius: "var(--radius-sm)",
-        padding: "1px 6px",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
 
 function SkillCard({ skill }: { skill: SkillConfig }) {
   const [hovered, setHovered] = useState(false);
@@ -148,41 +126,11 @@ function SkillCard({ skill }: { skill: SkillConfig }) {
   );
 }
 
-function FilterButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: "11px",
-        fontWeight: 600,
-        padding: "4px 10px",
-        borderRadius: "var(--radius-sm)",
-        border: active ? "1px solid var(--accent)" : "1px solid var(--border-2)",
-        background: active ? "rgba(0,255,136,0.08)" : "transparent",
-        color: active ? "var(--accent)" : "var(--text-3)",
-        cursor: "pointer",
-        transition: "all 0.12s",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
 export default function SkillsPage() {
   const [skills, setSkills] = useState<SkillConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [scopeFilter, setScopeFilter] = useState<string>("all");
+  const [activeScopes, setActiveScopes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     api.skills()
@@ -195,7 +143,7 @@ export default function SkillsPage() {
   if (error) return <PageShell><ErrorState message={error} /></PageShell>;
 
   const scopes = Array.from(new Set(skills.map((s) => s.scope))).sort();
-  const filtered = scopeFilter === "all" ? skills : skills.filter((s) => s.scope === scopeFilter);
+  const filtered = activeScopes.size === 0 ? skills : skills.filter((s) => activeScopes.has(s.scope.toLowerCase()));
 
   return (
     <PageShell>
@@ -218,16 +166,17 @@ export default function SkillsPage() {
         </div>
 
         {scopes.length > 1 && (
-          <div style={{ display: "flex", gap: "4px" }}>
-            <FilterButton active={scopeFilter === "all"} onClick={() => setScopeFilter("all")}>
-              All
-            </FilterButton>
-            {scopes.map((s) => (
-              <FilterButton key={s} active={scopeFilter === s} onClick={() => setScopeFilter(s)}>
-                {s}
-              </FilterButton>
-            ))}
-          </div>
+          <FilterChips
+            options={scopes}
+            active={activeScopes}
+            onToggle={(s) => {
+              setActiveScopes((prev) => {
+                const next = new Set(prev);
+                if (next.has(s)) next.delete(s); else next.add(s);
+                return next;
+              });
+            }}
+          />
         )}
       </div>
 

@@ -1,12 +1,10 @@
 //! Telemetry summary routes
-//!
-//! GET /api/telemetry/summary  — total cost + tokens across all sessions
-//! GET /api/telemetry/sessions — per-session cost breakdown
 
 use crate::server::{error::ApiError, AppState};
-use crate::storage::SessionIndex;
 use axum::{extract::State, Json};
 use serde::Serialize;
+
+use super::with_index;
 
 #[derive(Serialize)]
 pub struct TelemetrySummary {
@@ -32,25 +30,11 @@ pub struct SessionTelemetry {
 pub async fn telemetry_summary(
     State(_state): State<AppState>,
 ) -> Result<Json<TelemetrySummary>, ApiError> {
-    let summary = tokio::task::spawn_blocking(|| -> crate::error::Result<TelemetrySummary> {
-        let index = SessionIndex::new()?;
-        index.get_telemetry_summary()
-    })
-    .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(summary))
+    with_index(|index| index.get_telemetry_summary()).await
 }
 
 pub async fn telemetry_sessions(
     State(_state): State<AppState>,
 ) -> Result<Json<Vec<SessionTelemetry>>, ApiError> {
-    let sessions = tokio::task::spawn_blocking(|| -> crate::error::Result<Vec<SessionTelemetry>> {
-        let index = SessionIndex::new()?;
-        index.get_telemetry_per_session()
-    })
-    .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(sessions))
+    with_index(|index| index.get_telemetry_per_session()).await
 }

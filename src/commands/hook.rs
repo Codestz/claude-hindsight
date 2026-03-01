@@ -5,6 +5,7 @@
 //! All handlers swallow errors so Claude Code is never blocked.
 
 use crate::error::Result;
+use crate::storage::SessionIndex;
 use std::io::{self, BufRead};
 
 /// Full hook payload (all fields optional; event-specific fields may be absent)
@@ -54,6 +55,20 @@ pub fn read_payload() -> FullHookPayload {
         }
     }
     serde_json::from_str(raw.trim()).unwrap_or_default()
+}
+
+/// Read payload, extract session_id, open SessionIndex, and call `f`.
+/// Returns Ok(()) silently if session_id is missing or SessionIndex fails to open.
+fn with_session(f: impl FnOnce(&str, &SessionIndex, &FullHookPayload)) -> Result<()> {
+    let p = read_payload();
+    let sid = match p.session_id.as_deref() {
+        Some(s) if !s.is_empty() => s,
+        _ => return Ok(()),
+    };
+    if let Ok(idx) = SessionIndex::new() {
+        f(sid, &idx, &p);
+    }
+    Ok(())
 }
 
 // ── OTLP daemon auto-spawn ─────────────────────────────────────────────────────
@@ -116,32 +131,21 @@ pub fn run_session_end() -> Result<()> {
 
 pub fn run_user_prompt_submit() -> Result<()> {
     ensure_otlp_daemon();
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let attrs = serde_json::json!({
             "prompt": p.prompt,
             "cwd": p.cwd,
         });
         let attrs_str = attrs.to_string();
         let _ = idx.insert_hook_lifecycle_event(sid, "UserPromptSubmit", Some(&attrs_str));
-    }
-    Ok(())
+    })
 }
 
 // ── Tool-level events ─────────────────────────────────────────────────────────
 
 pub fn run_pre_tool_use() -> Result<()> {
     ensure_otlp_daemon();
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let input_str = p.tool_input.as_ref().map(|v| v.to_string());
         let _ = idx.insert_hook_tool_event(
             sid,
@@ -154,17 +158,11 @@ pub fn run_pre_tool_use() -> Result<()> {
             p.tool_use_id.as_deref(),
             p.cwd.as_deref(),
         );
-    }
-    Ok(())
+    })
 }
 
 pub fn run_post_tool_use() -> Result<()> {
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let input_str = p.tool_input.as_ref().map(|v| v.to_string());
         let result_str = p.tool_response.as_ref().map(|v| v.to_string());
         let _ = idx.insert_hook_tool_event(
@@ -178,17 +176,11 @@ pub fn run_post_tool_use() -> Result<()> {
             p.tool_use_id.as_deref(),
             p.cwd.as_deref(),
         );
-    }
-    Ok(())
+    })
 }
 
 pub fn run_post_tool_use_failure() -> Result<()> {
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let input_str = p.tool_input.as_ref().map(|v| v.to_string());
         let _ = idx.insert_hook_tool_event(
             sid,
@@ -201,19 +193,13 @@ pub fn run_post_tool_use_failure() -> Result<()> {
             p.tool_use_id.as_deref(),
             p.cwd.as_deref(),
         );
-    }
-    Ok(())
+    })
 }
 
 // ── Subagent events ───────────────────────────────────────────────────────────
 
 pub fn run_subagent_start() -> Result<()> {
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let _ = idx.insert_hook_subagent_event(
             sid,
             "SubagentStart",
@@ -221,17 +207,11 @@ pub fn run_subagent_start() -> Result<()> {
             p.agent_name.as_deref(),
             p.cwd.as_deref(),
         );
-    }
-    Ok(())
+    })
 }
 
 pub fn run_subagent_stop() -> Result<()> {
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let _ = idx.insert_hook_subagent_event(
             sid,
             "SubagentStop",
@@ -239,33 +219,21 @@ pub fn run_subagent_stop() -> Result<()> {
             p.agent_name.as_deref(),
             p.cwd.as_deref(),
         );
-    }
-    Ok(())
+    })
 }
 
 // ── Compaction ────────────────────────────────────────────────────────────────
 
 pub fn run_pre_compact() -> Result<()> {
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let _ = idx.insert_hook_compaction_event(sid, p.hook_event_name.as_deref());
-    }
-    Ok(())
+    })
 }
 
 // ── Permission request ────────────────────────────────────────────────────────
 
 pub fn run_permission_request() -> Result<()> {
-    let p = read_payload();
-    let sid = match p.session_id.as_deref() {
-        Some(s) if !s.is_empty() => s,
-        _ => return Ok(()),
-    };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
+    with_session(|sid, idx, p| {
         let input_str = p.tool_input.as_ref().map(|v| v.to_string());
         let _ = idx.insert_hook_permission_event(
             sid,
@@ -273,8 +241,7 @@ pub fn run_permission_request() -> Result<()> {
             input_str.as_deref(),
             p.cwd.as_deref(),
         );
-    }
-    Ok(())
+    })
 }
 
 // ── Lifecycle catch-all events ────────────────────────────────────────────────
@@ -284,8 +251,7 @@ fn run_lifecycle(event_name: &str, payload: FullHookPayload) -> Result<()> {
         Some(s) if !s.is_empty() => s,
         _ => return Ok(()),
     };
-    if let Ok(idx) = crate::storage::SessionIndex::new() {
-        // Encode event-specific fields as a JSON attributes blob
+    if let Ok(idx) = SessionIndex::new() {
         let attrs = serde_json::json!({
             "result": payload.result,
             "worktree_path": payload.worktree_path,

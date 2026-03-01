@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { ProjectStats } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
+import { PageShell } from "@/components/ui/PageShell";
+import { Card } from "@/components/ui/Card";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { StatCard } from "@/components/ui/StatCard";
 import { ProjectTable } from "@/components/projects/ProjectTable";
-
-const MAX_W = "1400px";
-const PAGE_PAD = "28px";
-const SECTION_GAP = "20px";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectStats[]>([]);
@@ -45,47 +45,5 @@ export default function ProjectsPage() {
         <ProjectTable projects={projects} />
       </Card>
     </PageShell>
-  );
-}
-
-function PageShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      maxWidth: MAX_W, margin: "0 auto",
-      padding: `36px ${PAGE_PAD}`,
-      display: "flex", flexDirection: "column", gap: SECTION_GAP,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: "var(--bg-1)", border: "1px solid var(--border-1)",
-      borderRadius: "var(--radius-lg)", overflow: "hidden",
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div style={{ height: "60vh", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", color: "var(--text-3)", fontFamily: "var(--font-sans)" }}>
-      Loading…
-    </div>
-  );
-}
-
-function ErrorState({ message }: { message: string | null }) {
-  return (
-    <div style={{ height: "60vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "10px", textAlign: "center" }}>
-      <div style={{ fontSize: "14px", color: "var(--red)" }}>{message ?? "Failed to load projects"}</div>
-      <div style={{ fontSize: "13px", color: "var(--text-3)" }}>
-        Is <code style={{ fontFamily: "var(--font-mono)", color: "var(--accent)" }}>claude-hindsight serve</code> running on :7227?
-      </div>
-    </div>
   );
 }

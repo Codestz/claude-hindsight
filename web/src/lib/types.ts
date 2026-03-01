@@ -257,12 +257,6 @@ export interface PromptEntry {
   model: string | null;
 }
 
-/** Health check — from GET /api/health */
-export interface HealthCheck {
-  ok: boolean;
-  version: string;
-}
-
 /**
  * 14-day (or N-day) conversation count array.
  * Index 0 = oldest day, last index = today.
@@ -377,13 +371,6 @@ export interface HookSubagentEvent {
   cwd: string | null;
 }
 
-export interface HookCompactionEvent {
-  id: number;
-  session_id: string;
-  occurred_at: number;
-  compaction_trigger: string | null;
-}
-
 export interface HookPermissionEvent {
   id: number;
   session_id: string;
@@ -408,20 +395,6 @@ export interface HookActivitySummary {
   total_permission_events: number;
   tool_event_counts: [string, number][];
   recent_errors: number;
-}
-
-/** OTEL metric record — from GET /api/otel/metrics */
-export interface OtelMetricDto {
-  received_at: number;
-  session_id: string | null;
-  metric_name: string;
-  token_type: string | null;
-  model: string | null;
-  value_int: number | null;
-  value_double: number | null;
-  time_unix_nano: string | null;
-  service_name: string | null;
-  service_version: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────

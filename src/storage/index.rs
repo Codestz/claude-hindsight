@@ -213,233 +213,146 @@ impl SessionIndex {
                 CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 12", [])?;
-        } else {
-            // Incremental migrations
-            if version < 4 {
-                // v1/v2/v3 → v4: add missing columns
-                for stmt in &[
-                    "ALTER TABLE sessions ADD COLUMN total_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN estimated_cost REAL NOT NULL DEFAULT 0.0",
-                    "ALTER TABLE sessions ADD COLUMN model TEXT",
-                    "ALTER TABLE sessions ADD COLUMN error_count INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN first_message TEXT",
-                    "ALTER TABLE sessions ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0",
-                ] {
-                    let _ = self.conn.execute(stmt, []);
-                }
-                let _ = self.conn.execute_batch(
-                    "CREATE VIRTUAL TABLE IF NOT EXISTS sessions_fts USING fts5(session_id UNINDEXED, searchable_text, tokenize='porter ascii');"
+            self.conn.execute("PRAGMA user_version = 2", [])?;
+        } else if version < 2 {
+            // Single migration from v1 → v2: add all columns and tables
+            // Use `let _ =` for ALTER TABLE to handle columns that may already exist
+            for stmt in &[
+                "ALTER TABLE sessions ADD COLUMN model TEXT",
+                "ALTER TABLE sessions ADD COLUMN error_count INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE sessions ADD COLUMN first_message TEXT",
+                "ALTER TABLE sessions ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE sessions ADD COLUMN source_dir TEXT NOT NULL DEFAULT ''",
+                "ALTER TABLE sessions ADD COLUMN subagent_models TEXT",
+                "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE sessions ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE sessions ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0.0",
+            ] {
+                let _ = self.conn.execute(stmt, []);
+            }
+
+            let _ = self.conn.execute_batch(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS sessions_fts USING fts5(session_id UNINDEXED, searchable_text, tokenize='porter ascii');"
+            );
+
+            self.conn.execute_batch(
+                r#"
+                CREATE TABLE IF NOT EXISTS file_usage (
+                    session_id TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    access_count INTEGER NOT NULL,
+                    PRIMARY KEY (session_id, file_path),
+                    FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
                 );
-                self.conn.execute("PRAGMA user_version = 4", [])?;
-            }
+                CREATE INDEX IF NOT EXISTS idx_file_path ON file_usage(file_path);
+                CREATE INDEX IF NOT EXISTS idx_file_access_count ON file_usage(access_count DESC);
 
-            if version < 5 {
-                // v4 → v5: add file_usage table
-                self.conn.execute_batch(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS file_usage (
-                        session_id TEXT NOT NULL,
-                        file_path TEXT NOT NULL,
-                        access_count INTEGER NOT NULL,
-                        PRIMARY KEY (session_id, file_path),
-                        FOREIGN KEY (session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_file_path ON file_usage(file_path);
-                    CREATE INDEX IF NOT EXISTS idx_file_access_count ON file_usage(access_count DESC);
-                    "#,
-                )?;
-                self.conn.execute("PRAGMA user_version = 5", [])?;
-            }
-
-            if version < 6 {
-                // v5 → v6: add source_dir and subagent_models columns
-                let _ = self.conn.execute(
-                    "ALTER TABLE sessions ADD COLUMN source_dir TEXT NOT NULL DEFAULT ''",
-                    [],
+                CREATE TABLE IF NOT EXISTS otel_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    received_at INTEGER NOT NULL,
+                    session_id TEXT,
+                    event_name TEXT NOT NULL,
+                    model TEXT,
+                    cost_usd REAL,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    cache_read_tokens INTEGER,
+                    cache_creation_tokens INTEGER,
+                    duration_ms INTEGER,
+                    attributes TEXT
                 );
-                let _ = self.conn.execute(
-                    "ALTER TABLE sessions ADD COLUMN subagent_models TEXT",
-                    [],
+
+                CREATE TABLE IF NOT EXISTS hook_tool_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    hook_event TEXT NOT NULL,
+                    tool_name TEXT,
+                    tool_input TEXT,
+                    tool_result TEXT,
+                    error_message TEXT,
+                    is_interrupt INTEGER,
+                    tool_use_id TEXT,
+                    cwd TEXT,
+                    source TEXT NOT NULL DEFAULT 'hook'
                 );
-                self.conn.execute("PRAGMA user_version = 6", [])?;
-            }
-
-            if version < 7 {
-                // v6 → v7: added token breakdown columns (now unused but harmless)
-                for stmt in &[
-                    "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0",
-                ] {
-                    let _ = self.conn.execute(stmt, []);
-                }
-                self.conn.execute("PRAGMA user_version = 7", [])?;
-            }
-
-            if version < 8 {
-                // v7 → v8: token/cost columns removed from application layer.
-                // Orphaned columns (total_tokens, estimated_cost, input_tokens, etc.)
-                // are left in place — SQLite handles unused columns gracefully.
-                self.conn.execute("PRAGMA user_version = 8", [])?;
-            }
-
-            if version < 9 {
-                // v8 → v9: add cost_usd (first attempt, may be incomplete on some DBs)
-                let _ = self.conn.execute(
-                    "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0.0",
-                    [],
+                CREATE TABLE IF NOT EXISTS hook_subagent_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    hook_event TEXT NOT NULL,
+                    agent_type TEXT,
+                    agent_name TEXT,
+                    cwd TEXT
                 );
-                self.conn.execute_batch(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS otel_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        received_at INTEGER NOT NULL,
-                        session_id TEXT,
-                        event_name TEXT NOT NULL,
-                        model TEXT,
-                        cost_usd REAL,
-                        input_tokens INTEGER,
-                        output_tokens INTEGER,
-                        cache_read_tokens INTEGER,
-                        cache_creation_tokens INTEGER,
-                        duration_ms INTEGER,
-                        attributes TEXT
-                    );
-                    "#,
-                )?;
-                self.conn.execute("PRAGMA user_version = 9", [])?;
-            }
-
-            if version < 10 {
-                // v9 → v10: ensure all token columns exist (may be missing on DBs that
-                // skipped the v7 migration path and were initialised fresh at v8/v9).
-                for stmt in &[
-                    "ALTER TABLE sessions ADD COLUMN input_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN output_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0",
-                    "ALTER TABLE sessions ADD COLUMN cost_usd REAL NOT NULL DEFAULT 0.0",
-                ] {
-                    let _ = self.conn.execute(stmt, []);
-                }
-                self.conn.execute("PRAGMA user_version = 10", [])?;
-            }
-
-            if version < 11 {
-                // v10 → v11: add 5 hook event tables
-                self.conn.execute_batch(
-                    r#"
-                    CREATE TABLE IF NOT EXISTS hook_tool_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        session_id TEXT NOT NULL,
-                        occurred_at INTEGER NOT NULL,
-                        hook_event TEXT NOT NULL,
-                        tool_name TEXT,
-                        tool_input TEXT,
-                        tool_result TEXT,
-                        error_message TEXT,
-                        is_interrupt INTEGER,
-                        tool_use_id TEXT,
-                        cwd TEXT
-                    );
-                    CREATE TABLE IF NOT EXISTS hook_subagent_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        session_id TEXT NOT NULL,
-                        occurred_at INTEGER NOT NULL,
-                        hook_event TEXT NOT NULL,
-                        agent_type TEXT,
-                        agent_name TEXT,
-                        cwd TEXT
-                    );
-                    CREATE TABLE IF NOT EXISTS hook_compaction_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        session_id TEXT NOT NULL,
-                        occurred_at INTEGER NOT NULL,
-                        compaction_trigger TEXT
-                    );
-                    CREATE TABLE IF NOT EXISTS hook_permission_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        session_id TEXT NOT NULL,
-                        occurred_at INTEGER NOT NULL,
-                        tool_name TEXT,
-                        tool_input TEXT,
-                        cwd TEXT
-                    );
-                    CREATE TABLE IF NOT EXISTS hook_lifecycle_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        session_id TEXT NOT NULL,
-                        occurred_at INTEGER NOT NULL,
-                        event_name TEXT NOT NULL,
-                        attributes TEXT
-                    );
-                    "#,
-                )?;
-                self.conn.execute("PRAGMA user_version = 11", [])?;
-            }
-
-            if version < 12 {
-                // v11 → v12: add otel_metrics and otel_logs tables.
-                // Drop-then-create handles any partial state from failed previous attempts.
-                self.conn.execute_batch(
-                    r#"
-                    DROP TABLE IF EXISTS otel_metrics;
-                    DROP TABLE IF EXISTS otel_logs;
-                    CREATE TABLE IF NOT EXISTS otel_metrics (
-                        id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                        received_at     INTEGER NOT NULL,
-                        session_id      TEXT,
-                        metric_name     TEXT NOT NULL,
-                        token_type      TEXT,
-                        model           TEXT,
-                        value_int       INTEGER,
-                        value_double    REAL,
-                        time_unix_nano  TEXT,
-                        service_name    TEXT,
-                        service_version TEXT
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_otel_metrics_session ON otel_metrics(session_id);
-                    CREATE INDEX IF NOT EXISTS idx_otel_metrics_name    ON otel_metrics(metric_name);
-                    CREATE INDEX IF NOT EXISTS idx_otel_metrics_time    ON otel_metrics(received_at DESC);
-
-                    CREATE TABLE IF NOT EXISTS otel_logs (
-                        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-                        received_at           INTEGER NOT NULL,
-                        session_id            TEXT,
-                        event_name            TEXT,
-                        model                 TEXT,
-                        cost_usd              REAL,
-                        input_tokens          INTEGER,
-                        output_tokens         INTEGER,
-                        cache_read_tokens     INTEGER,
-                        cache_creation_tokens INTEGER,
-                        duration_ms           INTEGER,
-                        tool_name             TEXT,
-                        success               INTEGER,
-                        error_message         TEXT,
-                        status_code           INTEGER,
-                        severity              TEXT,
-                        body                  TEXT,
-                        attributes            TEXT,
-                        time_unix_nano        TEXT
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_otel_logs_session ON otel_logs(session_id);
-                    CREATE INDEX IF NOT EXISTS idx_otel_logs_event   ON otel_logs(event_name);
-                    CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
-                    "#,
-                )?;
-                self.conn.execute("PRAGMA user_version = 12", [])?;
-            }
-
-            if version < 13 {
-                // v12 → v13: add source column to hook_tool_events for JSONL backfill
-                let _ = self.conn.execute(
-                    "ALTER TABLE hook_tool_events ADD COLUMN source TEXT NOT NULL DEFAULT 'hook'",
-                    [],
+                CREATE TABLE IF NOT EXISTS hook_compaction_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    compaction_trigger TEXT
                 );
-                self.conn.execute("PRAGMA user_version = 13", [])?;
-            }
+                CREATE TABLE IF NOT EXISTS hook_permission_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    tool_name TEXT,
+                    tool_input TEXT,
+                    cwd TEXT
+                );
+                CREATE TABLE IF NOT EXISTS hook_lifecycle_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    occurred_at INTEGER NOT NULL,
+                    event_name TEXT NOT NULL,
+                    attributes TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS otel_metrics (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    received_at     INTEGER NOT NULL,
+                    session_id      TEXT,
+                    metric_name     TEXT NOT NULL,
+                    token_type      TEXT,
+                    model           TEXT,
+                    value_int       INTEGER,
+                    value_double    REAL,
+                    time_unix_nano  TEXT,
+                    service_name    TEXT,
+                    service_version TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_otel_metrics_session ON otel_metrics(session_id);
+                CREATE INDEX IF NOT EXISTS idx_otel_metrics_name    ON otel_metrics(metric_name);
+                CREATE INDEX IF NOT EXISTS idx_otel_metrics_time    ON otel_metrics(received_at DESC);
+
+                CREATE TABLE IF NOT EXISTS otel_logs (
+                    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                    received_at           INTEGER NOT NULL,
+                    session_id            TEXT,
+                    event_name            TEXT,
+                    model                 TEXT,
+                    cost_usd              REAL,
+                    input_tokens          INTEGER,
+                    output_tokens         INTEGER,
+                    cache_read_tokens     INTEGER,
+                    cache_creation_tokens INTEGER,
+                    duration_ms           INTEGER,
+                    tool_name             TEXT,
+                    success               INTEGER,
+                    error_message         TEXT,
+                    status_code           INTEGER,
+                    severity              TEXT,
+                    body                  TEXT,
+                    attributes            TEXT,
+                    time_unix_nano        TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_otel_logs_session ON otel_logs(session_id);
+                CREATE INDEX IF NOT EXISTS idx_otel_logs_event   ON otel_logs(event_name);
+                CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
+                "#,
+            )?;
+            self.conn.execute("PRAGMA user_version = 2", [])?;
         }
 
         Ok(())

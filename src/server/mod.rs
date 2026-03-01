@@ -1,6 +1,6 @@
 //! Axum HTTP server for the Hindsight web dashboard
 //!
-//! Exposes a REST + SSE API and serves the pre-built Next.js static bundle,
+//! Exposes a REST + SSE API and serves the pre-built Vite static bundle,
 //! embedded at compile time via rust-embed.
 
 pub mod daemon;

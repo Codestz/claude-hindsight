@@ -1,17 +1,13 @@
 //! OTLP query routes
-//!
-//! GET /api/otel/metrics?session_id=&metric=&since=
-//! GET /api/otel/logs?session_id=&event=&since=
-//! GET /api/otel/session-summary?session_id=
-//! GET /api/otel/global-summary
 
 use crate::server::{error::ApiError, AppState};
-use crate::storage::SessionIndex;
 use axum::{
     extract::{Query, State},
     Json,
 };
 use serde::{Deserialize, Serialize};
+
+use super::with_index;
 
 // ── Query param structs ───────────────────────────────────────────────────────
 
@@ -32,7 +28,7 @@ pub struct SessionQuery {
     pub session_id: String,
 }
 
-// ── Response DTOs (thin wrappers so serde Serialize applies) ─────────────────
+// ── Response DTOs ─────────────────────────────────────────────────────────────
 
 #[derive(Serialize)]
 pub struct OtelMetricDto {
@@ -77,10 +73,7 @@ pub async fn get_metrics(
 ) -> Result<Json<Vec<OtelMetricDto>>, ApiError> {
     let session_id = q.session_id.unwrap_or_default();
     let metric = q.metric;
-    // Empty string signals "no filter" to the storage layer.
-
-    let rows = tokio::task::spawn_blocking(move || -> crate::error::Result<Vec<OtelMetricDto>> {
-        let index = SessionIndex::new()?;
+    with_index(move |index| {
         let records = index.get_otel_metrics(&session_id, metric.as_deref())?;
         Ok(records
             .into_iter()
@@ -99,9 +92,6 @@ pub async fn get_metrics(
             .collect())
     })
     .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(rows))
 }
 
 pub async fn get_logs(
@@ -110,9 +100,7 @@ pub async fn get_logs(
 ) -> Result<Json<Vec<OtelLogDto>>, ApiError> {
     let session_id = q.session_id.unwrap_or_default();
     let event = q.event;
-
-    let rows = tokio::task::spawn_blocking(move || -> crate::error::Result<Vec<OtelLogDto>> {
-        let index = SessionIndex::new()?;
+    with_index(move |index| {
         let records = index.get_otel_logs(&session_id, event.as_deref())?;
         Ok(records
             .into_iter()
@@ -138,38 +126,17 @@ pub async fn get_logs(
             .collect())
     })
     .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(rows))
 }
 
 pub async fn get_session_summary(
     State(_state): State<AppState>,
     Query(q): Query<SessionQuery>,
 ) -> Result<Json<crate::storage::OtelSessionSummary>, ApiError> {
-    let summary = tokio::task::spawn_blocking(
-        move || -> crate::error::Result<crate::storage::OtelSessionSummary> {
-            let index = SessionIndex::new()?;
-            index.get_otel_session_summary(&q.session_id)
-        },
-    )
-    .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(summary))
+    with_index(move |index| index.get_otel_session_summary(&q.session_id)).await
 }
 
 pub async fn get_global_summary(
     State(_state): State<AppState>,
 ) -> Result<Json<crate::storage::OtelGlobalSummary>, ApiError> {
-    let summary = tokio::task::spawn_blocking(
-        move || -> crate::error::Result<crate::storage::OtelGlobalSummary> {
-            let index = SessionIndex::new()?;
-            index.get_otel_global_summary()
-        },
-    )
-    .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(summary))
+    with_index(|index| index.get_otel_global_summary()).await
 }

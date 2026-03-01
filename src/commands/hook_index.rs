@@ -8,36 +8,9 @@
 //!   echo '<hook-json>' | claude-hindsight hook-index
 
 use crate::error::Result;
-use std::io::{self, BufRead};
-
-/// JSON shape emitted by Claude Code hook payloads (subset we care about).
-#[derive(serde::Deserialize)]
-struct HookPayload {
-    transcript_path: Option<String>,
-    session_id: Option<String>,
-}
 
 pub fn run() -> Result<()> {
-    // Read all of stdin
-    let stdin = io::stdin();
-    let mut raw = String::new();
-    for line in stdin.lock().lines() {
-        match line {
-            Ok(l) => {
-                raw.push_str(&l);
-                raw.push('\n');
-            }
-            Err(_) => break,
-        }
-    }
-
-    let payload: HookPayload = match serde_json::from_str(raw.trim()) {
-        Ok(p) => p,
-        Err(_) => {
-            // Malformed or empty payload — exit silently (never block Claude Code)
-            return Ok(());
-        }
-    };
+    let payload = super::hook::read_payload();
 
     let transcript_path = match payload.transcript_path {
         Some(p) => p,

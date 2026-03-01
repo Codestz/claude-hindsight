@@ -3,12 +3,13 @@
 use crate::api::responses::{NodeResponse, NodeResponseContext, TreeResponse};
 use crate::server::dto::SessionFileDto;
 use crate::server::{error::ApiError, AppState};
-use crate::storage::SessionIndex;
 use axum::{
     extract::{Path, Query, State},
     Json,
 };
 use serde::Deserialize;
+
+use super::with_index;
 
 #[derive(Deserialize)]
 pub struct SessionsQuery {
@@ -20,34 +21,28 @@ pub async fn list_sessions(
     State(_state): State<AppState>,
     Query(q): Query<SessionsQuery>,
 ) -> Result<Json<Vec<SessionFileDto>>, ApiError> {
-    let result = tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
-        let index = SessionIndex::new()?;
+    let limit = q.limit.unwrap_or(usize::MAX);
+    with_index(move |index| {
         let sessions = if let Some(ref project) = q.project {
             index.find_by_project(project)?
         } else {
             index.list_sessions()?
         };
-        Ok(sessions)
+        Ok(sessions
+            .into_iter()
+            .take(limit)
+            .map(SessionFileDto::from)
+            .collect())
     })
     .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    let limit = q.limit.unwrap_or(usize::MAX);
-    let dtos: Vec<SessionFileDto> = result
-        .into_iter()
-        .take(limit)
-        .map(SessionFileDto::from)
-        .collect();
-
-    Ok(Json(dtos))
 }
 
 pub async fn get_session(
     State(_state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<SessionFileDto>, ApiError> {
-    let result = tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
-        let index = SessionIndex::new()?;
+    let result = tokio::task::spawn_blocking(move || {
+        let index = crate::storage::SessionIndex::new()?;
         index.find_by_id(&id)
     })
     .await
@@ -63,8 +58,7 @@ pub async fn get_session_nodes(
     State(_state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<TreeResponse>, ApiError> {
-    let result = tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
-        let index = SessionIndex::new()?;
+    with_index(move |index| {
         let session = index
             .find_by_id(&id)?
             .ok_or_else(|| crate::error::HindsightError::SessionNotFound(id.clone()))?;
@@ -88,18 +82,14 @@ pub async fn get_session_nodes(
         })
     })
     .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(result))
 }
 
-/// GET /api/sessions/:id/prompts — returns nodes with prompt_score >= 40
+/// GET /api/sessions/:id/prompts -- returns nodes with prompt_score >= 40
 pub async fn get_session_prompts(
     State(_state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Json<Vec<NodeResponse>>, ApiError> {
-    let result = tokio::task::spawn_blocking(move || -> crate::error::Result<_> {
-        let index = SessionIndex::new()?;
+    with_index(move |index| {
         let session = index
             .find_by_id(&id)?
             .ok_or_else(|| crate::error::HindsightError::SessionNotFound(id.clone()))?;
@@ -113,7 +103,6 @@ pub async fn get_session_prompts(
             .map(|r| NodeResponse::from_tree_node_with_context(r, &mut ctx))
             .collect();
 
-        // Collect all nodes with prompt_score >= PROMPT_THRESHOLD
         let threshold = crate::analyzer::prompt_detect::PROMPT_THRESHOLD;
         let mut prompts = Vec::new();
         collect_prompts(&roots_response, threshold, &mut prompts);
@@ -121,15 +110,11 @@ pub async fn get_session_prompts(
         Ok(prompts)
     })
     .await
-    .map_err(|e| ApiError::Internal(e.to_string()))??;
-
-    Ok(Json(result))
 }
 
 fn collect_prompts(nodes: &[NodeResponse], threshold: u8, out: &mut Vec<NodeResponse>) {
     for node in nodes {
         if node.prompt_score.unwrap_or(0) >= threshold {
-            // Return a flat node (no children) for the prompts endpoint
             let mut flat = node.clone();
             flat.children = Vec::new();
             out.push(flat);

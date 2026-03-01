@@ -42,3 +42,23 @@ export function formatTokens(n: number): string {
 export function formatCost(usd: number): string {
   return `$${usd.toFixed(2)}`;
 }
+
+// Group mcp__<server>__<tool> entries by server name
+export function extractMcpServers(topTools: [string, number][]): [string, number][] {
+  const servers: Record<string, number> = {};
+  for (const [name, count] of topTools) {
+    if (name.startsWith("mcp__")) {
+      const parts = name.split("__");
+      const server = parts[1] ?? name;
+      servers[server] = (servers[server] ?? 0) + count;
+    }
+  }
+  return Object.entries(servers).sort((a, b) => b[1] - a[1]) as [string, number][];
+}
+
+// Show last 2 path segments: "/a/b/c/d.ts" → ".../c/d.ts"
+export function shortPath(path: string): string {
+  const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
+  if (parts.length <= 2) return parts.join("/");
+  return `.../${parts.slice(-2).join("/")}`;
+}

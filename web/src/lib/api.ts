@@ -5,7 +5,6 @@
 import type {
   AgentConfig,
   GlobalAnalytics,
-  HealthCheck,
   HookActivitySummary,
   HookLifecycleEvent,
   HookPermissionEvent,
@@ -48,10 +47,6 @@ export const api = {
 
   globalSparkline(days = 14): Promise<Sparkline> {
     return get(`/analytics/global/sparkline?days=${days}`);
-  },
-
-  health(): Promise<HealthCheck> {
-    return get("/health");
   },
 
   projectAnalytics(project: string): Promise<ProjectAnalytics> {

@@ -9,7 +9,7 @@ import type {
   SessionFile,
   TelemetrySummary,
 } from "@/lib/types";
-import { formatBytes, formatCost, formatTokens, shortId, timeAgo } from "@/lib/utils";
+import { formatBytes, formatCost, formatTokens, shortId, extractMcpServers, shortPath } from "@/lib/utils";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Card } from "@/components/ui/Card";
@@ -25,28 +25,6 @@ import {
   AlertTriangle,
   ChevronRight,
 } from "lucide-react";
-
-// ── MCP extraction: mcp__<server>__<tool> → group by server ──
-function extractMcpServers(topTools: [string, number][]): [string, number][] {
-  const servers: Record<string, number> = {};
-  for (const [name, count] of topTools) {
-    if (name.startsWith("mcp__")) {
-      const parts = name.split("__");
-      const server = parts[1] ?? name;
-      servers[server] = (servers[server] ?? 0) + count;
-    }
-  }
-  return Object.entries(servers)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6) as [string, number][];
-}
-
-// ── File path shortener: show last 2 segments ────────────────
-function shortPath(path: string): string {
-  const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
-  if (parts.length <= 2) return parts.join("/");
-  return `.../${parts.slice(-2).join("/")}`;
-}
 
 // ── Greeting based on time of day ─────────────────────────────
 function greeting(): string {
