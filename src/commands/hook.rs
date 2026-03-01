@@ -32,6 +32,8 @@ pub struct FullHookPayload {
     // WorktreeCreate / WorktreeRemove
     pub worktree_path: Option<String>,
     pub branch: Option<String>,
+    // UserPromptSubmit
+    pub prompt: Option<String>,
     // ConfigChange
     pub key: Option<String>,
     pub old_value: Option<serde_json::Value>,
@@ -108,6 +110,26 @@ pub fn run_stop() -> Result<()> {
 
 pub fn run_session_end() -> Result<()> {
     crate::commands::hook_index::run()
+}
+
+// ── User prompt ───────────────────────────────────────────────────────────────
+
+pub fn run_user_prompt_submit() -> Result<()> {
+    ensure_otlp_daemon();
+    let p = read_payload();
+    let sid = match p.session_id.as_deref() {
+        Some(s) if !s.is_empty() => s,
+        _ => return Ok(()),
+    };
+    if let Ok(idx) = crate::storage::SessionIndex::new() {
+        let attrs = serde_json::json!({
+            "prompt": p.prompt,
+            "cwd": p.cwd,
+        });
+        let attrs_str = attrs.to_string();
+        let _ = idx.insert_hook_lifecycle_event(sid, "UserPromptSubmit", Some(&attrs_str));
+    }
+    Ok(())
 }
 
 // ── Tool-level events ─────────────────────────────────────────────────────────

@@ -35,6 +35,7 @@ fn hindsight_hooks() -> serde_json::Value {
             "SessionStart":       [{ "hooks": [hook_entry("session-start")] }],
             "Stop":               [{ "hooks": [hook_entry("stop")] }],
             "SessionEnd":         [{ "hooks": [hook_entry("session-end")] }],
+            "UserPromptSubmit":   [{ "hooks": [hook_entry("user-prompt-submit")] }],
             "PreToolUse":         [{ "hooks": [hook_entry("pre-tool-use")] }],
             "PostToolUse":        [{ "hooks": [hook_entry("post-tool-use")] }],
             "PostToolUseFailure": [{ "hooks": [hook_entry("post-tool-use-failure")] }],
