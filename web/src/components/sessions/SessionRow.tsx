@@ -1,6 +1,4 @@
-"use client";
-
-import Link from "next/link";
+import { Link } from "react-router-dom";
 import type { SessionFile } from "@/lib/types";
 import { shortId, shortModel, timeAgo } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
@@ -32,7 +30,7 @@ export function SessionRow({ session: s }: SessionRowProps) {
 
   return (
     <Link
-      href={`/sessions/${s.session_id}/`}
+      to={`/sessions/${encodeURIComponent(s.session_id)}`}
       style={{
         display: "grid",
         gridTemplateColumns: SESSION_COLS,

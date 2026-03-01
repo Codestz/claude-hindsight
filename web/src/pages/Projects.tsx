@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { ProjectStats } from "@/lib/types";
@@ -8,14 +6,10 @@ import { StatCard } from "@/components/ui/StatCard";
 import { ProjectTable } from "@/components/projects/ProjectTable";
 
 const MAX_W = "1400px";
-const PAGE_PAD = "0 28px";
+const PAGE_PAD = "28px";
 const SECTION_GAP = "20px";
 
 export default function ProjectsPage() {
-  return <ProjectList />;
-}
-
-function ProjectList() {
   const [projects, setProjects] = useState<ProjectStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +52,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       maxWidth: MAX_W, margin: "0 auto",
-      padding: `36px ${PAGE_PAD.split(" ")[1]}`,
+      padding: `36px ${PAGE_PAD}`,
       display: "flex", flexDirection: "column", gap: SECTION_GAP,
     }}>
       {children}
