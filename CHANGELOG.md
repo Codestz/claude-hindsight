@@ -6,6 +6,36 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This pr
 
 ---
 
+## [2.0.0] — 2026-02-28
+
+Major release — full OpenTelemetry integration, Claude Code hooks, background daemon, and a complete web portal redesign.
+
+### Added
+- **OTLP telemetry** — built-in OpenTelemetry log receiver (`/v1/logs` endpoint) for ingesting Claude Code telemetry spans in real time
+- **Claude Code hooks** — `UserPromptSubmit` and `PreToolUse` hooks with `claude-hindsight hook` command; auto-spawns background daemon on every session
+- **Background daemon** — `claude-hindsight daemon` runs an OTLP-capable server in the background; `serve` kills any existing daemon before starting
+- **Agent discovery** — new `agents` module with automatic skill/agent discovery from project directories, supporting subdirectory layouts and CSV frontmatter parsing
+- **New CLI commands** — `daemon`, `hook`, `integrate`, `clean` for managing hooks, OTLP integration, and database cleanup
+- **Activity timeline** — real-time event timeline page with OTLP-sourced activity data
+- **Skills & Agents pages** — dedicated pages for browsing discovered skills and agents with detail views
+- **Token breakdown chart** — per-session token usage visualization component
+- **Configurable OTLP port** — server port is now configurable via settings
+- **JSONL activity backfill** — existing JSONL session data can be backfilled into the OTLP store
+
+### Changed
+- **Web portal rewrite** — migrated from Next.js to Vite + React Router; full page redesign with sidebar navigation replacing top nav
+- **Dashboard redesign** — new dashboard with OTEL telemetry integration, activity charts, and richer analytics
+- **Storage layer** — significantly expanded SQLite schema with squashed migrations, extracted helpers, and deduplicated queries
+- **Server architecture** — modular route system with dedicated route files for agents, hooks, OTLP, telemetry, and events
+
+### Fixed
+- OTLP parser robustness — handles string-encoded ints and event name fallback
+- Agent discovery supports subdirectory layouts and CSV frontmatter
+- `serve` command kills existing background daemon before starting
+- All clippy warnings resolved
+
+---
+
 ## [1.0.2] — 2026-02-21
 
 ### Added
