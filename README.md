@@ -219,6 +219,100 @@ Release builds embed the full Next.js static bundle using `rust-embed`. There is
 
 ---
 
+## Troubleshooting
+
+### Database errors after upgrading
+
+Starting with v2.0.1, Hindsight **automatically detects** schema version mismatches and rebuilds the database on the next command. You should see:
+
+```
+  Upgrading database schema (v2 -> v3). Rebuilding index...
+  Reindexed 142 session(s). Ready!
+```
+
+If you still see database errors, manually reset:
+
+```bash
+claude-hindsight clean        # delete the database
+claude-hindsight init          # rebuild from scratch
+```
+
+No session data is lost — Hindsight re-parses the original JSONL files from `~/.claude/projects/`.
+
+### Port already in use
+
+```
+Error: Address already in use (os error 48)
+```
+
+Another process (or a previous Hindsight instance) is using the port. Either stop it or use a different port:
+
+```bash
+claude-hindsight serve --port 8080               # custom web dashboard port
+claude-hindsight serve --otel-port 9100           # custom OTLP receiver port
+claude-hindsight daemon --port 9100               # custom daemon port
+```
+
+To find what's using the default port:
+
+```bash
+lsof -i :7227    # web dashboard default
+lsof -i :7228    # OTLP receiver / daemon default
+```
+
+### No sessions found
+
+```
+No sessions found. Run 'hindsight init' after your first Claude Code session.
+```
+
+This means Hindsight couldn't find any JSONL session files. Check that:
+
+1. You have used [Claude Code](https://claude.com/code) at least once
+2. Session files exist under `~/.claude/projects/`
+3. If your sessions are in a non-default location, add the path:
+   ```bash
+   claude-hindsight paths add /path/to/your/claude/projects
+   ```
+
+### Corrupt or locked database
+
+If you see `database is locked` or `database disk image is malformed`:
+
+```bash
+claude-hindsight clean        # delete the corrupt database
+claude-hindsight init          # rebuild fresh
+```
+
+### Web dashboard shows a blank page
+
+The web frontend is embedded in the binary at build time. If you built from source without Node.js, a placeholder page is served instead. To fix:
+
+1. Install Node.js 20+
+2. Rebuild: `make build`
+
+Pre-built binaries and Homebrew installs include the full dashboard — no Node.js required.
+
+### OTLP daemon won't start
+
+```
+Error: failed to start daemon
+```
+
+Check if a daemon is already running:
+
+```bash
+ps aux | grep claude-hindsight
+```
+
+Kill any stale processes and retry, or use a different port:
+
+```bash
+claude-hindsight daemon --port 9100
+```
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, coding standards, and how to open a pull request.
