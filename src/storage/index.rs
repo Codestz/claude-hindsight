@@ -7,6 +7,10 @@ use crate::storage::SessionFile;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
+/// The expected schema version for this release.
+/// When a user's DB has a different version, we delete and rebuild automatically.
+const SCHEMA_VERSION: i64 = 3;
+
 /// SQLite-based session index for fast lookups
 pub struct SessionIndex {
     conn: Connection,
@@ -25,11 +29,72 @@ impl SessionIndex {
         std::fs::create_dir_all(&hindsight_dir)?;
 
         let db_path = hindsight_dir.join("sessions.db");
+
+        let (index, needs_reindex) = Self::open(&db_path)?;
+
+        // After a schema upgrade, do a full reindex so every command starts
+        // with a fully populated database — no manual steps required.
+        if needs_reindex {
+            Self::reindex_after_upgrade(index)
+        } else {
+            Ok(index)
+        }
+    }
+
+    /// Open (or create) a database at the given path, handling schema migration.
+    ///
+    /// Returns the index and whether a schema upgrade forced a DB rebuild
+    /// (callers should reindex when `true`).
+    fn open(db_path: &std::path::Path) -> Result<(Self, bool)> {
+        // Detect schema version mismatch and rebuild if needed.
+        // This handles upgrades from v1.x where the schema layout is incompatible.
+        let needs_reindex = if db_path.exists() {
+            let conn = Connection::open(db_path)?;
+            let version: i64 =
+                conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+            drop(conn);
+
+            if version != 0 && version != SCHEMA_VERSION {
+                eprintln!(
+                    "  Upgrading database schema (v{} -> v{}). Rebuilding index...",
+                    version, SCHEMA_VERSION
+                );
+                std::fs::remove_file(db_path)?;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
         let conn = Connection::open(db_path)?;
 
         let mut index = SessionIndex { conn };
         index.initialize_schema()?;
 
+        Ok((index, needs_reindex))
+    }
+
+    /// Discover all sessions and index them after a schema upgrade.
+    fn reindex_after_upgrade(mut index: Self) -> Result<Self> {
+        match crate::storage::discover_sessions() {
+            Ok(sessions) => {
+                let mut indexed = 0usize;
+                for session in &sessions {
+                    if index.index_session(session).is_ok() {
+                        indexed += 1;
+                    }
+                }
+                eprintln!("  Reindexed {} session(s). Ready!", indexed);
+            }
+            Err(crate::error::HindsightError::NoSessionsFound) => {
+                eprintln!("  No sessions found. Run 'hindsight init' after your first Claude Code session.");
+            }
+            Err(e) => {
+                eprintln!("  Warning: could not reindex sessions: {}", e);
+            }
+        }
         Ok(index)
     }
 
@@ -213,8 +278,9 @@ impl SessionIndex {
                 CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 2", [])?;
-        } else if version < 2 {
+            self.conn
+                .execute(&format!("PRAGMA user_version = {}", SCHEMA_VERSION), [])?;
+        } else if version < SCHEMA_VERSION {
             // Single migration from v1 → v2: add all columns and tables
             // Use `let _ =` for ALTER TABLE to handle columns that may already exist
             for stmt in &[
@@ -352,7 +418,8 @@ impl SessionIndex {
                 CREATE INDEX IF NOT EXISTS idx_otel_logs_time    ON otel_logs(received_at DESC);
                 "#,
             )?;
-            self.conn.execute("PRAGMA user_version = 2", [])?;
+            self.conn
+                .execute(&format!("PRAGMA user_version = {}", SCHEMA_VERSION), [])?;
         }
 
         Ok(())
@@ -2555,5 +2622,102 @@ mod tests {
         let index = SessionIndex::new_in_memory().unwrap();
         let top_tools = index.get_top_tools(100).unwrap();
         assert_eq!(top_tools.len(), 0);
+    }
+
+    #[test]
+    fn test_schema_migration_deletes_stale_db() {
+        // Simulate a v1.x database with an old schema version.
+        // `open()` should delete it and recreate with the current schema.
+        let temp_dir = TempDir::new().unwrap();
+        let db_path = temp_dir.path().join("sessions.db");
+
+        // Create a DB with an old user_version and a dummy table layout
+        {
+            let conn = Connection::open(&db_path).unwrap();
+            conn.execute_batch(
+                "CREATE TABLE sessions (session_id TEXT PRIMARY KEY, project_name TEXT);",
+            )
+            .unwrap();
+            conn.execute("PRAGMA user_version = 2", []).unwrap();
+            // DB is closed when `conn` drops
+        }
+
+        // open() should detect the version mismatch, delete, and rebuild
+        let (index, needs_reindex) = SessionIndex::open(&db_path).unwrap();
+        assert!(needs_reindex, "should flag that a reindex is needed");
+
+        // The new DB should have the current schema version
+        let version: i64 = index
+            .conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, SCHEMA_VERSION);
+
+        // All v2 tables should exist (spot-check a few)
+        let table_exists = |name: &str| -> bool {
+            index
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
+                    [name],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap()
+                > 0
+        };
+        assert!(table_exists("sessions"));
+        assert!(table_exists("tool_usage"));
+        assert!(table_exists("file_usage"));
+        assert!(table_exists("hook_tool_events"));
+        assert!(table_exists("otel_metrics"));
+        assert!(table_exists("otel_logs"));
+    }
+
+    #[test]
+    fn test_schema_migration_skips_current_version() {
+        // A DB that already has the current schema version should NOT be deleted.
+        let temp_dir = TempDir::new().unwrap();
+        let db_path = temp_dir.path().join("sessions.db");
+
+        // Create a proper DB at the current schema version
+        {
+            let (index, needs_reindex) = SessionIndex::open(&db_path).unwrap();
+            assert!(!needs_reindex, "fresh DB should not need reindex");
+
+            // Insert a sentinel row so we can verify the DB was NOT deleted
+            index
+                .conn
+                .execute(
+                    "INSERT INTO sessions (session_id, project_name, file_path, file_size, modified_at, has_subagents, indexed_at) \
+                     VALUES ('sentinel', 'test', '/tmp/x', 0, 0, 0, 0)",
+                    [],
+                )
+                .unwrap();
+        }
+
+        // Reopen — should keep the existing DB intact
+        let (index, needs_reindex) = SessionIndex::open(&db_path).unwrap();
+        assert!(!needs_reindex);
+
+        let count: i64 = index
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sessions WHERE session_id = 'sentinel'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 1, "sentinel row should still exist");
+    }
+
+    #[test]
+    fn test_schema_migration_fresh_db() {
+        // A brand-new DB (version 0) should be created without triggering reindex.
+        let temp_dir = TempDir::new().unwrap();
+        let db_path = temp_dir.path().join("sessions.db");
+
+        assert!(!db_path.exists());
+        let (_index, needs_reindex) = SessionIndex::open(&db_path).unwrap();
+        assert!(!needs_reindex, "fresh DB should not trigger reindex");
     }
 }
