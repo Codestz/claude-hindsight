@@ -1,0 +1,848 @@
+---
+// SessionDemo — 4-scene animated hero component
+// Scenes cycle every 3.5s; dots allow manual navigation
+---
+
+<div class="session-demo" id="session-demo">
+
+  <!-- Mockup chrome — same visual as existing .mockup-chrome -->
+  <div class="mockup-chrome">
+    <div class="mockup-dots">
+      <span class="mdot mdot-r"></span>
+      <span class="mdot mdot-y"></span>
+      <span class="mdot mdot-g"></span>
+    </div>
+    <div class="mockup-url">claude-hindsight · localhost:7227</div>
+    <div class="mockup-live">
+      <span class="dot dot--pulse dot--red" aria-hidden="true"></span>
+      <span class="mockup-live-text">LIVE</span>
+    </div>
+  </div>
+
+  <!-- Scenes container -->
+  <div class="demo-scenes">
+
+    <!-- ── Scene 0: You gave Claude a task ──── -->
+    <div class="demo-scene demo-scene--active" data-scene="0">
+      <div class="demo-scene-label">
+        <span class="dim">01 / 04</span>&ensp;<span class="bright">You gave Claude a task</span>
+      </div>
+      <div class="demo-split">
+
+        <!-- Left: Claude Code terminal -->
+        <div class="demo-terminal">
+          <div class="dt-chrome">
+            <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+            <span class="dt-title">claude · ~/my-app</span>
+          </div>
+          <div class="dt-body">
+            <div class="dt-line" style="--delay:0.05s">
+              <span class="dim">›</span>
+              <span class="bright">Refactor the auth module to use JWT</span>
+            </div>
+            <div class="dt-line" style="--delay:0.55s">
+              <span class="dim">●</span>
+              <span class="muted">Thinking...</span>
+            </div>
+            <div class="dt-line" style="--delay:1.1s">
+              <span class="dim">├─</span>
+              <span class="muted">Reading src/auth/session.ts</span>
+            </div>
+            <div class="dt-line" style="--delay:1.6s">
+              <span class="dim">├─</span>
+              <span class="muted">Scanning for all usages</span>
+            </div>
+            <div class="dt-line" style="--delay:2.1s">
+              <span class="dim">├─</span>
+              <span class="muted">Planning the refactor</span>
+            </div>
+            <div class="dt-line" style="--delay:2.6s">
+              <span class="dim">...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Hindsight starting -->
+        <div class="demo-portal">
+          <div class="dp-header">
+            <span class="dp-hlabel">HINDSIGHT PORTAL</span>
+          </div>
+          <div class="dp-waiting">
+            <div class="dim dp-wait-sub">WAITING FOR SESSION</div>
+            <div class="bright cursor dp-wait-main" style="--delay:0.3s">Session starting</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Scene 1: Claude ran 14 tool calls ── -->
+    <div class="demo-scene" data-scene="1">
+      <div class="demo-scene-label">
+        <span class="dim">02 / 04</span>&ensp;<span class="amber">Claude ran 14 tool calls</span>
+      </div>
+      <div class="demo-split">
+
+        <!-- Left: tool call stream -->
+        <div class="demo-terminal">
+          <div class="dt-chrome">
+            <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+            <span class="dt-title">claude · ~/my-app</span>
+          </div>
+          <div class="dt-body">
+            <div class="dt-line" style="--delay:0.05s">
+              <span class="tbadge tbadge-tool">TOOL</span>
+              <span class="dim">Glob · src/auth/**</span>
+            </div>
+            <div class="dt-line" style="--delay:0.4s">
+              <span class="tbadge tbadge-ok">OK</span>
+              <span class="dim">9 files matched</span>
+            </div>
+            <div class="dt-line" style="--delay:0.75s">
+              <span class="tbadge tbadge-tool">TOOL</span>
+              <span class="dim">Read · session.ts</span>
+            </div>
+            <div class="dt-line" style="--delay:1.1s">
+              <span class="tbadge tbadge-tool">TOOL</span>
+              <span class="dim">Edit · session.ts</span>
+            </div>
+            <div class="dt-line" style="--delay:1.45s">
+              <span class="tbadge tbadge-tool">TOOL</span>
+              <span class="dim">Bash · npm test</span>
+            </div>
+            <div class="dt-line" style="--delay:1.8s">
+              <span class="tbadge tbadge-err">ERR</span>
+              <span class="amber">2 failures</span>
+            </div>
+            <div class="dt-line dt-pulse-line" style="--delay:2.2s">
+              <span class="dim">still running</span><span class="cursor"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: execution tree building -->
+        <div class="demo-portal demo-portal--tree">
+          <div class="dp-header">
+            <span class="dp-hlabel"><span class="accent">⚡</span> EXECUTION TRACE</span>
+          </div>
+          <div class="dp-tree">
+            <div class="dp-node" style="--delay:0.1s; padding-left:0">
+              <span class="dim">├─</span>
+              <span class="tbadge tbadge-user">USER</span>
+              <span class="muted">"Refactor the auth module"</span>
+            </div>
+            <div class="dp-node" style="--delay:0.4s; padding-left:0">
+              <span class="dim">└─</span>
+              <span class="tbadge tbadge-asst">ASST</span>
+              <span class="muted">claude-sonnet-4-6</span>
+            </div>
+            <div class="dp-node" style="--delay:0.7s; padding-left:1.25rem">
+              <span class="dim">├─</span>
+              <span class="tbadge tbadge-think">THINK</span>
+              <span class="dim">1,204 tokens</span>
+            </div>
+            <div class="dp-node" style="--delay:1.0s; padding-left:1.25rem">
+              <span class="dim">├─</span>
+              <span class="tbadge tbadge-tool">TOOL</span>
+              <span class="dim">Glob · src/auth/**</span>
+            </div>
+            <div class="dp-node" style="--delay:1.3s; padding-left:2.5rem">
+              <span class="dim">└─</span>
+              <span class="tbadge tbadge-ok">OK</span>
+              <span class="dim">9 files</span>
+            </div>
+            <div class="dp-node" style="--delay:1.6s; padding-left:1.25rem">
+              <span class="dim">├─</span>
+              <span class="tbadge tbadge-tool">TOOL</span>
+              <span class="dim">Bash · npm test</span>
+            </div>
+            <div class="dp-node" style="--delay:1.9s; padding-left:2.5rem">
+              <span class="dim">└─</span>
+              <span class="tbadge tbadge-err">ERR</span>
+              <span class="amber">2 failures</span>
+            </div>
+            <div class="dp-node" style="--delay:2.2s; padding-left:1.25rem">
+              <span class="dim">└─</span>
+              <span class="tbadge tbadge-sub">SUB</span>
+              <span class="amber">TypeScript validator</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Scene 2: Dashboard analytics ──────── -->
+    <div class="demo-scene" data-scene="2">
+      <div class="demo-scene-label">
+        <span class="dim">03 / 04</span>&ensp;<span class="cyan">You saw the whole picture</span>
+      </div>
+      <div class="demo-dashboard">
+
+        <div class="dd-header">
+          <div>
+            <div class="dd-meta-label">SESSION</div>
+            <div class="bright" style="font-family:var(--code);font-size:12px;">sess_17b8f9a2</div>
+          </div>
+          <div style="display:flex;gap:1.5rem;">
+            <div>
+              <div class="dd-meta-label">DURATION</div>
+              <div class="bright" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;">4m 12s</div>
+            </div>
+            <div>
+              <div class="dd-meta-label">MODEL</div>
+              <div class="bright" style="font-family:var(--code);font-size:10px;">claude-sonnet-4-6</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dd-body">
+
+          <!-- Token breakdown -->
+          <div class="dd-section">
+            <div class="dd-section-label">TOKEN BREAKDOWN</div>
+            <div class="dd-bars">
+              <div class="dd-bar-row">
+                <span class="dd-bar-lbl">Input</span>
+                <span class="dd-bar-wrap"><span class="dd-bar-fill" style="width:55%"></span></span>
+                <span class="dd-bar-val bright">18k</span>
+              </div>
+              <div class="dd-bar-row">
+                <span class="dd-bar-lbl">Output</span>
+                <span class="dd-bar-wrap"><span class="dd-bar-fill dd-bar-o" style="width:13%"></span></span>
+                <span class="dd-bar-val bright">4.2k</span>
+              </div>
+              <div class="dd-bar-row">
+                <span class="dd-bar-lbl">Cache</span>
+                <span class="dd-bar-wrap"><span class="dd-bar-fill dd-bar-c" style="width:34%"></span></span>
+                <span class="dd-bar-val bright">11k</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top tools -->
+          <div class="dd-section">
+            <div class="dd-section-label">TOP TOOLS</div>
+            <div class="dd-tools">
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl">Edit</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:84%;background:var(--accent)"></span></span>
+                <span class="dd-tool-val" style="color:var(--accent)">6</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl">Glob</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:56%;background:var(--cyan)"></span></span>
+                <span class="dd-tool-val" style="color:var(--cyan)">4</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl">Bash</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:42%;background:var(--amber)"></span></span>
+                <span class="dd-tool-val" style="color:var(--amber)">3</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl">Read</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:14%;background:var(--text-3)"></span></span>
+                <span class="dd-tool-val" style="color:var(--text-3)">1</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats row -->
+          <div class="dd-stats">
+            <div class="dd-stat dd-stat--err">
+              <span>⚠</span>
+              <span>1 error detected</span>
+            </div>
+            <div class="dd-stat">
+              <span class="dim">Subagents</span>
+              <span class="bright" style="font-weight:700;margin-left:0.375rem;">1</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Scene 3: Set it and forget it ──────── -->
+    <div class="demo-scene" data-scene="3">
+      <div class="demo-scene-label">
+        <span class="dim">04 / 04</span>&ensp;<span class="accent">Set it up once, it runs forever</span>
+      </div>
+      <div class="demo-split">
+
+        <!-- Left: integrate command -->
+        <div class="demo-terminal">
+          <div class="dt-chrome">
+            <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+            <span class="dt-title">terminal · ~/</span>
+          </div>
+          <div class="dt-body">
+            <div class="dt-line" style="--delay:0.05s">
+              <span class="accent">$</span>
+              <span class="bright">claude-hindsight integrate --otel</span>
+            </div>
+            <div class="dt-line" style="--delay:0.6s">
+              <span class="accent">✓</span>
+              <span class="muted">Installing Claude Code hooks...</span>
+            </div>
+            <div class="dt-line" style="--delay:1.1s">
+              <span class="accent">✓</span>
+              <span class="muted">PreToolUse hook → added</span>
+            </div>
+            <div class="dt-line" style="--delay:1.6s">
+              <span class="accent">✓</span>
+              <span class="muted">UserPromptSubmit hook → added</span>
+            </div>
+            <div class="dt-line" style="--delay:2.1s">
+              <span class="accent">✓</span>
+              <span class="muted">OTLP exporter → :7228</span>
+            </div>
+            <div class="dt-line" style="--delay:2.6s">
+              <span class="accent">✓</span>
+              <span class="bright">Done. Every session now auto-indexed.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Activity Timeline -->
+        <div class="demo-portal">
+          <div class="dp-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <span class="dp-hlabel">ACTIVITY TIMELINE</span>
+            <span style="display:flex;align-items:center;gap:4px;">
+              <span class="dot dot--pulse" style="width:4px;height:4px;flex-shrink:0;" aria-hidden="true"></span>
+              <span class="accent" style="font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:0.12em;">LIVE</span>
+            </span>
+          </div>
+          <div class="dp-body">
+            <div class="dp-event" style="--delay:0.3s">
+              <span class="dp-event-time">14:21:05</span>
+              <span class="tbadge tbadge-think">HOOK</span>
+              <span class="dim">session:start</span>
+            </div>
+            <div class="dp-event" style="--delay:0.85s">
+              <span class="dp-event-time">14:21:11</span>
+              <span class="tbadge tbadge-tool">OTLP</span>
+              <span class="dim">tool:Glob</span>
+            </div>
+            <div class="dp-event" style="--delay:1.4s">
+              <span class="dp-event-time">14:21:13</span>
+              <span class="tbadge tbadge-tool">OTLP</span>
+              <span class="dim">tool:Read</span>
+            </div>
+            <div class="dp-event" style="--delay:1.95s">
+              <span class="dp-event-time">14:21:18</span>
+              <span class="tbadge tbadge-tool">OTLP</span>
+              <span class="dim">tool:Edit</span>
+            </div>
+            <div class="dp-event dp-event--active" style="--delay:2.5s">
+              <span class="dp-event-time">14:21:22</span>
+              <span class="tbadge tbadge-tool">OTLP</span>
+              <span class="dim">tool:Bash</span>
+              <span class="cursor"></span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /.demo-scenes -->
+
+  <!-- Scene indicator dots -->
+  <div class="demo-dots" role="tablist" aria-label="Demo scenes">
+    <button class="demo-dot demo-dot--active" data-target="0" role="tab" aria-selected="true" aria-label="Scene 1: You gave Claude a task"></button>
+    <button class="demo-dot" data-target="1" role="tab" aria-selected="false" aria-label="Scene 2: Claude ran 14 tool calls"></button>
+    <button class="demo-dot" data-target="2" role="tab" aria-selected="false" aria-label="Scene 3: You saw the whole picture"></button>
+    <button class="demo-dot" data-target="3" role="tab" aria-selected="false" aria-label="Scene 4: Set it up once"></button>
+  </div>
+
+</div><!-- /#session-demo -->
+
+<script>
+(function () {
+  const demo = document.getElementById("session-demo");
+  if (!demo) return;
+
+  const scenes = demo.querySelectorAll<HTMLElement>(".demo-scene");
+  const dots   = demo.querySelectorAll<HTMLButtonElement>(".demo-dot");
+  let current  = 0;
+  let timer: ReturnType<typeof setInterval>;
+
+  function goTo(n: number) {
+    scenes[current].classList.remove("demo-scene--active");
+    dots[current].classList.remove("demo-dot--active");
+    dots[current].setAttribute("aria-selected", "false");
+
+    current = n;
+
+    // Force reflow to restart CSS animations on the incoming scene
+    const scene = scenes[current];
+    scene.classList.remove("demo-scene--active");
+    void (scene as HTMLElement).offsetWidth;
+    scene.classList.add("demo-scene--active");
+
+    dots[current].classList.add("demo-dot--active");
+    dots[current].setAttribute("aria-selected", "true");
+  }
+
+  function advance() {
+    goTo((current + 1) % scenes.length);
+  }
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(advance, 3500);
+  }
+
+  dots.forEach((dot) => {
+    dot.addEventListener("click", () => {
+      goTo(parseInt(dot.dataset.target ?? "0", 10));
+      startTimer();
+    });
+  });
+
+  // Pause on hover to let users read
+  demo.addEventListener("mouseenter", () => clearInterval(timer));
+  demo.addEventListener("mouseleave", startTimer);
+
+  startTimer();
+})();
+</script>
+
+<style>
+/* ── Mockup chrome (matches index.astro .mockup-chrome) ─── */
+.mockup-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.75rem 1.125rem;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mockup-dots { display: flex; gap: 6px; }
+.mdot { width: 10px; height: 10px; border-radius: 50%; opacity: 0.45; }
+.mdot-r { background: #FF5F57; }
+.mdot-y { background: #FEBC2E; }
+.mdot-g { background: #28C840; }
+
+.mockup-url {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  letter-spacing: 0.05em;
+}
+
+.mockup-live { display: flex; align-items: center; gap: 0.375rem; }
+.mockup-live-text {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+/* ft-dot (terminal chrome dots in scene terminals) */
+.ft-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border-2); }
+
+/* ── Wrapper ─────────────────────────────────── */
+.session-demo {
+  border: 1px solid var(--border-2);
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Scene container ─────────────────────────── */
+.demo-scenes {
+  position: relative;
+  height: 460px;
+  overflow: hidden;
+}
+
+/* ── Individual scenes ───────────────────────── */
+.demo-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-scene--active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Scene label bar ─────────────────────────── */
+.demo-scene-label {
+  flex-shrink: 0;
+  padding: 0.375rem 0.875rem;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+}
+
+/* ── Two-panel split ─────────────────────────── */
+.demo-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  gap: 1px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+/* ── Terminal panel ──────────────────────────── */
+.demo-terminal {
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dt-chrome {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dt-title {
+  font-family: var(--code);
+  font-size: 9px;
+  color: var(--text-3);
+  margin-left: 6px;
+}
+
+.dt-body {
+  padding: 0.875rem 1rem;
+  font-family: var(--code);
+  font-size: 11.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.dt-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  line-height: 1.65;
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.demo-scene--active .dt-line {
+  animation: node-appear 0.2s var(--delay, 0s) ease forwards;
+}
+
+.dt-pulse-line {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Portal panel ────────────────────────────── */
+.demo-portal {
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dp-header {
+  padding: 0.45rem 0.875rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-3);
+  flex-shrink: 0;
+}
+
+.dp-hlabel {
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
+}
+
+/* Scene 0 — waiting state */
+.dp-waiting {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--code);
+}
+
+.dp-wait-sub {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.dp-wait-main {
+  font-size: 13px;
+  opacity: 0;
+  animation: node-appear 0.3s var(--delay, 0s) ease forwards;
+}
+
+.demo-scene--active .dp-wait-main {
+  animation: node-appear 0.3s var(--delay, 0s) ease forwards;
+}
+
+/* ── Execution tree ──────────────────────────── */
+.dp-tree {
+  padding: 0.75rem;
+  font-family: var(--code);
+  font-size: 10.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+.dp-node {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  line-height: 1.65;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.demo-scene--active .dp-node {
+  animation: node-appear 0.2s var(--delay, 0s) ease forwards;
+}
+
+/* ── Dashboard scene ─────────────────────────── */
+.demo-dashboard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.125rem;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dd-meta-label {
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+
+.dd-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: 1;
+  min-height: 0;
+  gap: 1px;
+  background: var(--border);
+}
+
+.dd-section {
+  background: var(--bg);
+  padding: 0.875rem 1.125rem;
+  overflow: hidden;
+}
+
+.dd-section-label {
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-3);
+  margin-bottom: 0.625rem;
+}
+
+/* Token bars */
+.dd-bars { display: flex; flex-direction: column; gap: 7px; }
+
+.dd-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--code);
+  font-size: 10px;
+}
+
+.dd-bar-lbl { width: 34px; flex-shrink: 0; color: var(--text-3); }
+.dd-bar-wrap { flex: 1; height: 4px; background: var(--border-2); overflow: hidden; }
+.dd-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0.8;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.dd-bar-o { background: var(--cyan); }
+.dd-bar-c { background: var(--amber); }
+
+.demo-scene--active .dd-bar-fill {
+  animation: bar-expand 0.9s 0.3s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+
+.dd-bar-val { width: 28px; text-align: right; font-size: 10px; }
+
+/* Tool bars */
+.dd-tools { display: flex; flex-direction: column; gap: 7px; }
+
+.dd-tool-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--code);
+  font-size: 10px;
+}
+
+.dd-tool-lbl { width: 28px; flex-shrink: 0; color: var(--text-3); }
+.dd-tool-bar { flex: 1; height: 4px; background: var(--border-2); overflow: hidden; }
+.dd-tool-fill {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+.demo-scene--active .dd-tool-fill {
+  animation: bar-expand 0.9s 0.5s cubic-bezier(0.4,0,0.2,1) forwards;
+}
+
+.dd-tool-val { width: 16px; text-align: right; font-size: 11px; font-weight: 700; }
+
+/* Stats row */
+.dd-stats {
+  grid-column: 1 / -1;
+  background: var(--bg-2);
+  padding: 0.625rem 1.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dd-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--code);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.dd-stat--err { color: var(--amber); }
+
+/* ── Activity Timeline events ─────────────────── */
+.dp-body {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.dp-event {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--code);
+  font-size: 10.5px;
+  line-height: 1.75;
+  color: var(--text-3);
+  opacity: 0;
+  white-space: nowrap;
+}
+
+.demo-scene--active .dp-event {
+  animation: node-appear 0.2s var(--delay, 0s) ease forwards;
+}
+
+.dp-event--active { color: var(--text-1); }
+
+.dp-event-time {
+  font-size: 9.5px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+/* ── Shared animations ───────────────────────── */
+@keyframes node-appear {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bar-expand {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ── Scene indicator dots ────────────────────── */
+.demo-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 0.625rem;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.demo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border-2);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  padding: 0;
+}
+
+.demo-dot:hover { background: var(--text-3); transform: scale(1.4); }
+.demo-dot--active { background: var(--accent); }
+
+/* ── Mobile ──────────────────────────────────── */
+@media (max-width: 640px) {
+  .demo-scenes { height: auto; min-height: 380px; }
+  .demo-split  { grid-template-columns: 1fr; }
+  /* Show only the portal panel (right) on mobile — terminal is secondary */
+  .demo-terminal { display: none; }
+  .demo-portal   { min-height: 340px; }
+  .dp-tree       { font-size: 11px; }
+}
+</style>

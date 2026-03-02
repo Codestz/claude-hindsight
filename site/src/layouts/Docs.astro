@@ -22,17 +22,24 @@ const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
 
 const sections = [
   {
-    label: "Getting Started",
-    pages: [{ href: `${base}/docs/getting-started`, label: "Introduction" }],
-  },
-  {
-    label: "Core Concepts",
-    pages: [{ href: `${base}/docs/architecture`, label: "Architecture" }],
-  },
-  {
-    label: "CLI Reference",
+    label: "Get Started",
     pages: [
-      { href: `${base}/docs/commands`, label: "Commands" },
+      { href: `${base}/docs/getting-started`, label: "Introduction" },
+      { href: `${base}/docs/hooks`,            label: "Hooks Setup"  },
+    ],
+  },
+  {
+    label: "Your Sessions",
+    pages: [
+      { href: `${base}/docs/dashboard`, label: "Web Dashboard" },
+    ],
+  },
+  {
+    label: "Reference",
+    pages: [
+      { href: `${base}/docs/commands`,       label: "CLI Commands"    },
+      { href: `${base}/docs/configuration`,  label: "Configuration"   },
+      { href: `${base}/docs/troubleshooting`, label: "Troubleshooting" },
     ],
   },
   {
