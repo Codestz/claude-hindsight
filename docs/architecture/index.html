@@ -1,140 +1,15 @@
-<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><!-- Primary Meta --><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="canonical" href="https://codestz.github.io/claude-hindsight/docs/architecture/"><!-- Favicon --><link rel="icon" type="image/svg+xml" href="/claude-hindsight/favicon.svg"><!-- Open Graph --><meta property="og:type" content="website"><meta property="og:url" content="https://codestz.github.io/claude-hindsight/docs/architecture/"><meta property="og:title" content="Docs — Claude Hindsight"><meta property="og:description" content="Claude Hindsight documentation."><meta property="og:image" content="https://codestz.github.io/claude-hindsight/og.svg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:site_name" content="Claude Hindsight"><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Docs — Claude Hindsight"><meta name="twitter:description" content="Claude Hindsight documentation."><meta name="twitter:image" content="https://codestz.github.io/claude-hindsight/og.svg"><!-- Additional SEO --><meta name="robots" content="index, follow"><meta name="generator" content="Astro v4.16.19"><!-- Fonts --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.BF4DvJBM.css">
-<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.DrUHEGBN.css">
-<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.C0vJrZON.css"><script type="module" src="/claude-hindsight/_astro/hoisted.CORrjAm5.js"></script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v1.1.1</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Desktop links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> <!-- Mobile hamburger --> <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer" data-astro-cid-dmqpwcec> <span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span> </button> </div> </header> <!-- Mobile drawer --> <div id="nav-drawer" aria-hidden="true" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="drawer-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="drawer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="drawer-link drawer-cta" data-astro-cid-dmqpwcec>INSTALL</a> </div> <div id="nav-overlay" aria-hidden="true" data-astro-cid-dmqpwcec></div>   <!-- Mobile sidebar toggle --> <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="docs-sidebar"> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"> <rect y="2" width="14" height="1.2" fill="currentColor"></rect> <rect y="6.4" width="14" height="1.2" fill="currentColor"></rect> <rect y="10.8" width="14" height="1.2" fill="currentColor"></rect> </svg>
+<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><!-- Primary Meta --><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="canonical" href="https://codestz.github.io/claude-hindsight/docs/architecture/"><!-- Favicon --><link rel="icon" type="image/svg+xml" href="/claude-hindsight/favicon.svg"><!-- Open Graph --><meta property="og:type" content="website"><meta property="og:url" content="https://codestz.github.io/claude-hindsight/docs/architecture/"><meta property="og:title" content="Docs — Claude Hindsight"><meta property="og:description" content="Claude Hindsight documentation."><meta property="og:image" content="https://codestz.github.io/claude-hindsight/og.svg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:site_name" content="Claude Hindsight"><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Docs — Claude Hindsight"><meta name="twitter:description" content="Claude Hindsight documentation."><meta name="twitter:image" content="https://codestz.github.io/claude-hindsight/og.svg"><!-- Additional SEO --><meta name="robots" content="index, follow"><meta name="generator" content="Astro v4.16.19"><!-- Fonts --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.CWxCkz41.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.6Eoncv5z.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.C0vJrZON.css"><script type="module" src="/claude-hindsight/_astro/hoisted.0SoUF7mM.js"></script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v2.0.1</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Desktop links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> <!-- Mobile hamburger --> <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer" data-astro-cid-dmqpwcec> <span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span> </button> </div> </header> <!-- Mobile drawer --> <div id="nav-drawer" aria-hidden="true" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="drawer-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="drawer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="drawer-link drawer-cta" data-astro-cid-dmqpwcec>INSTALL</a> </div> <div id="nav-overlay" aria-hidden="true" data-astro-cid-dmqpwcec></div>   <!-- Mobile sidebar toggle --> <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="docs-sidebar"> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"> <rect y="2" width="14" height="1.2" fill="currentColor"></rect> <rect y="6.4" width="14" height="1.2" fill="currentColor"></rect> <rect y="10.8" width="14" height="1.2" fill="currentColor"></rect> </svg>
 MENU
-</button> <div id="sidebar-overlay"></div> <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button> <div class="sb-group"> <div class="sb-group-label">Getting Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a> </div><div class="sb-group"> <div class="sb-group-label">Core Concepts</div> <a href="/claude-hindsight/docs/architecture" class="sb-link sb-link--active"> Architecture </a> </div><div class="sb-group"> <div class="sb-group-label">CLI Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> Commands </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link "> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Docs</span> </nav> <article class="prose-doc"> <h1 id="architecture">Architecture</h1>
-<p>Hindsight is designed around a single key constraint: <strong>zero runtime dependencies</strong>. Everything — the web dashboard, the static assets, and the data layer — ships in one binary.</p>
-<h2 id="session-files-jsonl">Session files (JSONL)</h2>
-<p>Claude Code records every session as a newline-delimited JSON file (JSONL) in:</p>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>~/.claude/projects/&#x3C;project-slug>/&#x3C;session-id>.jsonl</span></span>
-<span class="line"><span></span></span></code></pre>
-<p>Each line is a JSON object representing one “node” — a message, tool call, tool result, or system event. Nodes form a tree structure: assistant messages contain tool use, tool results reference the call, sub-agents nest inside the parent session.</p>
-<p><strong>Example node types:</strong></p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>human</code></td><td>User message</td></tr><tr><td><code>assistant</code></td><td>Claude response</td></tr><tr><td><code>tool_use</code></td><td>Claude invoking a tool</td></tr><tr><td><code>tool_result</code></td><td>Tool output</td></tr><tr><td><code>summary</code></td><td>Auto-generated session summary</td></tr></tbody></table>
-<p>Hindsight parses these files using a streaming JSONL reader so even very large sessions (tens of thousands of nodes) load quickly.</p>
-<h2 id="sqlite-index">SQLite index</h2>
-<p>On <code>claude-hindsight init</code>, Claude Hindsight scans the project directories and builds a local SQLite database (default: <code>~/.local/share/claude-hindsight/index.db</code>).</p>
-<p>The schema includes:</p>
-<ul>
-<li><strong><code>sessions</code></strong> — one row per JSONL file: session ID, project name, file path, token counts, cost estimate, first message, model, timestamps, error count</li>
-<li><strong><code>tool_uses</code></strong> — denormalized tool call records for fast frequency queries</li>
-<li><strong><code>session_fts</code></strong> — SQLite FTS5 virtual table for full-text search over message content</li>
-</ul>
-<p>The index is kept deliberately flat (not deeply normalized) to allow fast single-query analytics aggregations across hundreds of sessions.</p>
-<h3 id="incremental-updates">Incremental updates</h3>
-<p><code>claude-hindsight reindex</code> uses file modification timestamps to skip sessions that haven’t changed since the last index pass. Only new or modified JSONL files are re-parsed.</p>
-<h2 id="single-binary-embed">Single-binary embed</h2>
-<p>The web dashboard is a Next.js application built to static files (<code>next build</code>). At Rust compile time, <a href="https://github.com/pyros2097/rust-embed"><code>rust-embed</code></a> bundles the entire <code>web/out/</code> directory into the binary as read-only byte slices.</p>
-<p>At runtime, the embedded HTTP server (built with <a href="https://github.com/tokio-rs/axum"><code>axum</code></a>) serves these static assets from memory alongside the JSON API.</p>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>┌─────────────────────────────────┐</span></span>
-<span class="line"><span>│     claude-hindsight binary     │</span></span>
-<span class="line"><span>│                                 │</span></span>
-<span class="line"><span>│  ┌───────────┐ ┌─────────────┐  │</span></span>
-<span class="line"><span>│  │ axum HTTP │ │ rust-embed  │  │</span></span>
-<span class="line"><span>│  │  server   │ │ web/out/*   │  │</span></span>
-<span class="line"><span>│  └─────┬─────┘ └─────────────┘  │</span></span>
-<span class="line"><span>│        │                        │</span></span>
-<span class="line"><span>│  ┌─────▼─────────────────────┐  │</span></span>
-<span class="line"><span>│  │   JSON API (/api/*)       │  │</span></span>
-<span class="line"><span>│  │   SQLite via rusqlite     │  │</span></span>
-<span class="line"><span>│  └───────────────────────────┘  │</span></span>
-<span class="line"><span>└─────────────────────────────────┘</span></span>
-<span class="line"><span></span></span></code></pre>
-<h2 id="api-surface">API surface</h2>
-<p>The server exposes a minimal JSON API consumed by the dashboard:</p>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<table><thead><tr><th>Endpoint</th><th>Description</th></tr></thead><tbody><tr><td><code>GET /api/analytics</code></td><td>Global session aggregates</td></tr><tr><td><code>GET /api/sparkline?days=N</code></td><td>Daily session counts for the last N days</td></tr><tr><td><code>GET /api/sessions</code></td><td>Paginated session list</td></tr><tr><td><code>GET /api/sessions/:id</code></td><td>Single session metadata</td></tr><tr><td><code>GET /api/sessions/:id/tree</code></td><td>Full node tree for a session</td></tr><tr><td><code>GET /api/projects</code></td><td>Per-project stats</td></tr><tr><td><code>GET /api/search?q=&#x3C;query></code></td><td>Full-text search results</td></tr></tbody></table>
-<h2 id="rust-crate-structure">Rust crate structure</h2>
-<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>src/</span></span>
-<span class="line"><span>  main.rs          Entry point, CLI dispatch</span></span>
-<span class="line"><span>  lib.rs           Library exports</span></span>
-<span class="line"><span>  error.rs         Shared error types (thiserror)</span></span>
-<span class="line"><span>  server/          HTTP server and API handlers</span></span>
-<span class="line"><span>    mod.rs</span></span>
-<span class="line"><span>    routes.rs</span></span>
-<span class="line"><span>    analytics.rs</span></span>
-<span class="line"><span>  storage/         JSONL parsing and SQLite index</span></span>
-<span class="line"><span>    mod.rs</span></span>
-<span class="line"><span>    index.rs</span></span>
-<span class="line"><span>    parser.rs</span></span>
-<span class="line"><span>  search/          Full-text search (FTS5)</span></span>
-<span class="line"><span>    mod.rs</span></span>
-<span class="line"><span>  api/             JSON response types</span></span>
-<span class="line"><span>    responses.rs</span></span>
-<span class="line"><span>  commands/        CLI subcommands</span></span>
-<span class="line"><span>    mod.rs</span></span>
-<span class="line"><span>    export.rs</span></span>
-<span class="line"><span>    reindex.rs</span></span>
-<span class="line"><span>    watch.rs</span></span>
-<span class="line"><span>  tui/             Terminal UI (ratatui)</span></span>
-<span class="line"><span>    mod.rs</span></span>
-<span class="line"><span>    app.rs</span></span>
-<span class="line"><span></span></span></code></pre>
-<p>Key dependencies: <code>axum</code>, <code>rusqlite</code>, <code>rust-embed</code>, <code>ratatui</code>, <code>tokio</code>, <code>serde</code>, <code>clap</code>.</p> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/architecture/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
+</button> <div id="sidebar-overlay"></div> <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button> <div class="sb-group"> <div class="sb-group-label">Get Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a><a href="/claude-hindsight/docs/hooks" class="sb-link "> Hooks Setup </a> </div><div class="sb-group"> <div class="sb-group-label">Your Sessions</div> <a href="/claude-hindsight/docs/dashboard" class="sb-link "> Web Dashboard </a> </div><div class="sb-group"> <div class="sb-group-label">Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> CLI Commands </a><a href="/claude-hindsight/docs/configuration" class="sb-link "> Configuration </a><a href="/claude-hindsight/docs/troubleshooting" class="sb-link "> Troubleshooting </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link "> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Docs</span> </nav> <article class="prose-doc"> <h1 id="architecture">Architecture</h1>
+<script>
+  // Redirect to the contributing page which now contains architecture details
+  if (typeof window !== 'undefined') {
+    window.location.replace(window.location.href.replace('/architecture', '/contributing') + '#how-it-works');
+  }
+</script>
+<p>This page has moved. The architecture documentation is now part of the <strong><a href="/docs/contributing#how-it-works">Contributing</a></strong> page.</p>
+<p><strong><a href="/docs/contributing#how-it-works">Go to Contributing → How it works →</a></strong></p> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/architecture/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
 Edit this page on GitHub →
-</a> </div> </main> <!-- ── Right ToC ─────────────────────────── --> <aside id="docs-toc"> <div class="toc-label">On this page</div> <nav> <a href="#session-files-jsonl" class="toc-link toc-link--h2" data-slug="session-files-jsonl"> Session files (JSONL) </a><a href="#sqlite-index" class="toc-link toc-link--h2" data-slug="sqlite-index"> SQLite index </a><a href="#incremental-updates" class="toc-link toc-link--h3" data-slug="incremental-updates"> Incremental updates </a><a href="#single-binary-embed" class="toc-link toc-link--h2" data-slug="single-binary-embed"> Single-binary embed </a><a href="#api-surface" class="toc-link toc-link--h2" data-slug="api-surface"> API surface </a><a href="#rust-crate-structure" class="toc-link toc-link--h2" data-slug="rust-crate-structure"> Rust crate structure </a> </nav> </aside> </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   <!-- Active ToC highlight via IntersectionObserver -->  </body></html><!-- Mobile sidebar toggle -->
+</a> </div> </main> <!-- ── Right ToC ─────────────────────────── -->  </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   <!-- Active ToC highlight via IntersectionObserver -->  </body></html><!-- Mobile sidebar toggle -->

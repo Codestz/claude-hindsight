@@ -1,0 +1,189 @@
+<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><!-- Primary Meta --><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="canonical" href="https://codestz.github.io/claude-hindsight/docs/dashboard/"><!-- Favicon --><link rel="icon" type="image/svg+xml" href="/claude-hindsight/favicon.svg"><!-- Open Graph --><meta property="og:type" content="website"><meta property="og:url" content="https://codestz.github.io/claude-hindsight/docs/dashboard/"><meta property="og:title" content="Docs — Claude Hindsight"><meta property="og:description" content="Claude Hindsight documentation."><meta property="og:image" content="https://codestz.github.io/claude-hindsight/og.svg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:site_name" content="Claude Hindsight"><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Docs — Claude Hindsight"><meta name="twitter:description" content="Claude Hindsight documentation."><meta name="twitter:image" content="https://codestz.github.io/claude-hindsight/og.svg"><!-- Additional SEO --><meta name="robots" content="index, follow"><meta name="generator" content="Astro v4.16.19"><!-- Fonts --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.CWxCkz41.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.6Eoncv5z.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.C0vJrZON.css"><script type="module" src="/claude-hindsight/_astro/hoisted.0SoUF7mM.js"></script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v2.0.1</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Desktop links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> <!-- Mobile hamburger --> <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer" data-astro-cid-dmqpwcec> <span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span> </button> </div> </header> <!-- Mobile drawer --> <div id="nav-drawer" aria-hidden="true" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="drawer-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="drawer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="drawer-link drawer-cta" data-astro-cid-dmqpwcec>INSTALL</a> </div> <div id="nav-overlay" aria-hidden="true" data-astro-cid-dmqpwcec></div>   <!-- Mobile sidebar toggle --> <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="docs-sidebar"> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"> <rect y="2" width="14" height="1.2" fill="currentColor"></rect> <rect y="6.4" width="14" height="1.2" fill="currentColor"></rect> <rect y="10.8" width="14" height="1.2" fill="currentColor"></rect> </svg>
+MENU
+</button> <div id="sidebar-overlay"></div> <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button> <div class="sb-group"> <div class="sb-group-label">Get Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a><a href="/claude-hindsight/docs/hooks" class="sb-link "> Hooks Setup </a> </div><div class="sb-group"> <div class="sb-group-label">Your Sessions</div> <a href="/claude-hindsight/docs/dashboard" class="sb-link sb-link--active"> Web Dashboard </a> </div><div class="sb-group"> <div class="sb-group-label">Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> CLI Commands </a><a href="/claude-hindsight/docs/configuration" class="sb-link "> Configuration </a><a href="/claude-hindsight/docs/troubleshooting" class="sb-link "> Troubleshooting </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link "> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Docs</span> </nav> <article class="prose-doc"> <h1 id="web-dashboard">Web Dashboard</h1>
+<p>The Hindsight web portal gives you a full-featured browser UI over your session data. This page walks through every section.</p>
+<h2 id="starting-the-dashboard">Starting the dashboard</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># Start (visit http://localhost:7227 manually)</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> serve</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Start and open your browser automatically</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> serve</span><span style="color:#79B8FF"> --open</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Start on a different port</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> serve</span><span style="color:#79B8FF"> --port</span><span style="color:#79B8FF"> 8080</span><span style="color:#79B8FF"> --open</span></span>
+<span class="line"></span></code></pre>
+<p>The dashboard is a React application embedded in the binary — no Node.js, no network requests, no build step.</p>
+<hr>
+<h2 id="dashboard--">Dashboard ( <code>/</code> )</h2>
+<p>The home page shows aggregate statistics across all your indexed sessions:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Metric</th><th>What it shows</th></tr></thead><tbody><tr><td><strong>Total sessions</strong></td><td>Count of all indexed sessions</td></tr><tr><td><strong>Total cost</strong></td><td>Estimated cost in USD (based on public model pricing)</td></tr><tr><td><strong>Error count</strong></td><td>Sessions that had at least one failed tool call</td></tr><tr><td><strong>Activity chart</strong></td><td>Sparkline of session counts for the last 14 days</td></tr><tr><td><strong>Recent sessions</strong></td><td>Last 10 sessions with model, duration, and status</td></tr><tr><td><strong>Top tools</strong></td><td>Most-used tool calls across all sessions</td></tr><tr><td><strong>Cost by model</strong></td><td>Breakdown if you use multiple Claude models</td></tr></tbody></table>
+<p>Click any session row to jump straight to its detail view.</p>
+<hr>
+<h2 id="sessions--sessions">Sessions ( <code>/sessions</code> )</h2>
+<p>The sessions list shows every indexed session, newest first.</p>
+<p><strong>Filtering and search:</strong></p>
+<ul>
+<li><strong>Search bar</strong> — full-text search across user messages and tool inputs</li>
+<li><strong>Project filter</strong> — narrow to a specific project directory</li>
+<li><strong>Errors only</strong> — show only sessions with failed tool calls</li>
+<li><strong>Today</strong> — sessions from the current day</li>
+</ul>
+<p>Each row shows:</p>
+<ul>
+<li>Session ID (truncated)</li>
+<li>Project name</li>
+<li>Model used</li>
+<li>Duration</li>
+<li>Token counts</li>
+<li>Number of tool calls</li>
+<li>Error indicator (if any)</li>
+</ul>
+<hr>
+<h2 id="session-detail--sessionsid">Session Detail ( <code>/sessions/:id</code> )</h2>
+<p>The most powerful view in the dashboard. Shows the complete execution trace for one session.</p>
+<h3 id="execution-tree">Execution tree</h3>
+<p>Every node Claude produced is shown as a tree, colour-coded by type:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Badge</th><th>Node type</th><th>What it means</th></tr></thead><tbody><tr><td><code>USER</code></td><td>Human message</td><td>The prompt you sent</td></tr><tr><td><code>ASST</code></td><td>Assistant turn</td><td>Claude’s full response (may contain multiple tool calls)</td></tr><tr><td><code>THINK</code></td><td>Thinking block</td><td>Claude’s extended thinking (token count shown)</td></tr><tr><td><code>TOOL</code></td><td>Tool call</td><td>A tool invocation (name + input shown)</td></tr><tr><td><code>RESULT</code></td><td>Tool result</td><td>The output returned to Claude</td></tr><tr><td><code>SUB</code></td><td>Subagent</td><td>A spawned subagent session (expandable)</td></tr></tbody></table>
+<h3 id="filtering-nodes">Filtering nodes</h3>
+<p>Use the type-filter chips at the top of the tree to show only the node types you care about — e.g. hide <code>THINK</code> blocks to focus on tool calls.</p>
+<h3 id="inspecting-a-node">Inspecting a node</h3>
+<p>Click any node to expand its full content:</p>
+<ul>
+<li><strong>TOOL</strong> — shows the full input object sent to the tool</li>
+<li><strong>RESULT</strong> — shows the complete output (with diff view for Edit calls)</li>
+<li><strong>THINK</strong> — shows the raw thinking text</li>
+<li><strong>USER/ASST</strong> — shows the full message</li>
+</ul>
+<h3 id="raw-json">Raw JSON</h3>
+<p>Every node has a “Raw JSON” toggle at the bottom of its detail pane — useful for debugging or when you want the exact data structure Claude received.</p>
+<hr>
+<h2 id="projects--projects">Projects ( <code>/projects</code> )</h2>
+<p>Aggregated view across all your project directories.</p>
+<p>For each project:</p>
+<ul>
+<li>Session count</li>
+<li>Total token usage</li>
+<li>Total estimated cost</li>
+<li>Error rate</li>
+<li>Most-used model</li>
+<li>Last active date</li>
+</ul>
+<p>Click a project to filter the Sessions list to that project.</p>
+<hr>
+<h2 id="activity-timeline--activity">Activity Timeline ( <code>/activity</code> )</h2>
+<p>Real-time feed of tool calls and session lifecycle events, powered by OTLP telemetry.</p>
+<blockquote>
+<p><strong>Requires hooks.</strong> The Activity Timeline is only populated when you have <code>PreToolUse</code> and <code>UserPromptSubmit</code> hooks installed. See <a href="/docs/hooks">Hooks Setup</a>.</p>
+</blockquote>
+<p>The timeline shows:</p>
+<ul>
+<li><strong><code>HOOK — session:start</code></strong> — a new Claude Code session began</li>
+<li><strong><code>OTLP — tool:*</code></strong> — a tool call fired (name shown after the colon)</li>
+<li><strong><code>HOOK — session:end</code></strong> — the session completed</li>
+</ul>
+<p>Events stream in real time while a session is running. Historical events from previous sessions are shown below the live stream.</p>
+<p>Each event shows its timestamp and the hook or OTLP source.</p>
+<hr>
+<h2 id="skills--skills">Skills ( <code>/skills</code> )</h2>
+<p>Shows all skill files (<code>.md</code> files with <code>description:</code> frontmatter) discovered in your scan directories.</p>
+<p>For each skill:</p>
+<ul>
+<li>File name and path</li>
+<li>Description (from frontmatter)</li>
+<li>Trigger description</li>
+</ul>
+<p>This page is useful for auditing which skills Claude Code can access in each project.</p>
+<p>Skill discovery requires that your project directories are added to Hindsight’s scan paths. See <a href="/docs/configuration#scan-directories">Configuration → Scan directories</a>.</p>
+<hr>
+<h2 id="agents--agents">Agents ( <code>/agents</code> )</h2>
+<p>Shows all agent definitions discovered in your scan directories — typically JSON or YAML files that define custom Claude Code agents.</p>
+<p>For each agent:</p>
+<ul>
+<li>Agent name</li>
+<li>Source file path</li>
+<li>Description</li>
+<li>Capabilities listed in the definition</li>
+</ul>
+<p>Click an agent to see its full definition.</p>
+<p>Like skills, agent discovery uses the configured scan paths.</p> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/dashboard/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
+Edit this page on GitHub →
+</a> </div> </main> <!-- ── Right ToC ─────────────────────────── --> <aside id="docs-toc"> <div class="toc-label">On this page</div> <nav> <a href="#starting-the-dashboard" class="toc-link toc-link--h2" data-slug="starting-the-dashboard"> Starting the dashboard </a><a href="#dashboard--" class="toc-link toc-link--h2" data-slug="dashboard--"> Dashboard ( / ) </a><a href="#sessions--sessions" class="toc-link toc-link--h2" data-slug="sessions--sessions"> Sessions ( /sessions ) </a><a href="#session-detail--sessionsid" class="toc-link toc-link--h2" data-slug="session-detail--sessionsid"> Session Detail ( /sessions/:id ) </a><a href="#execution-tree" class="toc-link toc-link--h3" data-slug="execution-tree"> Execution tree </a><a href="#filtering-nodes" class="toc-link toc-link--h3" data-slug="filtering-nodes"> Filtering nodes </a><a href="#inspecting-a-node" class="toc-link toc-link--h3" data-slug="inspecting-a-node"> Inspecting a node </a><a href="#raw-json" class="toc-link toc-link--h3" data-slug="raw-json"> Raw JSON </a><a href="#projects--projects" class="toc-link toc-link--h2" data-slug="projects--projects"> Projects ( /projects ) </a><a href="#activity-timeline--activity" class="toc-link toc-link--h2" data-slug="activity-timeline--activity"> Activity Timeline ( /activity ) </a><a href="#skills--skills" class="toc-link toc-link--h2" data-slug="skills--skills"> Skills ( /skills ) </a><a href="#agents--agents" class="toc-link toc-link--h2" data-slug="agents--agents"> Agents ( /agents ) </a> </nav> </aside> </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   <!-- Active ToC highlight via IntersectionObserver -->  </body></html><!-- Mobile sidebar toggle -->

@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><!-- Primary Meta --><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="canonical" href="https://codestz.github.io/claude-hindsight/docs/troubleshooting/"><!-- Favicon --><link rel="icon" type="image/svg+xml" href="/claude-hindsight/favicon.svg"><!-- Open Graph --><meta property="og:type" content="website"><meta property="og:url" content="https://codestz.github.io/claude-hindsight/docs/troubleshooting/"><meta property="og:title" content="Docs — Claude Hindsight"><meta property="og:description" content="Claude Hindsight documentation."><meta property="og:image" content="https://codestz.github.io/claude-hindsight/og.svg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:site_name" content="Claude Hindsight"><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Docs — Claude Hindsight"><meta name="twitter:description" content="Claude Hindsight documentation."><meta name="twitter:image" content="https://codestz.github.io/claude-hindsight/og.svg"><!-- Additional SEO --><meta name="robots" content="index, follow"><meta name="generator" content="Astro v4.16.19"><!-- Fonts --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.CWxCkz41.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.6Eoncv5z.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.C0vJrZON.css"><script type="module" src="/claude-hindsight/_astro/hoisted.0SoUF7mM.js"></script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v2.0.1</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Desktop links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> <!-- Mobile hamburger --> <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer" data-astro-cid-dmqpwcec> <span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span> </button> </div> </header> <!-- Mobile drawer --> <div id="nav-drawer" aria-hidden="true" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="drawer-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="drawer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="drawer-link drawer-cta" data-astro-cid-dmqpwcec>INSTALL</a> </div> <div id="nav-overlay" aria-hidden="true" data-astro-cid-dmqpwcec></div>   <!-- Mobile sidebar toggle --> <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="docs-sidebar"> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"> <rect y="2" width="14" height="1.2" fill="currentColor"></rect> <rect y="6.4" width="14" height="1.2" fill="currentColor"></rect> <rect y="10.8" width="14" height="1.2" fill="currentColor"></rect> </svg>
+MENU
+</button> <div id="sidebar-overlay"></div> <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button> <div class="sb-group"> <div class="sb-group-label">Get Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a><a href="/claude-hindsight/docs/hooks" class="sb-link "> Hooks Setup </a> </div><div class="sb-group"> <div class="sb-group-label">Your Sessions</div> <a href="/claude-hindsight/docs/dashboard" class="sb-link "> Web Dashboard </a> </div><div class="sb-group"> <div class="sb-group-label">Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> CLI Commands </a><a href="/claude-hindsight/docs/configuration" class="sb-link "> Configuration </a><a href="/claude-hindsight/docs/troubleshooting" class="sb-link sb-link--active"> Troubleshooting </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link "> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Docs</span> </nav> <article class="prose-doc"> <h1 id="troubleshooting">Troubleshooting</h1>
+<h2 id="database-errors-after-upgrading">Database errors after upgrading</h2>
+<p><strong>Symptom:</strong> After upgrading to v2.0+, you see an error like:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Error: database schema version mismatch (found v1, expected v2)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p><strong>Solution:</strong> Hindsight v2.0.1+ auto-detects schema mismatches and rebuilds the database automatically on startup. If you see this on an older v2.0.0 build, run:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> clean</span><span style="color:#79B8FF"> --db</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> init</span></span>
+<span class="line"></span></code></pre>
+<p><code>clean --db</code> removes only the SQLite index — your original JSONL session files are never modified. <code>init</code> rebuilds the index from scratch.</p>
+<hr>
+<h2 id="port-already-in-use">Port already in use</h2>
+<p><strong>Web dashboard (<code>:7227</code>):</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Error: address already in use (os error 98)</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>Either another Hindsight instance is running, or another process has claimed port 7227. Options:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># Use a different port</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> serve</span><span style="color:#79B8FF"> --port</span><span style="color:#79B8FF"> 8080</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># Or find and kill the conflicting process</span></span>
+<span class="line"><span style="color:#B392F0">lsof</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> :7227</span></span>
+<span class="line"><span style="color:#79B8FF">kill</span><span style="color:#F97583"> &#x3C;</span><span style="color:#9ECBFF">PI</span><span style="color:#E1E4E8">D</span><span style="color:#F97583">></span></span>
+<span class="line"></span></code></pre>
+<p><strong>OTLP daemon (<code>:7228</code>):</strong></p>
+<p>Same error for the daemon port. Use <code>--port</code> to override:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> daemon</span><span style="color:#79B8FF"> --port</span><span style="color:#79B8FF"> 7229</span></span>
+<span class="line"><span style="color:#6A737D"># Then update config so the hooks point to the new port</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> config</span><span style="color:#9ECBFF"> edit</span><span style="color:#6A737D">   # set otel.port = 7229</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> integrate</span><span style="color:#79B8FF"> --otel</span><span style="color:#79B8FF"> --force</span><span style="color:#6A737D">  # reinstall hooks with new port</span></span>
+<span class="line"></span></code></pre>
+<hr>
+<h2 id="no-sessions-found">No sessions found</h2>
+<p><strong>Symptom:</strong> <code>claude-hindsight init</code> reports “Indexed 0 sessions”.</p>
+<p><strong>Common causes:</strong></p>
+<ol>
+<li>
+<p><strong>Wrong scan directory</strong> — Hindsight looks in <code>~/.claude/projects/</code> by default. If your Claude Code data is elsewhere:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> init</span><span style="color:#79B8FF"> --dir</span><span style="color:#9ECBFF"> /path/to/your/claude/projects</span></span>
+<span class="line"><span style="color:#6A737D"># Or add it permanently:</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> paths</span><span style="color:#9ECBFF"> add</span><span style="color:#9ECBFF"> /path/to/your/claude/projects</span></span>
+<span class="line"></span></code></pre>
+</li>
+<li>
+<p><strong>No sessions yet</strong> — Claude Code only creates JSONL files after you’ve used it. Start a session, then run <code>init</code> again.</p>
+</li>
+<li>
+<p><strong>Empty project directories</strong> — Claude Code creates subdirectories per project. Check that <code>~/.claude/projects/</code> contains subdirectories with <code>.jsonl</code> files:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">ls</span><span style="color:#9ECBFF"> ~/.claude/projects/</span></span>
+<span class="line"></span></code></pre>
+</li>
+</ol>
+<hr>
+<h2 id="corrupt-or-locked-database">Corrupt or locked database</h2>
+<p><strong>Symptom:</strong> Errors mentioning <code>SQLITE_CORRUPT</code>, <code>database disk image is malformed</code>, or <code>database is locked</code>.</p>
+<p><strong>Solution:</strong> Delete the index and rebuild:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> clean</span><span style="color:#79B8FF"> --db</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> init</span></span>
+<span class="line"></span></code></pre>
+<p>The <code>clean --db</code> command removes <code>~/.local/share/claude-hindsight/index.db</code>. Your original session files in <code>~/.claude/projects/</code> are untouched — everything can be rebuilt from them.</p>
+<p>If the database is locked (another process has it open), close all other Hindsight processes first:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">pkill</span><span style="color:#79B8FF"> -f</span><span style="color:#9ECBFF"> claude-hindsight</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> init</span></span>
+<span class="line"></span></code></pre>
+<hr>
+<h2 id="web-dashboard-shows-a-blank-page">Web dashboard shows a blank page</h2>
+<p><strong>Symptom:</strong> You open <code>http://localhost:7227</code> and see an empty page or a React error screen.</p>
+<p><strong>If you installed via Homebrew or pre-built binary:</strong> This shouldn’t happen. Try:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># Hard reload in your browser (Cmd+Shift+R / Ctrl+Shift+R)</span></span>
+<span class="line"><span style="color:#6A737D"># Or try a different browser</span></span>
+<span class="line"></span></code></pre>
+<p><strong>If you built from source:</strong> The web dashboard assets must be built before running <code>cargo build</code>. See <a href="/docs/contributing#dev-setup">Contributing → Dev setup</a>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> web</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#B392F0">npm</span><span style="color:#9ECBFF"> install</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#B392F0">npm</span><span style="color:#9ECBFF"> run</span><span style="color:#9ECBFF"> build</span><span style="color:#E1E4E8"> &#x26;&#x26; </span><span style="color:#79B8FF">cd</span><span style="color:#9ECBFF"> ..</span></span>
+<span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> build</span><span style="color:#79B8FF"> --release</span></span>
+<span class="line"></span></code></pre>
+<p>Running <code>cargo run -- serve</code> without first building the web assets results in a blank page because there are no embedded files.</p>
+<hr>
+<h2 id="otlp-daemon-wont-start">OTLP daemon won’t start</h2>
+<p><strong>Symptom:</strong> <code>claude-hindsight daemon</code> exits immediately or <code>integrate --status</code> shows the daemon as not running.</p>
+<p><strong>Check the port:</strong> The daemon needs port <code>7228</code> to be free. See <a href="#port-already-in-use">Port already in use</a>.</p>
+<p><strong>Check your config:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> config</span><span style="color:#9ECBFF"> show</span></span>
+<span class="line"></span></code></pre>
+<p>Verify <code>otel.port</code> is set correctly and matches what <code>integrate --status</code> shows.</p>
+<p><strong>Start manually to see errors:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> daemon</span><span style="color:#79B8FF"> --port</span><span style="color:#79B8FF"> 7228</span></span>
+<span class="line"></span></code></pre>
+<p>Any startup errors will print to stderr.</p>
+<hr>
+<h2 id="activity-timeline-is-empty">Activity Timeline is empty</h2>
+<p><strong>Symptom:</strong> The Activity page (<code>/activity</code>) shows no events even after running Claude Code sessions.</p>
+<p><strong>Cause:</strong> Hooks are not installed or the daemon is not running.</p>
+<p><strong>Step 1:</strong> Check hook status:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> integrate</span><span style="color:#79B8FF"> --status</span></span>
+<span class="line"></span></code></pre>
+<p>If hooks are missing, install them:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> integrate</span><span style="color:#79B8FF"> --otel</span></span>
+<span class="line"></span></code></pre>
+<p><strong>Step 2:</strong> Make sure the daemon is running:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> daemon</span></span>
+<span class="line"><span style="color:#6A737D"># Or start the full server (which also starts the daemon):</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> serve</span></span>
+<span class="line"></span></code></pre>
+<p><strong>Step 3:</strong> Start a new Claude Code session. Existing sessions that ran before hooks were installed will not appear in the Activity Timeline (only the SQLite-indexed data is available for them). Future sessions will stream in live.</p>
+<hr>
+<h2 id="hooks-not-triggering">Hooks not triggering</h2>
+<p><strong>Symptom:</strong> <code>integrate --status</code> shows hooks installed, but no Activity events appear.</p>
+<p><strong>Check the settings file path:</strong> Claude Code uses different settings files depending on how it’s invoked. Hindsight defaults to writing to <code>~/.claude/settings.json</code>. If Claude Code is reading from a different location:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># Show where Claude Code looks for settings</span></span>
+<span class="line"><span style="color:#B392F0">claude</span><span style="color:#79B8FF"> --help</span><span style="color:#F97583"> |</span><span style="color:#B392F0"> grep</span><span style="color:#9ECBFF"> settings</span></span>
+<span class="line"></span></code></pre>
+<p><strong>Force reinstall with explicit path:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> integrate</span><span style="color:#79B8FF"> --otel</span><span style="color:#79B8FF"> --force</span></span>
+<span class="line"></span></code></pre>
+<p><strong>Check hook execution:</strong> Add <code>--verbose</code> to see whether the hook commands are actually running:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># In one terminal: watch hook output</span></span>
+<span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> daemon</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># In another terminal: start Claude Code and watch for OTLP events</span></span>
+<span class="line"></span></code></pre>
+<p>If you see no OTLP events in the daemon output when running Claude Code, the hooks are not executing. This usually means the settings file path is wrong. See <a href="/docs/configuration#data-locations">Configuration → Data locations</a> for the expected paths.</p>
+<hr>
+<h2 id="getting-more-help">Getting more help</h2>
+<p>If none of the above resolves your issue:</p>
+<ol>
+<li>Run <code>claude-hindsight --version</code> and note the version</li>
+<li>Collect the error output</li>
+<li>Open an issue at <a href="https://github.com/Codestz/claude-hindsight/issues">github.com/Codestz/claude-hindsight/issues</a> with your OS, version, and steps to reproduce</li>
+</ol> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/troubleshooting/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
+Edit this page on GitHub →
+</a> </div> </main> <!-- ── Right ToC ─────────────────────────── --> <aside id="docs-toc"> <div class="toc-label">On this page</div> <nav> <a href="#database-errors-after-upgrading" class="toc-link toc-link--h2" data-slug="database-errors-after-upgrading"> Database errors after upgrading </a><a href="#port-already-in-use" class="toc-link toc-link--h2" data-slug="port-already-in-use"> Port already in use </a><a href="#no-sessions-found" class="toc-link toc-link--h2" data-slug="no-sessions-found"> No sessions found </a><a href="#corrupt-or-locked-database" class="toc-link toc-link--h2" data-slug="corrupt-or-locked-database"> Corrupt or locked database </a><a href="#web-dashboard-shows-a-blank-page" class="toc-link toc-link--h2" data-slug="web-dashboard-shows-a-blank-page"> Web dashboard shows a blank page </a><a href="#otlp-daemon-wont-start" class="toc-link toc-link--h2" data-slug="otlp-daemon-wont-start"> OTLP daemon won’t start </a><a href="#activity-timeline-is-empty" class="toc-link toc-link--h2" data-slug="activity-timeline-is-empty"> Activity Timeline is empty </a><a href="#hooks-not-triggering" class="toc-link toc-link--h2" data-slug="hooks-not-triggering"> Hooks not triggering </a><a href="#getting-more-help" class="toc-link toc-link--h2" data-slug="getting-more-help"> Getting more help </a> </nav> </aside> </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   <!-- Active ToC highlight via IntersectionObserver -->  </body></html><!-- Mobile sidebar toggle -->

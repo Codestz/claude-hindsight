@@ -1,0 +1,171 @@
+<!DOCTYPE html><html lang="en" style="color-scheme: dark;"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#050505"><!-- Primary Meta --><title>Docs — Claude Hindsight</title><meta name="description" content="Claude Hindsight documentation."><link rel="canonical" href="https://codestz.github.io/claude-hindsight/docs/configuration/"><!-- Favicon --><link rel="icon" type="image/svg+xml" href="/claude-hindsight/favicon.svg"><!-- Open Graph --><meta property="og:type" content="website"><meta property="og:url" content="https://codestz.github.io/claude-hindsight/docs/configuration/"><meta property="og:title" content="Docs — Claude Hindsight"><meta property="og:description" content="Claude Hindsight documentation."><meta property="og:image" content="https://codestz.github.io/claude-hindsight/og.svg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:site_name" content="Claude Hindsight"><!-- Twitter Card --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Docs — Claude Hindsight"><meta name="twitter:description" content="Claude Hindsight documentation."><meta name="twitter:image" content="https://codestz.github.io/claude-hindsight/og.svg"><!-- Additional SEO --><meta name="robots" content="index, follow"><meta name="generator" content="Astro v4.16.19"><!-- Fonts --><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="/claude-hindsight/_astro/architecture.CWxCkz41.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.6Eoncv5z.css">
+<link rel="stylesheet" href="/claude-hindsight/_astro/architecture.C0vJrZON.css"><script type="module" src="/claude-hindsight/_astro/hoisted.0SoUF7mM.js"></script></head> <body> <header id="nav" data-astro-cid-dmqpwcec> <div class="nav-inner" data-astro-cid-dmqpwcec> <!-- Brand --> <a href="/claude-hindsight/" class="nav-brand" aria-label="Hindsight home" data-astro-cid-dmqpwcec> <span class="nav-logo" data-astro-cid-dmqpwcec>HINDSIGHT</span> <span class="nav-version" data-astro-cid-dmqpwcec>v2.0.1</span> </a> <!-- Spacer --> <div style="flex:1" data-astro-cid-dmqpwcec></div> <!-- Desktop links --> <nav class="nav-links" aria-label="Main navigation" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="nav-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="nav-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="nav-link nav-cta" data-astro-cid-dmqpwcec>INSTALL</a> </nav> <!-- Mobile hamburger --> <button class="nav-hamburger" id="nav-hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer" data-astro-cid-dmqpwcec> <span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span><span data-astro-cid-dmqpwcec></span> </button> </div> </header> <!-- Mobile drawer --> <div id="nav-drawer" aria-hidden="true" data-astro-cid-dmqpwcec> <a href="/claude-hindsight/docs" class="drawer-link" data-astro-cid-dmqpwcec>DOCS</a> <a href="https://github.com/Codestz/claude-hindsight" class="drawer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-dmqpwcec>GITHUB</a> <a href="#install" class="drawer-link drawer-cta" data-astro-cid-dmqpwcec>INSTALL</a> </div> <div id="nav-overlay" aria-hidden="true" data-astro-cid-dmqpwcec></div>   <!-- Mobile sidebar toggle --> <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="docs-sidebar"> <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"> <rect y="2" width="14" height="1.2" fill="currentColor"></rect> <rect y="6.4" width="14" height="1.2" fill="currentColor"></rect> <rect y="10.8" width="14" height="1.2" fill="currentColor"></rect> </svg>
+MENU
+</button> <div id="sidebar-overlay"></div> <div class="docs-layout"> <!-- ── Left Sidebar ─────────────────────── --> <aside id="docs-sidebar"> <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">✕</button> <div class="sb-group"> <div class="sb-group-label">Get Started</div> <a href="/claude-hindsight/docs/getting-started" class="sb-link "> Introduction </a><a href="/claude-hindsight/docs/hooks" class="sb-link "> Hooks Setup </a> </div><div class="sb-group"> <div class="sb-group-label">Your Sessions</div> <a href="/claude-hindsight/docs/dashboard" class="sb-link "> Web Dashboard </a> </div><div class="sb-group"> <div class="sb-group-label">Reference</div> <a href="/claude-hindsight/docs/commands" class="sb-link "> CLI Commands </a><a href="/claude-hindsight/docs/configuration" class="sb-link sb-link--active"> Configuration </a><a href="/claude-hindsight/docs/troubleshooting" class="sb-link "> Troubleshooting </a> </div><div class="sb-group"> <div class="sb-group-label">Contributing</div> <a href="/claude-hindsight/docs/contributing" class="sb-link "> Contributing </a> </div> </aside> <!-- ── Main Content ──────────────────────── --> <main class="docs-main"> <!-- Breadcrumb --> <nav class="breadcrumb" aria-label="Breadcrumb"> <a href="/claude-hindsight/docs/getting-started" class="bc-link">Docs</a> <span class="bc-sep">›</span> <span class="bc-current">Docs</span> </nav> <article class="prose-doc"> <h1 id="configuration">Configuration</h1>
+<h2 id="config-file-location">Config file location</h2>
+<p>Hindsight stores its configuration at:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>~/.config/hindsight/config.toml</span></span>
+<span class="line"><span></span></span></code></pre>
+<p>On first run, a default config file is created automatically. You can edit it directly or use the <code>config</code> subcommands below.</p>
+<h2 id="managing-config">Managing config</h2>
+<h3 id="view-current-config">View current config</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> config</span><span style="color:#9ECBFF"> show</span></span>
+<span class="line"></span></code></pre>
+<p>Prints the active configuration as TOML to stdout.</p>
+<h3 id="open-in-editor">Open in editor</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> config</span><span style="color:#9ECBFF"> edit</span></span>
+<span class="line"></span></code></pre>
+<p>Opens the config file in your <code>$EDITOR</code> (falls back to <code>nano</code> if unset).</p>
+<h3 id="validate-config">Validate config</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> config</span><span style="color:#9ECBFF"> validate</span></span>
+<span class="line"></span></code></pre>
+<p>Parses the config file and reports any errors without making changes. Useful after hand-editing.</p>
+<h3 id="reset-to-defaults">Reset to defaults</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> config</span><span style="color:#9ECBFF"> reset</span></span>
+<span class="line"></span></code></pre>
+<p>Overwrites your config with the default values. Your session data and SQLite index are not affected.</p>
+<hr>
+<h2 id="configurable-options">Configurable options</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>web.port</code></td><td><code>7227</code></td><td>Port for the web dashboard (<code>serve</code>)</td></tr><tr><td><code>web.host</code></td><td><code>127.0.0.1</code></td><td>Bind address for the web dashboard</td></tr><tr><td><code>otel.port</code></td><td><code>7228</code></td><td>Port for the OTLP receiver daemon</td></tr><tr><td><code>tui.theme</code></td><td><code>"dark"</code></td><td>TUI colour theme: <code>"dark"</code> or <code>"light"</code></td></tr><tr><td><code>tui.default_view</code></td><td><code>"list"</code></td><td>TUI default view on launch: <code>"list"</code> or <code>"watch"</code></td></tr><tr><td><code>tui.keybindings.quit</code></td><td><code>"q"</code></td><td>TUI key to quit</td></tr><tr><td><code>tui.keybindings.up</code></td><td><code>"k"</code></td><td>TUI key to move up</td></tr><tr><td><code>tui.keybindings.down</code></td><td><code>"j"</code></td><td>TUI key to move down</td></tr><tr><td><code>tui.keybindings.select</code></td><td><code>"Enter"</code></td><td>TUI key to open selected session</td></tr><tr><td><code>analytics.show_cost</code></td><td><code>true</code></td><td>Show estimated cost in the dashboard</td></tr><tr><td><code>analytics.currency</code></td><td><code>"USD"</code></td><td>Currency symbol for cost display</td></tr></tbody></table>
+<p><strong>Example <code>config.toml</code>:</strong></p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="toml"><code><span class="line"><span style="color:#E1E4E8">[</span><span style="color:#B392F0">web</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">port = </span><span style="color:#79B8FF">7227</span></span>
+<span class="line"><span style="color:#E1E4E8">host = </span><span style="color:#9ECBFF">"127.0.0.1"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">[</span><span style="color:#B392F0">otel</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">port = </span><span style="color:#79B8FF">7228</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">[</span><span style="color:#B392F0">tui</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">theme = </span><span style="color:#9ECBFF">"dark"</span></span>
+<span class="line"><span style="color:#E1E4E8">default_view = </span><span style="color:#9ECBFF">"list"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">[</span><span style="color:#B392F0">tui</span><span style="color:#E1E4E8">.</span><span style="color:#B392F0">keybindings</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">quit = </span><span style="color:#9ECBFF">"q"</span></span>
+<span class="line"><span style="color:#E1E4E8">up   = </span><span style="color:#9ECBFF">"k"</span></span>
+<span class="line"><span style="color:#E1E4E8">down = </span><span style="color:#9ECBFF">"j"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#E1E4E8">[</span><span style="color:#B392F0">analytics</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">show_cost = </span><span style="color:#79B8FF">true</span></span>
+<span class="line"><span style="color:#E1E4E8">currency  = </span><span style="color:#9ECBFF">"USD"</span></span>
+<span class="line"></span></code></pre>
+<hr>
+<h2 id="scan-directories">Scan directories</h2>
+<p>Hindsight scans specific directories to find Claude Code session files (<code>.jsonl</code>), skills, and agents. By default, it scans <code>~/.claude/projects/</code>.</p>
+<h3 id="list-configured-paths">List configured paths</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> paths</span><span style="color:#9ECBFF"> list</span></span>
+<span class="line"></span></code></pre>
+<h3 id="add-a-path">Add a path</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> paths</span><span style="color:#9ECBFF"> add</span><span style="color:#9ECBFF"> ~/work/claude-projects</span></span>
+<span class="line"></span></code></pre>
+<h3 id="remove-a-path">Remove a path</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> paths</span><span style="color:#9ECBFF"> remove</span><span style="color:#9ECBFF"> ~/old-project-dir</span></span>
+<span class="line"></span></code></pre>
+<p>Paths are stored in the config file under <code>[scan]</code>:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="toml"><code><span class="line"><span style="color:#E1E4E8">[</span><span style="color:#B392F0">scan</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#E1E4E8">paths = [</span></span>
+<span class="line"><span style="color:#9ECBFF">  "~/.claude/projects"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#9ECBFF">  "~/work/claude-projects"</span><span style="color:#E1E4E8">,</span></span>
+<span class="line"><span style="color:#E1E4E8">]</span></span>
+<span class="line"></span></code></pre>
+<p><strong>When to add extra paths:</strong></p>
+<ul>
+<li>You use Claude Code in a non-standard location</li>
+<li>You want to combine sessions from multiple machines (via shared storage or sync)</li>
+<li>You have separate work and personal Claude Code setups</li>
+</ul>
+<p>After adding a new path, run <code>claude-hindsight init</code> (or <code>reindex</code>) to pick up the sessions it contains.</p>
+<hr>
+<h2 id="data-locations">Data locations</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Path</th><th>Contents</th></tr></thead><tbody><tr><td><code>~/.config/hindsight/config.toml</code></td><td>Configuration file</td></tr><tr><td><code>~/.local/share/claude-hindsight/index.db</code></td><td>SQLite session index</td></tr><tr><td><code>~/.local/share/claude-hindsight/</code></td><td>All Hindsight data (safe to delete to reset)</td></tr></tbody></table>
+<p>To find the exact paths on your system:</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">claude-hindsight</span><span style="color:#9ECBFF"> paths</span><span style="color:#9ECBFF"> list</span></span>
+<span class="line"></span></code></pre> </article> <!-- Edit on GitHub --> <div class="edit-link-wrap"> <a href="https://github.com/Codestz/claude-hindsight/tree/main/site/src/pages/docs/configuration/.md" target="_blank" rel="noopener noreferrer" class="edit-link">
+Edit this page on GitHub →
+</a> </div> </main> <!-- ── Right ToC ─────────────────────────── --> <aside id="docs-toc"> <div class="toc-label">On this page</div> <nav> <a href="#config-file-location" class="toc-link toc-link--h2" data-slug="config-file-location"> Config file location </a><a href="#managing-config" class="toc-link toc-link--h2" data-slug="managing-config"> Managing config </a><a href="#view-current-config" class="toc-link toc-link--h3" data-slug="view-current-config"> View current config </a><a href="#open-in-editor" class="toc-link toc-link--h3" data-slug="open-in-editor"> Open in editor </a><a href="#validate-config" class="toc-link toc-link--h3" data-slug="validate-config"> Validate config </a><a href="#reset-to-defaults" class="toc-link toc-link--h3" data-slug="reset-to-defaults"> Reset to defaults </a><a href="#configurable-options" class="toc-link toc-link--h2" data-slug="configurable-options"> Configurable options </a><a href="#scan-directories" class="toc-link toc-link--h2" data-slug="scan-directories"> Scan directories </a><a href="#list-configured-paths" class="toc-link toc-link--h3" data-slug="list-configured-paths"> List configured paths </a><a href="#add-a-path" class="toc-link toc-link--h3" data-slug="add-a-path"> Add a path </a><a href="#remove-a-path" class="toc-link toc-link--h3" data-slug="remove-a-path"> Remove a path </a><a href="#data-locations" class="toc-link toc-link--h2" data-slug="data-locations"> Data locations </a> </nav> </aside> </div> <footer class="footer" data-astro-cid-sz7xmlte> <!-- Main row --> <div class="footer-inner" data-astro-cid-sz7xmlte> <div class="footer-brand" data-astro-cid-sz7xmlte> <span class="footer-logo" data-astro-cid-sz7xmlte>HINDSIGHT</span> <span class="footer-tagline muted" data-astro-cid-sz7xmlte>// 20/20 hindsight for your Claude Code sessions</span> </div> <nav class="footer-links" aria-label="Footer navigation" data-astro-cid-sz7xmlte> <a href="/claude-hindsight/docs/getting-started" class="footer-link" data-astro-cid-sz7xmlte>GETTING STARTED</a><a href="/claude-hindsight/docs/commands" class="footer-link" data-astro-cid-sz7xmlte>COMMANDS</a><a href="/claude-hindsight/docs/architecture" class="footer-link" data-astro-cid-sz7xmlte>ARCHITECTURE</a><a href="https://github.com/Codestz/claude-hindsight" class="footer-link" target="_blank" rel="noopener noreferrer" data-astro-cid-sz7xmlte>GITHUB</a> </nav> <div class="footer-status" data-astro-cid-sz7xmlte> <span class="dot dot--pulse" aria-hidden="true" data-astro-cid-sz7xmlte></span> <span class="label muted" data-astro-cid-sz7xmlte>SYS.STATUS: ONLINE</span> </div> </div> <!-- Bottom bar --> <div class="footer-bar" data-astro-cid-sz7xmlte> <span class="label dim" data-astro-cid-sz7xmlte>// CLAUDE HINDSIGHT · MIT LICENSE · 2026</span> <span class="label dim" data-astro-cid-sz7xmlte>READ-ONLY · LOCAL-ONLY · NO TELEMETRY</span> </div> </footer>   <!-- Active ToC highlight via IntersectionObserver -->  </body></html><!-- Mobile sidebar toggle -->
