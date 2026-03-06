@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "@/lib/api";
-import type { SkillConfig, SkillReference } from "@/lib/types";
+import type { SkillConfig, SkillGroup, SkillReference } from "@/lib/types";
 import { PageShell } from "@/components/ui/PageShell";
 import { Card } from "@/components/ui/Card";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { InlineDiff } from "@/components/ui/InlineDiff";
 import {
   Sparkles,
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
   BookOpen,
   Scale,
   Webhook,
+  GitCompare,
 } from "lucide-react";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { ConfigRow } from "@/components/ui/ConfigRow";
@@ -111,17 +113,21 @@ function ReferencesSection({
 
 export default function SkillDetailPage() {
   const { name } = useParams<{ name: string }>();
-  const [skill, setSkill] = useState<SkillConfig | null>(null);
+  const [group, setGroup] = useState<SkillGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
 
   useEffect(() => {
     if (!name) return;
     api.skill(name)
-      .then(setSkill)
+      .then(setGroup)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [name]);
+
+  const skill: SkillConfig | null = group?.items[0] ?? null;
+  const hasDiff = group != null && !group.identical && group.items.length >= 2;
 
   if (loading) return <PageShell><LoadingState /></PageShell>;
   if (error || !skill) return <PageShell><ErrorState message={error ?? "Skill not found"} /></PageShell>;
@@ -163,7 +169,7 @@ export default function SkillDetailPage() {
         >
           <Sparkles size={20} />
         </span>
-        <div>
+        <div style={{ flex: 1 }}>
           <h1
             style={{
               fontSize: "20px",
@@ -188,6 +194,31 @@ export default function SkillDetailPage() {
             </div>
           )}
         </div>
+        {hasDiff && (
+          <button
+            onClick={() => setCompareMode((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 14px",
+              background: compareMode
+                ? "color-mix(in srgb, var(--amber) 15%, transparent)"
+                : "var(--bg-2)",
+              border: `1px solid ${compareMode ? "var(--amber)" : "var(--border-1)"}`,
+              borderRadius: "var(--radius-md)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "12px",
+              color: compareMode ? "var(--amber)" : "var(--text-2)",
+              cursor: "pointer",
+              flexShrink: 0,
+              transition: "all 0.15s",
+            }}
+          >
+            <GitCompare size={13} />
+            {compareMode ? "Exit compare" : "Compare scopes"}
+          </button>
+        )}
       </div>
 
       {/* Config + Tools row (2-col) */}
@@ -351,8 +382,38 @@ export default function SkillDetailPage() {
         </div>
       </div>
 
-      {/* Instructions / body */}
-      {skill.body && (
+      {/* Body — normal view or compare view, toggled by the header button */}
+      {compareMode && group ? (
+        <Card>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "10px",
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--amber)",
+              padding: "14px 16px",
+              borderBottom: "1px solid var(--border-1)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <GitCompare size={12} />
+            Comparing {group.items.length} scopes
+          </div>
+          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            {group.items.slice(1).map((copy) => (
+              <InlineDiff
+                key={copy.file_path}
+                left={{ label: group.items[0].scope, body: group.items[0].body }}
+                right={{ label: copy.scope, body: copy.body }}
+              />
+            ))}
+          </div>
+        </Card>
+      ) : skill.body ? (
         <Card>
           <div
             style={{
@@ -368,17 +429,11 @@ export default function SkillDetailPage() {
           >
             Instructions
           </div>
-          <div
-            style={{
-              padding: "16px",
-              maxHeight: "500px",
-              overflowY: "auto",
-            }}
-          >
+          <div style={{ padding: "16px", maxHeight: "500px", overflowY: "auto" }}>
             <MarkdownContent text={skill.body} />
           </div>
         </Card>
-      )}
+      ) : null}
 
       {/* Skill references and rules */}
       {skill.references && skill.references.length > 0 && (

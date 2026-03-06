@@ -6,5 +6,4 @@
 pub mod discovery;
 pub mod parser;
 
-pub use discovery::{discover_agents, discover_skills};
-pub use parser::{AgentConfig, SkillConfig};
+pub use discovery::{discover_agents, discover_skills, group_agents, group_skills, AgentGroup, SkillGroup};
