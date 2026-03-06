@@ -9,9 +9,28 @@
 //! 3. Plugins: `~/.claude/plugins/**/agents/*.md`, `~/.claude/plugins/**/skills/*/SKILL.md`
 
 use super::parser::{self, AgentConfig, SkillConfig, SkillReference};
+use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+/// All copies of an agent that share the same name across different scopes.
+#[derive(Serialize)]
+pub struct AgentGroup {
+    pub name: String,
+    /// `true` when every copy has byte-identical body content.
+    pub identical: bool,
+    pub items: Vec<AgentConfig>,
+}
+
+/// All copies of a skill that share the same name across different scopes.
+#[derive(Serialize)]
+pub struct SkillGroup {
+    pub name: String,
+    /// `true` when every copy has byte-identical body content.
+    pub identical: bool,
+    pub items: Vec<SkillConfig>,
+}
 
 fn home_dir() -> Option<PathBuf> {
     dirs::home_dir()
@@ -268,6 +287,15 @@ pub fn discover_agents() -> Vec<AgentConfig> {
         }
     }
 
+    // Dedup by canonical file path so that the same physical file reached via
+    // different symlinks or duplicate claude_dirs entries is only kept once.
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    all.retain(|item| {
+        let canonical = fs::canonicalize(&item.file_path)
+            .unwrap_or_else(|_| PathBuf::from(&item.file_path));
+        seen.insert(canonical)
+    });
+
     // Sort by name for consistent output
     all.sort_by(|a, b| a.name.cmp(&b.name));
     all
@@ -351,8 +379,50 @@ pub fn discover_skills() -> Vec<SkillConfig> {
         }
     }
 
+    // Dedup by canonical file path so that the same physical file reached via
+    // different symlinks or duplicate claude_dirs entries is only kept once.
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    all.retain(|item| {
+        let canonical = fs::canonicalize(&item.file_path)
+            .unwrap_or_else(|_| PathBuf::from(&item.file_path));
+        seen.insert(canonical)
+    });
+
     all.sort_by(|a, b| a.name.cmp(&b.name));
     all
+}
+
+/// Group a flat (already-sorted, already-deduped) list of agents by name.
+pub fn group_agents(agents: Vec<AgentConfig>) -> Vec<AgentGroup> {
+    let mut groups: Vec<AgentGroup> = Vec::new();
+    for agent in agents {
+        if let Some(g) = groups.last_mut().filter(|g| g.name == agent.name) {
+            g.items.push(agent);
+        } else {
+            groups.push(AgentGroup { name: agent.name.clone(), identical: true, items: vec![agent] });
+        }
+    }
+    // Compute identical flag now that all items per group are collected
+    for g in &mut groups {
+        g.identical = g.items.windows(2).all(|w| w[0].body == w[1].body);
+    }
+    groups
+}
+
+/// Group a flat (already-sorted, already-deduped) list of skills by name.
+pub fn group_skills(skills: Vec<SkillConfig>) -> Vec<SkillGroup> {
+    let mut groups: Vec<SkillGroup> = Vec::new();
+    for skill in skills {
+        if let Some(g) = groups.last_mut().filter(|g| g.name == skill.name) {
+            g.items.push(skill);
+        } else {
+            groups.push(SkillGroup { name: skill.name.clone(), identical: true, items: vec![skill] });
+        }
+    }
+    for g in &mut groups {
+        g.identical = g.items.windows(2).all(|w| w[0].body == w[1].body);
+    }
+    groups
 }
 
 #[cfg(test)]

@@ -405,7 +405,15 @@ export interface HookActivitySummary {
 //       GET /api/skills/:name
 // ─────────────────────────────────────────────────────────────
 
-/** Agent configuration — from GET /api/agents */
+/** All copies of an agent sharing the same name across scopes — from GET /api/agents and /api/agents/:name */
+export interface AgentGroup {
+  name: string;
+  /** true when every copy has byte-identical body content */
+  identical: boolean;
+  items: AgentConfig[];
+}
+
+/** Agent configuration — from GET /api/agents (inside AgentGroup.items) */
 export interface AgentConfig {
   name: string;
   description: string | null;
@@ -432,7 +440,15 @@ export interface SkillReference {
   category: string; // "reference" | "rule"
 }
 
-/** Skill configuration — from GET /api/skills */
+/** All copies of a skill sharing the same name across scopes — from GET /api/skills and /api/skills/:name */
+export interface SkillGroup {
+  name: string;
+  /** true when every copy has byte-identical body content */
+  identical: boolean;
+  items: SkillConfig[];
+}
+
+/** Skill configuration — from GET /api/skills (inside SkillGroup.items) */
 export interface SkillConfig {
   name: string;
   description: string | null;
