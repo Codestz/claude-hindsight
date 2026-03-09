@@ -18,7 +18,7 @@
 ### Homebrew (macOS & Linux)
 
 ```bash
-brew tap Codestz/claude-hindsight
+brew tap Codestz/tap
 brew install claude-hindsight
 ```
 
