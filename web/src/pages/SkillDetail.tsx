@@ -165,6 +165,7 @@ export default function SkillDetailPage() {
             justifyContent: "center",
             color: "var(--cyan)",
             flexShrink: 0,
+            boxShadow: "0 0 16px color-mix(in srgb, var(--cyan) 20%, transparent)",
           }}
         >
           <Sparkles size={20} />
@@ -222,7 +223,7 @@ export default function SkillDetailPage() {
       </div>
 
       {/* Config + Tools row (2-col) */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "start" }}>
+      <div className="animate-in" style={{ "--delay": "0.06s", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "start" } as React.CSSProperties}>
         <Card>
           <div
             style={{

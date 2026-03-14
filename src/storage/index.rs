@@ -464,7 +464,7 @@ impl SessionIndex {
                 let first_message: Option<String> = parsed
                     .nodes
                     .iter()
-                    .filter(|n| n.node_type == "user")
+                    .filter(|n| n.node_type == crate::parser::models::NodeType::User)
                     .find_map(|n| {
                         let text = n.message.as_ref()?.text_content();
                         let trimmed = text.trim().to_string();
@@ -2443,7 +2443,10 @@ mod tests {
             uuid: Some("u1".to_string()),
             parent_uuid: None,
             timestamp: Some(1_000),
-            node_type: "user".to_string(),
+            node_type: crate::parser::models::NodeType::User,
+            is_sidechain: None,
+            session_id: None,
+            cwd: None,
             message: Some(Message {
                 id: None,
                 role: Some("user".to_string()),
@@ -2506,7 +2509,10 @@ mod tests {
                 uuid: Some("user1".to_string()),
                 parent_uuid: None,
                 timestamp: Some(500),
-                node_type: "user".to_string(),
+                node_type: crate::parser::models::NodeType::User,
+                is_sidechain: None,
+                session_id: None,
+                cwd: None,
                 message: Some(Message {
                     id: None,
                     role: Some("user".to_string()),
@@ -2527,7 +2533,10 @@ mod tests {
                 uuid: Some("node1".to_string()),
                 parent_uuid: None,
                 timestamp: Some(1000),
-                node_type: "tool_use".to_string(),
+                node_type: crate::parser::models::NodeType::Unknown,
+                is_sidechain: None,
+                session_id: None,
+                cwd: None,
                 message: None,
                 tool_use: Some(ToolUse {
                     name: "Read".to_string(),
@@ -2545,7 +2554,10 @@ mod tests {
                 uuid: Some("node2".to_string()),
                 parent_uuid: None,
                 timestamp: Some(2000),
-                node_type: "tool_use".to_string(),
+                node_type: crate::parser::models::NodeType::Unknown,
+                is_sidechain: None,
+                session_id: None,
+                cwd: None,
                 message: None,
                 tool_use: Some(ToolUse {
                     name: "Edit".to_string(),
@@ -2563,7 +2575,10 @@ mod tests {
                 uuid: Some("node3".to_string()),
                 parent_uuid: None,
                 timestamp: Some(3000),
-                node_type: "tool_use".to_string(),
+                node_type: crate::parser::models::NodeType::Unknown,
+                is_sidechain: None,
+                session_id: None,
+                cwd: None,
                 message: None,
                 tool_use: Some(ToolUse {
                     name: "Read".to_string(),

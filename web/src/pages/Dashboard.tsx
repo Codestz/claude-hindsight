@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type {
@@ -71,8 +71,8 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageShell maxWidth="1400px"><LoadingState /></PageShell>;
-  if (error || !analytics) return <PageShell maxWidth="1400px"><ErrorState message={error} /></PageShell>;
+  if (loading) return <PageShell maxWidth="1320px"><LoadingState /></PageShell>;
+  if (error || !analytics) return <PageShell maxWidth="1320px"><ErrorState message={error} /></PageShell>;
 
   const sessionsSub = [
     analytics.sessions_today > 0 && `+${analytics.sessions_today} today`,
@@ -105,9 +105,9 @@ export default function DashboardPage() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <PageShell maxWidth="1400px">
+    <PageShell maxWidth="1320px">
       {/* ── Greeting header ──────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-1)", paddingBottom: "16px" }}>
         <h1 style={{ fontSize: "20px", fontWeight: 600, color: "var(--text-1)", fontFamily: "var(--font-sans)", margin: 0 }}>
           {greeting()}
         </h1>
@@ -117,7 +117,8 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Row ──────────────────────────────────────── */}
-      <Card>
+      <div className="animate-in" style={{ "--delay": "0s" } as React.CSSProperties}>
+      <Card glow="var(--indigo)">
         <div style={{ display: "grid", gridTemplateColumns: hasTelemetry ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
             <StatCard
@@ -152,9 +153,24 @@ export default function DashboardPage() {
           />
         </div>
       </Card>
+      </div>
+
+      {/* Quick insight */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "8px",
+        padding: "0 4px",
+        fontSize: "12px", fontFamily: "var(--font-sans)", color: "var(--text-3)",
+      }}>
+        <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "var(--indigo)", flexShrink: 0 }} />
+        {analytics.sessions_today > 0
+          ? `${analytics.sessions_today} session${analytics.sessions_today > 1 ? "s" : ""} today across ${analytics.total_projects} projects`
+          : `${analytics.sessions_this_week} sessions this week`
+        }
+      </div>
 
       {/* ── Sparkline + Token Breakdown ──────────────────── */}
-      <Card>
+      <div className="animate-in" style={{ "--delay": "0.06s" } as React.CSSProperties}>
+      <Card glow="var(--accent)">
         <div style={{ display: "grid", gridTemplateColumns: hasTelemetry ? "2fr 1fr" : "1fr" }}>
           <div style={{ padding: "24px 28px", borderRight: hasTelemetry ? "1px solid var(--border-1)" : "none" }}>
             <DayChart data={sparkline} />
@@ -174,8 +190,10 @@ export default function DashboardPage() {
           )}
         </div>
       </Card>
+      </div>
 
       {/* ── Recent Sessions + Top Tools ──────────────────── */}
+      <div className="animate-in" style={{ "--delay": "0.12s" } as React.CSSProperties}>
       <Card>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr" }}>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
@@ -188,6 +206,9 @@ export default function DashboardPage() {
           <div style={{ padding: "24px 28px" }}>
             <div style={{ marginBottom: "18px" }}>
               <SectionHeader title="Top Tools" />
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "12px" }}>
+              Most used tools across all sessions
             </div>
             <BarChart data={nativeTools} limit={6} color="var(--cyan)" />
 
@@ -203,8 +224,10 @@ export default function DashboardPage() {
           </div>
         </div>
       </Card>
+      </div>
 
       {/* ── Recent Activity + Top Files ──────────────────── */}
+      <div className="animate-in" style={{ "--delay": "0.18s" } as React.CSSProperties}>
       <Card>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr" }}>
           {/* Recent Activity preview */}
@@ -300,6 +323,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </Card>
+      </div>
     </PageShell>
   );
 }

@@ -3,7 +3,7 @@
 //! Intelligently labels nodes based on content, not just type.
 
 use crate::analyzer::TreeNode;
-use crate::parser::models::ContentBlock;
+use crate::parser::models::{ContentBlock, NodeType};
 
 /// Get smart label for a node (with Nerd Font icon and color).
 ///
@@ -40,14 +40,14 @@ fn detect_node_type(
     node: &TreeNode,
     correlation: Option<&std::collections::HashMap<String, String>>,
 ) -> (String, String) {
-    match node.node.node_type.as_str() {
-        "user" => detect_user_type(node, correlation),
-        "assistant" => detect_assistant_type(node),
-        "progress" => detect_progress_type(node),
-        "file-history-snapshot" => ("file_snapshot".to_string(), detect_snapshot_details(node)),
-        "system" => detect_system_type(node),
-        "queue-operation" => ("queue_operation".to_string(), "queued".to_string()),
-        _ => ("unknown".to_string(), node.node.node_type.clone()),
+    match node.node.node_type {
+        NodeType::User => detect_user_type(node, correlation),
+        NodeType::Assistant => detect_assistant_type(node),
+        NodeType::Progress => detect_progress_type(node),
+        NodeType::FileHistorySnapshot => ("file_snapshot".to_string(), detect_snapshot_details(node)),
+        NodeType::System => detect_system_type(node),
+        NodeType::QueueOperation => ("queue_operation".to_string(), "queued".to_string()),
+        _ => ("unknown".to_string(), node.node.node_type.to_string()),
     }
 }
 
@@ -212,13 +212,25 @@ fn detect_progress_type(node: &TreeNode) -> (String, String) {
                     return ("progress_hook".to_string(), hook_name.to_string());
                 }
                 "agent_progress" => {
-                    let agent_id = data
-                        .get("agentId")
-                        .and_then(|a| a.as_str())
-                        .unwrap_or("unknown");
-                    // Show first 8 chars of agent ID (character-safe)
-                    let short_id: String = agent_id.chars().take(8).collect();
-                    return ("progress_agent".to_string(), short_id);
+                    // Prefer the agent prompt (the task description) over the
+                    // opaque agentId hash which is meaningless to users.
+                    let label = data
+                        .get("prompt")
+                        .and_then(|p| p.as_str())
+                        .map(|p| {
+                            let cleaned = p.replace('\n', " ");
+                            let trimmed = cleaned.trim();
+                            let preview: String = trimmed.chars().take(50).collect();
+                            if trimmed.len() > 50 { format!("{preview}…") } else { preview }
+                        })
+                        .unwrap_or_else(|| {
+                            let agent_id = data
+                                .get("agentId")
+                                .and_then(|a| a.as_str())
+                                .unwrap_or("unknown");
+                            agent_id.chars().take(8).collect()
+                        });
+                    return ("progress_agent".to_string(), label);
                 }
                 _ => return ("progress_other".to_string(), progress_type.to_string()),
             }

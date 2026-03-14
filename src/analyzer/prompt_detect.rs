@@ -4,7 +4,7 @@
 //! is a meaningful prompt (instruction, request, question) vs. a tool
 //! result passthrough or minimal acknowledgement.
 
-use crate::parser::models::{ContentBlock, ExecutionNode};
+use crate::parser::models::{ContentBlock, ExecutionNode, NodeType};
 
 /// Returns true if the text is system noise injected by the Claude Code client
 /// (slash commands, stdout output, caveats, interruptions). These are not real
@@ -86,7 +86,7 @@ pub fn prompt_score(
     is_first_after_assistant: bool,
 ) -> u8 {
     // Only user nodes can be prompts
-    if node.node_type != "user" {
+    if node.node_type != NodeType::User {
         return 0;
     }
 
@@ -193,7 +193,10 @@ mod tests {
             uuid: Some("u1".to_string()),
             parent_uuid: None,
             timestamp: Some(1000),
-            node_type: "user".to_string(),
+            node_type: NodeType::User,
+            is_sidechain: None,
+            session_id: None,
+            cwd: None,
             message: Some(Message {
                 id: None,
                 role: Some("user".to_string()),
@@ -217,7 +220,10 @@ mod tests {
             uuid: Some("u2".to_string()),
             parent_uuid: None,
             timestamp: Some(2000),
-            node_type: "user".to_string(),
+            node_type: NodeType::User,
+            is_sidechain: None,
+            session_id: None,
+            cwd: None,
             message: Some(Message {
                 id: None,
                 role: Some("user".to_string()),
@@ -271,7 +277,7 @@ mod tests {
     #[test]
     fn assistant_node_scores_zero() {
         let mut node = user_node("test");
-        node.node_type = "assistant".to_string();
+        node.node_type = NodeType::Assistant;
         assert_eq!(prompt_score(&node, true, false), 0);
     }
 

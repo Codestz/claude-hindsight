@@ -8,6 +8,47 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Typed node classification — replaces raw `String` comparisons with
+/// compile-time checked variants. Serializes to kebab-case for JSON compat.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum NodeType {
+    User,
+    Assistant,
+    Progress,
+    System,
+    FileHistorySnapshot,
+    QueueOperation,
+    LastPrompt,
+    PrLink,
+    /// Catch-all for future/unknown types — prevents deserialization failures.
+    #[serde(other)]
+    Unknown,
+}
+
+impl NodeType {
+    /// Returns the kebab-case string representation (matches JSON serialization).
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            NodeType::User => "user",
+            NodeType::Assistant => "assistant",
+            NodeType::Progress => "progress",
+            NodeType::System => "system",
+            NodeType::FileHistorySnapshot => "file-history-snapshot",
+            NodeType::QueueOperation => "queue-operation",
+            NodeType::LastPrompt => "last-prompt",
+            NodeType::PrLink => "pr-link",
+            NodeType::Unknown => "unknown",
+        }
+    }
+}
+
+impl std::fmt::Display for NodeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Custom deserializer for timestamp that handles both string and number formats
 mod timestamp_format {
     use serde::{Deserialize, Deserializer};
@@ -83,34 +124,48 @@ pub struct ExecutionNode {
     /// Unique identifier for this node
     pub uuid: Option<String>,
 
-    /// Parent node UUID (for building hierarchy)
+    /// Parent node UUID (for building hierarchy).
+    /// The JSONL field is camelCase `parentUuid` — must match exactly.
+    #[serde(rename = "parentUuid")]
     pub parent_uuid: Option<String>,
 
     /// Timestamp in milliseconds (accepts both ISO 8601 string and number)
     #[serde(default, deserialize_with = "timestamp_format::deserialize")]
     pub timestamp: Option<i64>,
 
-    /// Node type (user, assistant, tool_use, etc.)
+    /// Node type (user, assistant, progress, system, file-history-snapshot, …)
     #[serde(rename = "type")]
-    pub node_type: String,
+    pub node_type: NodeType,
+
+    /// Whether this node belongs to a sidechain (subagent parallel execution).
+    #[serde(rename = "isSidechain", default, skip_serializing_if = "Option::is_none")]
+    pub is_sidechain: Option<bool>,
+
+    /// Session ID this node belongs to (mirrors the filename stem).
+    #[serde(rename = "sessionId", skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+
+    /// Working directory at the time of this node.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
 
     /// Message content (for user/assistant messages)
     pub message: Option<Message>,
 
-    /// Tool use details (for tool_use type)
+    /// Tool use details (legacy top-level format — real data uses ContentBlock::ToolUse)
     pub tool_use: Option<ToolUse>,
 
-    /// Tool result (for tool_result events)
+    /// Tool result (legacy top-level format — real data uses ContentBlock::ToolResult)
     pub tool_result: Option<ToolResult>,
 
     /// Tool use result (raw tool output - can be string or object)
     #[serde(rename = "toolUseResult")]
     pub tool_use_result: Option<serde_json::Value>,
 
-    /// Thinking content (for thinking blocks)
+    /// Thinking content (legacy top-level format)
     pub thinking: Option<String>,
 
-    /// Progress updates
+    /// Progress updates (legacy field — real data stores progress details in `extra["data"]`)
     pub progress: Option<Progress>,
 
     /// Token usage statistics
@@ -130,6 +185,54 @@ impl ExecutionNode {
         self.token_usage
             .as_ref()
             .or_else(|| self.message.as_ref().and_then(|m| m.usage.as_ref()))
+    }
+
+    /// Returns true if this node represents a tool error.
+    ///
+    /// Checks all known error signals in one place:
+    /// 1. `tool_result.is_error` flag
+    /// 2. `<tool_use_error>` tag in `tool_result.content`
+    /// 3. `toolUseResult` (raw JSON) deserialized as ToolResult with is_error
+    /// 4. `ContentBlock::ToolResult` with is_error or `<tool_use_error>` content
+    pub fn has_error(&self) -> bool {
+        let tr = self.tool_result.as_ref();
+        let tool_result_error = tr.and_then(|r| r.is_error).unwrap_or(false);
+        let content_tag_error = tr
+            .and_then(|r| r.content.as_deref())
+            .map(|c| c.contains("<tool_use_error>"))
+            .unwrap_or(false);
+
+        let tool_use_result_error = self
+            .tool_use_result
+            .as_ref()
+            .and_then(|v| {
+                serde_json::from_value::<ToolResult>(v.clone())
+                    .ok()
+                    .and_then(|r| r.is_error)
+            })
+            .unwrap_or(false);
+
+        let block_error = self
+            .message
+            .as_ref()
+            .map(|m| {
+                m.content_blocks().iter().any(|b| match b {
+                    ContentBlock::ToolResult {
+                        content, is_error, ..
+                    } => {
+                        is_error.unwrap_or(false)
+                            || content
+                                .as_ref()
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.contains("<tool_use_error>"))
+                                .unwrap_or(false)
+                    }
+                    _ => false,
+                })
+            })
+            .unwrap_or(false);
+
+        tool_result_error || content_tag_error || tool_use_result_error || block_error
     }
 }
 
@@ -394,52 +497,21 @@ pub struct Session {
 impl Session {
     /// Create a new session from parsed nodes
     pub fn new(session_id: String, file_path: Option<String>, nodes: Vec<ExecutionNode>) -> Self {
-        let total_tools = nodes.iter().filter(|n| n.tool_use.is_some()).count();
-
-        let error_count = nodes
+        // Count tool calls from ContentBlock::ToolUse in assistant messages.
+        // The legacy top-level `tool_use` field is never populated by real Claude Code
+        // transcripts — all tool invocations live in message.content blocks.
+        let total_tools = nodes
             .iter()
-            .filter(|n| {
-                let tr = n.tool_result.as_ref();
-                let tool_result_error = tr.and_then(|r| r.is_error).unwrap_or(false);
-                let content_tag_error = tr
-                    .and_then(|r| r.content.as_deref())
-                    .map(|c| c.contains("<tool_use_error>"))
-                    .unwrap_or(false);
-
-                let tool_use_result_error = n
-                    .tool_use_result
+            .flat_map(|n| {
+                n.message
                     .as_ref()
-                    .and_then(|v| {
-                        serde_json::from_value::<ToolResult>(v.clone())
-                            .ok()
-                            .and_then(|r| r.is_error)
-                    })
-                    .unwrap_or(false);
-
-                // Also check message content blocks for tool_result errors
-                let block_error = n
-                    .message
-                    .as_ref()
-                    .map(|m| {
-                        m.content_blocks().iter().any(|b| match b {
-                            ContentBlock::ToolResult {
-                                content, is_error, ..
-                            } => {
-                                is_error.unwrap_or(false)
-                                    || content
-                                        .as_ref()
-                                        .and_then(|v| v.as_str())
-                                        .map(|s| s.contains("<tool_use_error>"))
-                                        .unwrap_or(false)
-                            }
-                            _ => false,
-                        })
-                    })
-                    .unwrap_or(false);
-
-                tool_result_error || content_tag_error || tool_use_result_error || block_error
+                    .map(|m| m.content_blocks())
+                    .unwrap_or(&[])
             })
+            .filter(|b| matches!(b, ContentBlock::ToolUse { .. }))
             .count();
+
+        let error_count = nodes.iter().filter(|n| n.has_error()).count();
 
         let start_time = nodes.iter().filter_map(|n| n.timestamp).min();
         let end_time = nodes.iter().filter_map(|n| n.timestamp).max();

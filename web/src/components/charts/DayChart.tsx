@@ -86,7 +86,7 @@ function Bar({
   );
 }
 
-export function DayChart({ data, color = "var(--green)" }: DayChartProps) {
+export function DayChart({ data, color = "var(--accent)" }: DayChartProps) {
   const max = Math.max(...data, 1);
 
   // Build day labels: date numbers for every other bar (avoids crowding)
@@ -133,7 +133,7 @@ export function DayChart({ data, color = "var(--green)" }: DayChartProps) {
         <div style={{ textAlign: "right" }}>
           <div
             style={{
-              fontSize: "20px",
+              fontSize: "24px",
               fontWeight: 700,
               fontFamily: "var(--font-mono)",
               color: "var(--text-1)",

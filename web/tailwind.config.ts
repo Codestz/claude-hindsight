@@ -12,7 +12,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Backgrounds
+        // Surfaces
         canvas:  "var(--bg-0)",
         surface: "var(--bg-1)",
         card:    "var(--bg-2)",
@@ -28,9 +28,16 @@ const config: Config = {
         "text-secondary": "var(--text-2)",
         "text-muted":     "var(--text-3)",
 
-        // Accents
+        // Semantic palette
+        indigo:  "var(--indigo)",
+        amber:   "var(--amber)",
+        emerald: "var(--emerald)",
+        rose:    "var(--rose)",
+        sky:     "var(--sky)",
+        violet:  "var(--violet)",
+
+        // Legacy aliases (existing components use these)
         green:  "var(--green)",
-        amber:  "var(--amber)",
         cyan:   "var(--cyan)",
         purple: "var(--purple)",
         danger: "var(--red)",
@@ -43,8 +50,8 @@ const config: Config = {
       },
 
       fontFamily: {
-        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
-        mono: ["var(--font-mono)", '"JetBrains Mono"', "monospace"],
+        sans: ["var(--font-sans)", "Geist", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", '"Geist Mono"', "monospace"],
       },
 
       fontSize: {
@@ -63,6 +70,14 @@ const config: Config = {
         sm: "var(--radius-sm)",
         md: "var(--radius-md)",
         lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+      },
+
+      boxShadow: {
+        sm: "var(--shadow-sm)",
+        md: "var(--shadow-md)",
+        lg: "var(--shadow-lg)",
+        xl: "var(--shadow-xl)",
       },
     },
   },

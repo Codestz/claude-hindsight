@@ -1,5 +1,6 @@
 //! JSONL transcript parser for Claude Code sessions
 
+pub mod extract;
 pub mod models;
 pub mod transcript;
 

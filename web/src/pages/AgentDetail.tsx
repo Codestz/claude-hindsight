@@ -20,6 +20,7 @@ import {
   GitCompare,
 } from "lucide-react";
 import { ConfigRow } from "@/components/ui/ConfigRow";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
 function TagList({ items, color }: { items: string[]; color: string }) {
   return (
@@ -99,6 +100,7 @@ export default function AgentDetailPage() {
             justifyContent: "center",
             color: "var(--purple)",
             flexShrink: 0,
+            boxShadow: "0 0 16px color-mix(in srgb, var(--purple) 20%, transparent)",
           }}
         >
           <Bot size={20} />
@@ -155,7 +157,7 @@ export default function AgentDetailPage() {
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "start" }}>
+      <div className="animate-in" style={{ "--delay": "0.06s", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "start" } as React.CSSProperties}>
         {/* Config table */}
         <Card>
           <div
@@ -362,19 +364,8 @@ export default function AgentDetailPage() {
           >
             System prompt
           </div>
-          <div
-            style={{
-              padding: "16px",
-              fontFamily: "var(--font-mono)",
-              fontSize: "13px",
-              lineHeight: 1.6,
-              color: "var(--text-2)",
-              whiteSpace: "pre-wrap",
-              maxHeight: "500px",
-              overflowY: "auto",
-            }}
-          >
-            {agent.body}
+          <div style={{ padding: "16px", maxHeight: "500px", overflowY: "auto" }}>
+            <MarkdownContent text={agent.body} />
           </div>
         </Card>
       ) : null}

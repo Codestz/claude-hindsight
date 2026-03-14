@@ -40,8 +40,11 @@ pub async fn live_events(
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))??;
 
-    // Shared mutable byte offset — updated each poll
-    let offset = Arc::new(Mutex::new(0u64));
+    // Start at the current end of file so we only stream NEWLY appended nodes.
+    // Without this, offset 0 replays the entire file — every node would appear
+    // twice (once from the initial /nodes API and again from the SSE stream).
+    let initial_offset = std::fs::metadata(&session_path).map(|m| m.len()).unwrap_or(0);
+    let offset = Arc::new(Mutex::new(initial_offset));
 
     let interval = tokio::time::interval(Duration::from_millis(500));
     let interval_stream = IntervalStream::new(interval);

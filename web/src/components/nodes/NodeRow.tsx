@@ -35,12 +35,7 @@ export function NodeRow({
   onToggle,
   promptScore,
 }: NodeRowProps) {
-  const selectedBg = "rgba(0, 255, 136, 0.06)";
-
-  // Prompt badge color intensity scales with score
-  const promptBadgeOpacity = promptScore != null && promptScore >= 40
-    ? 0.5 + (promptScore / 100) * 0.5
-    : 0;
+  const selectedBg = "rgba(129, 140, 248, 0.06)";
 
   return (
     <div
@@ -51,25 +46,23 @@ export function NodeRow({
       style={{
         display: "flex",
         alignItems: "center",
-        height: "40px",
-        paddingLeft: `${10 + depth * 18}px`,
-        paddingRight: "14px",
-        gap: "6px",
+        minHeight: "34px",
+        paddingLeft: `${8 + depth * 14}px`,
+        paddingRight: "12px",
+        paddingTop: "4px",
+        paddingBottom: "4px",
+        gap: "8px",
         cursor: "pointer",
         background: isSelected ? selectedBg : "transparent",
-        borderLeft: isSelected
-          ? "2px solid var(--accent)"
-          : "2px solid transparent",
-        transition: "background 0.1s",
+        borderLeft: `3px solid ${isSelected ? meta.color : "transparent"}`,
+        transition: "background 0.1s, border-color 0.1s",
         userSelect: "none",
       }}
       onMouseEnter={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.background = isSelected ? selectedBg : "var(--bg-2)";
+        if (!isSelected) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)";
       }}
       onMouseLeave={(e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.background = isSelected ? selectedBg : "transparent";
+        if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
       {/* Expand/collapse toggle */}
@@ -80,8 +73,8 @@ export function NodeRow({
           if (hasChildren) onToggle();
         }}
         style={{
-          width: "16px",
-          height: "16px",
+          width: "12px",
+          height: "12px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -89,38 +82,40 @@ export function NodeRow({
           border: "none",
           cursor: hasChildren ? "pointer" : "default",
           color: hasChildren ? "var(--text-3)" : "transparent",
-          fontSize: "10px",
+          fontSize: "8px",
           padding: 0,
           flexShrink: 0,
           lineHeight: 1,
+          transition: "transform 0.12s",
+          transform: hasChildren && isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
         }}
       >
-        {hasChildren ? (isExpanded ? "▾" : "▸") : "·"}
+        {hasChildren ? "▾" : ""}
       </button>
 
-      {/* Node type icon */}
+      {/* Color dot — tiny semantic indicator */}
       <span
         style={{
-          color: meta.color,
-          fontSize: "14px",
-          lineHeight: 1,
+          width: "6px",
+          height: "6px",
+          borderRadius: "50%",
+          background: meta.color,
           flexShrink: 0,
+          opacity: isSelected ? 1 : 0.6,
         }}
-      >
-        {meta.icon}
-      </span>
+      />
 
-      {/* Badge */}
+      {/* Type — minimal text label */}
       <span
         style={{
           fontFamily: "var(--font-mono)",
           fontSize: "10px",
-          fontWeight: 700,
-          letterSpacing: "0.07em",
-          textTransform: "uppercase",
-          color: meta.color,
+          fontWeight: 500,
+          letterSpacing: "0.03em",
+          color: isSelected ? meta.color : "var(--text-3)",
           flexShrink: 0,
-          opacity: 0.85,
+          width: "44px",
+          textTransform: "lowercase",
         }}
       >
         {meta.badge}
@@ -130,34 +125,32 @@ export function NodeRow({
       <span
         style={{
           fontSize: "13px",
-          color: "var(--text-2)",
+          color: isSelected ? "var(--text-1)" : "var(--text-2)",
           fontFamily: "var(--font-sans)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           flex: 1,
+          fontWeight: isSelected ? 500 : 400,
+          lineHeight: 1.3,
         }}
       >
         {node.summary || node.label}
       </span>
 
-      {/* Prompt score badge */}
+      {/* Prompt score */}
       {promptScore != null && promptScore >= 40 && (
         <span
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: "10px",
-            fontWeight: 600,
-            color: "var(--green)",
-            opacity: promptBadgeOpacity,
+            fontSize: "9px",
+            fontWeight: 500,
+            color: "var(--emerald)",
+            opacity: 0.7,
             flexShrink: 0,
-            padding: "1px 5px",
-            borderRadius: "var(--radius-sm)",
-            background: "rgba(0, 255, 136, 0.08)",
-            border: "1px solid rgba(0, 255, 136, 0.15)",
           }}
         >
-          P:{promptScore}%
+          {promptScore}%
         </span>
       )}
 
@@ -165,11 +158,12 @@ export function NodeRow({
       {node.timestamp != null && (
         <span
           style={{
-            fontSize: "11px",
+            fontSize: "10px",
             color: "var(--text-3)",
             fontFamily: "var(--font-mono)",
             fontVariantNumeric: "tabular-nums",
             flexShrink: 0,
+            opacity: 0.7,
           }}
         >
           {formatMs(node.timestamp)}

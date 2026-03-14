@@ -83,9 +83,27 @@ export function EventRow({ event }: { event: UnifiedEvent }) {
           {relativeTime(event.occurred_at)}
         </span>
 
-        {/* Icon */}
-        <span style={{ color: cfg.color, flexShrink: 0, display: "flex" }}>
-          <Icon size={14} strokeWidth={2} />
+        {/* Timeline dot */}
+        <span
+          style={{
+            position: "relative",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "20px",
+            height: "20px",
+          }}
+        >
+          <span
+            style={{
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: cfg.color,
+              boxShadow: `0 0 6px ${cfg.color}`,
+            }}
+          />
         </span>
 
         {/* Label */}

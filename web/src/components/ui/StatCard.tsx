@@ -7,37 +7,42 @@ interface StatCardProps {
 }
 
 export function StatCard({ label, value, sub, accent, valueColor }: StatCardProps) {
+  const accentColor = accent ? "var(--indigo)" : undefined;
+
   return (
     <div
       style={{
-        padding: "24px 28px",
+        padding: "22px 24px",
         background: "var(--bg-1)",
         position: "relative",
+        borderRight: "1px solid var(--border-1)",
+        boxShadow: accent ? "0 0 20px rgba(129, 140, 248, 0.06)" : undefined,
       }}
     >
-      {/* Accent top line */}
+      {/* Top accent glow */}
       {accent && (
         <div
           aria-hidden="true"
           style={{
             position: "absolute",
             top: 0,
-            left: 0,
-            right: 0,
-            height: "2px",
-            background: "var(--accent)",
+            left: "15%",
+            right: "15%",
+            height: "1px",
+            background: `linear-gradient(90deg, transparent, var(--indigo), transparent)`,
+            opacity: 0.6,
           }}
         />
       )}
 
       <div
         style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          letterSpacing: "0.08em",
+          fontSize: "11px",
+          fontWeight: 300,
+          letterSpacing: "0.06em",
           textTransform: "uppercase",
-          color: accent ? "var(--accent)" : "var(--text-3)",
-          marginBottom: "12px",
+          color: accentColor ?? "var(--text-3)",
+          marginBottom: "10px",
           fontFamily: "var(--font-mono)",
         }}
       >
@@ -46,14 +51,14 @@ export function StatCard({ label, value, sub, accent, valueColor }: StatCardProp
 
       <div
         style={{
-          fontSize: "34px",
-          fontWeight: 700,
-          fontFamily: "var(--font-mono)",
+          fontSize: "28px",
+          fontWeight: 600,
+          fontFamily: "var(--font-sans)",
           fontVariantNumeric: "tabular-nums",
           letterSpacing: "-0.03em",
           lineHeight: 1,
           color: valueColor ?? "var(--text-1)",
-          marginBottom: "8px",
+          marginBottom: sub ? "8px" : 0,
         }}
       >
         {value}
@@ -62,7 +67,7 @@ export function StatCard({ label, value, sub, accent, valueColor }: StatCardProp
       {sub && (
         <div
           style={{
-            fontSize: "13px",
+            fontSize: "12px",
             color: "var(--text-3)",
             fontFamily: "var(--font-sans)",
           }}

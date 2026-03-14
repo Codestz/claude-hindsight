@@ -42,6 +42,7 @@ function MarkdownText({ text }: { text: string }) {
           marginBottom: "8px",
           marginTop: out.length > 0 ? "16px" : 0,
           lineHeight: 1.3,
+          ...(level <= 2 ? { paddingBottom: "6px", borderBottom: "1px solid var(--border-1)" } : {}),
         }}>
           {renderInline(headMatch[2])}
         </div>
@@ -54,7 +55,7 @@ function MarkdownText({ text }: { text: string }) {
     if (bulletMatch) {
       out.push(
         <div key={i} style={{ display: "flex", gap: "8px", marginBottom: "3px" }}>
-          <span style={{ color: "var(--text-3)", flexShrink: 0, userSelect: "none" }}>·</span>
+          <span style={{ color: "var(--indigo)", flexShrink: 0, userSelect: "none" }}>·</span>
           <span style={{ color: "var(--text-1)" }}>{renderInline(bulletMatch[1])}</span>
         </div>
       );
@@ -102,8 +103,8 @@ function renderInline(text: string): React.ReactNode {
           return (
             <code key={i} style={{
               fontFamily: "var(--font-mono)", fontSize: "12px",
-              background: "var(--bg-3)", padding: "1px 5px",
-              borderRadius: "var(--radius-sm)", color: "var(--cyan)",
+              background: "color-mix(in srgb, var(--indigo) 8%, var(--bg-2))", padding: "1px 5px",
+              borderRadius: "var(--radius-sm)", color: "var(--info)",
             }}>
               {part.slice(1, -1)}
             </code>

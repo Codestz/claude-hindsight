@@ -3,13 +3,13 @@ interface PageShellProps {
   maxWidth?: string;
 }
 
-export function PageShell({ children, maxWidth = "1200px" }: PageShellProps) {
+export function PageShell({ children, maxWidth = "1280px" }: PageShellProps) {
   return (
     <div
       style={{
         maxWidth,
         margin: "0 auto",
-        padding: "36px 28px",
+        padding: "28px 32px",
         display: "flex",
         flexDirection: "column",
         gap: "20px",

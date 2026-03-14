@@ -18,12 +18,12 @@ export function FilterChips({ options, active, onToggle }: FilterChipsProps) {
               fontSize: "10px",
               fontWeight: 600,
               letterSpacing: "0.05em",
-              padding: "2px 8px",
-              borderRadius: "var(--radius-sm)",
+              padding: "4px 12px",
+              borderRadius: "12px",
               border: isActive
                 ? "1px solid var(--accent)"
                 : "1px solid var(--border-2)",
-              background: isActive ? "rgba(0,255,136,0.08)" : "transparent",
+              background: isActive ? "rgba(129, 140, 248, 0.10)" : "transparent",
               color: isActive ? "var(--accent)" : "var(--text-3)",
               cursor: "pointer",
               transition: "all 0.12s",

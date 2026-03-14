@@ -15,12 +15,14 @@ export function SectionHeader({ title, count, action }: SectionHeaderProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        paddingLeft: "12px",
+        borderLeft: "3px solid var(--indigo)",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <span
           style={{
-            fontSize: "15px",
+            fontSize: "16px",
             fontWeight: 600,
             color: "var(--text-1)",
             fontFamily: "var(--font-sans)",

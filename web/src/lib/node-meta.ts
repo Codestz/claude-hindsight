@@ -115,6 +115,14 @@ export const NODE_META: Record<string, NodeMeta> = {
     description: "Sub-agent session",
   },
 
+  // Task notification — sub-agent completion
+  task: {
+    badge: "Task",
+    icon: "↻",
+    color: "var(--purple)",
+    description: "Task completion",
+  },
+
   // Error node
   error: {
     badge: "Error",
@@ -187,6 +195,10 @@ export function getNodeMeta(node: NodeResponse): NodeMeta {
   // color = "blue" means tool result (user node that carries tool output)
   if (t === "user") {
     if (node.color === "blue") return NODE_META.tool_result ?? FALLBACK_META;
+    // Task notification from sub-agent completion
+    if (typeof node.message?.content === "string" && node.message.content.includes("<task-notification>")) {
+      return NODE_META.task ?? FALLBACK_META;
+    }
     return NODE_META.user ?? FALLBACK_META;
   }
 

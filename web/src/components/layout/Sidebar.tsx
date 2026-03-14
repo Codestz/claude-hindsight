@@ -8,10 +8,11 @@ import {
   Bot,
   Sparkles,
   Search,
+  SearchAlertIcon,
 } from "lucide-react";
 
-const SIDEBAR_W = 220;
-const SIDEBAR_COLLAPSED_W = 52;
+const SIDEBAR_W = 232;
+const SIDEBAR_COLLAPSED_W = 56;
 const BREAKPOINT = 1024;
 
 interface NavItem {
@@ -64,47 +65,31 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
         display: "flex",
         flexDirection: "column",
         zIndex: 40,
-        transition: "width 0.2s ease",
+        transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         overflow: "hidden",
       }}
     >
-      {/* Brand */}
+      {/* ── Brand ──────────────────────────────────────── */}
       <Link
         to="/"
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "10px",
-          padding: collapsed ? "20px 14px" : "20px 18px",
+          gap: "12px",
+          padding: collapsed ? "24px 16px" : "24px 20px",
           textDecoration: "none",
           flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            width: "24px",
-            height: "24px",
-            borderRadius: "6px",
-            background: "linear-gradient(135deg, var(--green), rgba(0, 255, 136, 0.4))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "12px",
-            fontWeight: 700,
-            color: "#000",
-            flexShrink: 0,
-          }}
-        >
-          H
-        </span>
+        <SearchAlertIcon />
         {!collapsed && (
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
             <span
               style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "13px",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
+                fontFamily: "var(--font-sans)",
+                fontSize: "15px",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
                 color: "var(--text-1)",
               }}
             >
@@ -113,23 +98,72 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
             <span
               style={{
                 fontFamily: "var(--font-mono)",
-                fontSize: "9px",
-                fontWeight: 600,
-                color: "var(--accent)",
-                background: "rgba(0, 255, 136, 0.08)",
-                border: "1px solid rgba(0, 255, 136, 0.18)",
-                borderRadius: "var(--radius-sm)",
-                padding: "1px 5px",
+                fontSize: "10px",
+                fontWeight: 500,
+                color: "var(--text-3)",
               }}
             >
-              v2.0
+              v2.2
             </span>
           </div>
         )}
       </Link>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "4px 8px", display: "flex", flexDirection: "column", gap: "2px" }}>
+      {/* ── Search trigger ─────────────────────────────── */}
+      <div style={{ padding: collapsed ? "0 10px 12px" : "0 14px 16px", flexShrink: 0 }}>
+        <button
+          onClick={onSearch}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            width: "100%",
+            padding: collapsed ? "7px" : "7px 10px",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid var(--border-2)",
+            background: "var(--bg-2)",
+            color: "var(--text-3)",
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "border-color 0.15s, background 0.15s",
+            justifyContent: collapsed ? "center" : "flex-start",
+            fontFamily: "var(--font-sans)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--border-3)";
+            e.currentTarget.style.background = "var(--bg-3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--border-2)";
+            e.currentTarget.style.background = "var(--bg-2)";
+          }}
+        >
+          <Search size={14} strokeWidth={2} />
+          {!collapsed && (
+            <>
+              <span style={{ flex: 1, textAlign: "left" }}>Search</span>
+              <kbd
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  color: "var(--text-3)",
+                  background: "var(--bg-0)",
+                  border: "1px solid var(--border-2)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "0 5px",
+                  lineHeight: "18px",
+                }}
+              >
+                ⌘K
+              </kbd>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* ── Navigation ─────────────────────────────────── */}
+      <nav style={{ flex: 1, padding: "0 10px", display: "flex", flexDirection: "column", gap: "1px" }}>
         {NAV_ITEMS.map((item) => {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
@@ -145,17 +179,17 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
                   style={{
                     fontFamily: "var(--font-mono)",
                     fontSize: "10px",
-                    fontWeight: 600,
-                    letterSpacing: "0.1em",
+                    fontWeight: 500,
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     color: "var(--text-3)",
-                    padding: "16px 10px 6px",
+                    padding: "20px 10px 6px",
                   }}
                 >
                   {item.section}
                 </div>
               )}
-              {showSection && collapsed && <div style={{ height: "12px" }} />}
+              {showSection && collapsed && <div style={{ height: "16px" }} />}
 
               <Link
                 to={item.to}
@@ -166,20 +200,41 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
                   display: "flex",
                   alignItems: "center",
                   gap: "10px",
-                  padding: collapsed ? "8px 10px" : "8px 10px",
+                  padding: "8px 10px",
                   borderRadius: "var(--radius-md)",
                   textDecoration: "none",
                   fontSize: "13px",
                   fontWeight: active ? 500 : 400,
                   color: active ? "var(--text-1)" : hovered ? "var(--text-2)" : "var(--text-3)",
-                  background: active ? "var(--bg-2)" : hovered ? "rgba(255,255,255,0.03)" : "transparent",
-                  transition: "color 0.12s, background 0.12s",
+                  background: active
+                    ? "rgba(129, 140, 248, 0.08)"
+                    : hovered
+                    ? "rgba(255, 255, 255, 0.03)"
+                    : "transparent",
+                  transition: "color 0.15s, background 0.15s",
                   justifyContent: collapsed ? "center" : "flex-start",
+                  position: "relative",
                 }}
               >
+                {/* Active indicator — indigo bar */}
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "3px",
+                      height: "16px",
+                      borderRadius: "0 2px 2px 0",
+                      background: "var(--indigo)",
+                    }}
+                  />
+                )}
                 <Icon
                   size={16}
-                  strokeWidth={active ? 2.2 : 1.8}
+                  strokeWidth={active ? 2 : 1.7}
                 />
                 {!collapsed && <span>{item.label}</span>}
               </Link>
@@ -187,58 +242,6 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
           );
         })}
       </nav>
-
-      {/* Search button */}
-      <div style={{ padding: "8px", flexShrink: 0 }}>
-        <button
-          onClick={onSearch}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            width: "100%",
-            padding: collapsed ? "8px 10px" : "8px 10px",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid var(--border-2)",
-            background: "transparent",
-            color: "var(--text-3)",
-            fontSize: "13px",
-            cursor: "pointer",
-            transition: "border-color 0.12s, color 0.12s",
-            justifyContent: collapsed ? "center" : "flex-start",
-            fontFamily: "var(--font-sans)",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-3)";
-            (e.currentTarget as HTMLElement).style.color = "var(--text-2)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = "var(--border-2)";
-            (e.currentTarget as HTMLElement).style.color = "var(--text-3)";
-          }}
-        >
-          <Search size={14} strokeWidth={2} />
-          {!collapsed && (
-            <>
-              <span style={{ flex: 1, textAlign: "left" }}>Search</span>
-              <kbd
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "10px",
-                  color: "var(--text-3)",
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--border-2)",
-                  borderRadius: "var(--radius-sm)",
-                  padding: "0 4px",
-                  lineHeight: "16px",
-                }}
-              >
-                ⌘K
-              </kbd>
-            </>
-          )}
-        </button>
-      </div>
     </aside>
   );
 }

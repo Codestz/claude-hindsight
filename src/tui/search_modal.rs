@@ -634,23 +634,20 @@ fn get_node_category(node: &ExecutionNode) -> String {
     } else if node.thinking.is_some() {
         "thinking".to_string()
     } else if node.message.is_some() {
-        let node_type_lower = node.node_type.to_lowercase();
-        if node_type_lower.contains("user") {
-            "user".to_string()
-        } else if node_type_lower.contains("assistant") {
-            "assistant".to_string()
-        } else {
-            node.node_type.clone()
+        match node.node_type {
+            crate::parser::models::NodeType::User => "user".to_string(),
+            crate::parser::models::NodeType::Assistant => "assistant".to_string(),
+            _ => node.node_type.to_string(),
         }
     } else {
-        node.node_type.clone()
+        node.node_type.to_string()
     }
 }
 
 /// Convert an ExecutionNode to a SearchResultItem
 fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
-    let node_type = &node.node_type;
-    let node_type_lower = node_type.to_lowercase();
+    let node_type = node.node_type;
+    let node_type_str = node_type.as_str();
 
     // Build title and subtitle based on node type
     // Match by actual content, not just type string
@@ -713,7 +710,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             format!("#{} [THINKING] {}", index + 1, preview),
             format!("{} • thinking", time),
         )
-    } else if node.message.is_some() && node_type_lower.contains("user") {
+    } else if node.message.is_some() && node_type == crate::parser::models::NodeType::User {
         // This is a user message node
         let preview = node
             .message
@@ -742,7 +739,7 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             format!("#{} [USER] {}", index + 1, preview),
             format!("{} • user message", time),
         )
-    } else if node.message.is_some() && node_type_lower.contains("assistant") {
+    } else if node.message.is_some() && node_type == crate::parser::models::NodeType::Assistant {
         // This is an assistant message node
         let time = node
             .timestamp
@@ -761,8 +758,8 @@ fn node_to_result_item(index: usize, node: &ExecutionNode) -> SearchResultItem {
             .unwrap_or_else(|| "??:??:??".to_string());
 
         (
-            format!("#{} [{}]", index + 1, node_type.to_uppercase()),
-            format!("{} • {}", time, node_type),
+            format!("#{} [{}]", index + 1, node_type_str.to_uppercase()),
+            format!("{} • {}", time, node_type_str),
         )
     };
 

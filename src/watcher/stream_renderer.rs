@@ -1,5 +1,6 @@
 //! Terminal rendering for streaming session nodes
 
+use crate::parser::models::NodeType;
 use crate::parser::ExecutionNode;
 use chrono::{Local, TimeZone};
 
@@ -65,8 +66,8 @@ impl WatchStats {
 pub fn render_node(node: &ExecutionNode) {
     let timestamp = format_timestamp(node.timestamp);
 
-    match node.node_type.as_str() {
-        "user" => {
+    match node.node_type {
+        NodeType::User => {
             println!("  [{}] USER", timestamp);
             if let Some(ref message) = node.message {
                 let text = message.text_content();
@@ -77,7 +78,7 @@ pub fn render_node(node: &ExecutionNode) {
             }
         }
 
-        "assistant" => {
+        NodeType::Assistant => {
             println!("  [{}] ASSISTANT", timestamp);
             if let Some(ref message) = node.message {
                 // Show tool calls if present
@@ -103,40 +104,7 @@ pub fn render_node(node: &ExecutionNode) {
             }
         }
 
-        "tool_use" => {
-            if let Some(ref tool_use) = node.tool_use {
-                println!("  [{}] TOOL: {}", timestamp, tool_use.name);
-            } else {
-                println!("  [{}] TOOL_USE", timestamp);
-            }
-        }
-
-        "tool_result" => {
-            if let Some(ref tool_result) = node.tool_result {
-                if tool_result.is_error == Some(true) {
-                    println!("  [{}] TOOL RESULT: \x1b[31mERROR\x1b[0m", timestamp);
-                    if let Some(ref error) = tool_result.error {
-                        println!("    {}", truncate(error, 80));
-                    }
-                } else {
-                    println!("  [{}] TOOL RESULT: \x1b[32mOK\x1b[0m", timestamp);
-                }
-
-                if let Some(duration) = tool_result.duration_ms {
-                    println!("    Duration: {}ms", duration);
-                }
-            }
-        }
-
-        "thinking" => {
-            println!("  [{}] 💭 THINKING...", timestamp);
-            if let Some(ref thinking) = node.thinking {
-                let preview = truncate(thinking, 80);
-                println!("    {}", preview);
-            }
-        }
-
-        "progress" => {
+        NodeType::Progress => {
             if let Some(ref progress) = node.progress {
                 if let Some(ref message) = progress.message {
                     println!("  [{}] ⏳ {}", timestamp, message);
@@ -145,7 +113,7 @@ pub fn render_node(node: &ExecutionNode) {
         }
 
         _ => {
-            println!("  [{}] {}", timestamp, node.node_type.to_uppercase());
+            println!("  [{}] {}", timestamp, node.node_type.as_str().to_uppercase());
         }
     }
 }
