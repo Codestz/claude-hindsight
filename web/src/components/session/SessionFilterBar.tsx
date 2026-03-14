@@ -145,7 +145,7 @@ export function SessionFilterBar({
               display: "flex", alignItems: "center", gap: "4px",
             }}
           >
-            {sortOrder === "newest" ? "\u2193 NEW" : "\u2191 OLD"}
+            {sortOrder === "newest" ? "NEWEST \u2193" : "OLDEST \u2191"}
           </button>
         )}
 

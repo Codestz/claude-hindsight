@@ -15,10 +15,16 @@ type DisplayItem =
   | { kind: "node"; node: NodeResponse }
   | { kind: "group"; nodes: NodeResponse[]; label: string };
 
-function isProgressNode(node: NodeResponse): boolean {
-  return node.node_type === "progress" ||
-    (node.label?.startsWith("Agent:") ?? false) ||
-    (node.summary?.startsWith("Agent:") ?? false);
+function isCollapsibleNode(node: NodeResponse): boolean {
+  // Progress events (hooks, agents, etc.)
+  if (node.node_type === "progress") return true;
+  // System events (stop_hook_summary, turn durations)
+  if (node.node_type === "system") return true;
+  // Queue operations
+  if (node.node_type === "queue-operation") return true;
+  // File snapshots
+  if (node.node_type === "file-history-snapshot") return true;
+  return false;
 }
 
 /** Collapse consecutive progress/agent nodes into groups */
@@ -27,18 +33,27 @@ function buildDisplayItems(nodes: NodeResponse[]): DisplayItem[] {
   let i = 0;
 
   while (i < nodes.length) {
-    if (isProgressNode(nodes[i])) {
+    if (isCollapsibleNode(nodes[i])) {
       // Collect consecutive progress nodes
       const group: NodeResponse[] = [];
-      while (i < nodes.length && isProgressNode(nodes[i])) {
+      while (i < nodes.length && isCollapsibleNode(nodes[i])) {
         group.push(nodes[i]);
         i++;
       }
       if (group.length <= 2) {
-        // Don't collapse small groups
         for (const n of group) items.push({ kind: "node", node: n });
       } else {
-        const label = group[0].summary || group[0].label || "Agent progress";
+        // Smart label: count types in the group
+        const types = new Map<string, number>();
+        for (const n of group) {
+          const t = n.node_type;
+          types.set(t, (types.get(t) ?? 0) + 1);
+        }
+        const dominant = [...types.entries()].sort((a, b) => b[1] - a[1])[0];
+        const label = dominant[0] === "progress" ? "Hook / progress events"
+          : dominant[0] === "system" ? "System events"
+          : dominant[0] === "queue-operation" ? "Queue operations"
+          : "Internal events";
         items.push({ kind: "group", nodes: group, label });
       }
     } else {
@@ -117,9 +132,9 @@ function GroupRow({
         {/* Badge */}
         <span style={{
           fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 500,
-          color: "var(--purple)", flexShrink: 0, letterSpacing: "0.03em",
+          color: "var(--text-3)", flexShrink: 0, letterSpacing: "0.03em",
         }}>
-          Agent
+          internal
         </span>
 
         {/* Count badge */}
