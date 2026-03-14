@@ -159,6 +159,40 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   const mcpShortTool = mcpParts?.[2]?.replace(/__/g, ".") ?? null;
   const displayToolName = mcpShortTool ?? toolCallName;
 
+  // ── Resolve file path from all possible sources ─────────────
+  // Priority: content blocks > toolCallInput > toolResultBlock > topLevelToolResult > node.file_paths
+  const resolvedFilePath: string | undefined = (() => {
+    // From raw message content blocks — Read results embed filePath as sibling of text
+    const rawContent = node.message?.content;
+    if (Array.isArray(rawContent)) {
+      for (const block of rawContent) {
+        if (typeof block === "object" && block !== null) {
+          const b = block as Record<string, unknown>;
+          if (typeof b.filePath === "string") return b.filePath;
+          if (typeof b.file_path === "string") return b.file_path;
+          // Also check nested content objects
+          if (typeof b.content === "object" && b.content !== null && !Array.isArray(b.content)) {
+            const inner = b.content as Record<string, unknown>;
+            if (typeof inner.filePath === "string") return inner.filePath;
+          }
+        }
+      }
+    }
+    // From the tool call input (Read, Write, Edit all have file_path)
+    if (typeof toolCallInput?.file_path === "string") return toolCallInput.file_path;
+    // From nested tool_result content object
+    if (toolResultBlock?.content && typeof toolResultBlock.content === "object" && !Array.isArray(toolResultBlock.content)) {
+      const obj = toolResultBlock.content as Record<string, unknown>;
+      if (typeof obj.filePath === "string") return obj.filePath;
+      if (typeof obj.file_path === "string") return obj.file_path;
+    }
+    // From top-level tool result file
+    if (topLevelToolResult?.file?.file_path) return topLevelToolResult.file.file_path;
+    // From backend-computed file_paths
+    if (node.file_paths?.[0]) return node.file_paths[0];
+    return undefined;
+  })();
+
   // Tool result content & error detection
   const resultIsError =
     toolResultBlock?.is_error ?? topLevelToolResult?.is_error ?? false;
@@ -182,9 +216,19 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
     : (() => {
         let raw: string | null = null;
         if (toolResultBlock?.content != null) {
-          raw = typeof toolResultBlock.content === "string"
-            ? toolResultBlock.content
-            : JSON.stringify(toolResultBlock.content, null, 2);
+          if (typeof toolResultBlock.content === "string") {
+            raw = toolResultBlock.content;
+          } else if (typeof toolResultBlock.content === "object" && !Array.isArray(toolResultBlock.content)) {
+            // Content object with nested content string (e.g., Read result: {content, filePath, numLines})
+            const obj = toolResultBlock.content as Record<string, unknown>;
+            if (typeof obj.content === "string") {
+              raw = obj.content;
+            } else {
+              raw = JSON.stringify(toolResultBlock.content, null, 2);
+            }
+          } else {
+            raw = JSON.stringify(toolResultBlock.content, null, 2);
+          }
         } else if (topLevelToolResult?.content != null) {
           raw = topLevelToolResult.content;
         }
@@ -498,13 +542,10 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
                   if (looksLikeMarkdown(displayResultContent)) {
                     return <MarkdownContent text={displayResultContent} />;
                   }
-                  const resultFilePath =
-                    (typeof toolCallInput?.file_path === "string" ? toolCallInput.file_path : undefined)
-                    ?? node.file_paths?.[0];
                   return (
                     <CodeRender
                       content={displayResultContent}
-                      filePath={resultFilePath}
+                      filePath={resolvedFilePath}
                       error={effectiveIsError}
                     />
                   );

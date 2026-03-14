@@ -20,6 +20,9 @@ function detectLanguage(filePath?: string, content?: string): string {
   }
   // Heuristic: detect common code patterns
   if (/^import\s+.+from\s+['"]|^export\s+(default\s+)?/m.test(trimmed)) return "typescript";
+  // TS/JS: const/let/var declarations, arrow functions, type annotations
+  if (/^\s*(const|let|var)\s+\w+\s*(:|=)/m.test(trimmed) && /(\?\?|=>|as\s+\w|interface\s|type\s)/.test(trimmed)) return "typescript";
+  if (/^\s*(const|let|var)\s+\w+\s*=/.test(trimmed) && /(\?\.|=>|\.map\(|\.filter\(|\.forEach\()/.test(trimmed)) return "javascript";
   if (/^(use\s+\w|fn\s+\w|pub\s+(fn|struct|enum|mod|use)\s)/m.test(trimmed)) return "rust";
   if (/^(def\s+\w|class\s+\w|from\s+\w+\s+import)/m.test(trimmed)) return "python";
   if (/^(func\s+\w|package\s+\w)/m.test(trimmed)) return "go";
