@@ -74,6 +74,98 @@ export function EmptyResult({ label }: { label?: string }) {
   );
 }
 
+// ── Read tool ───────────────────────────────────────────────────
+export function ReadToolDisplay({ input }: { input: Record<string, unknown> }) {
+  const filePath = typeof input.file_path === "string" ? input.file_path : null;
+  const offset   = typeof input.offset   === "number" ? input.offset   : null;
+  const limit    = typeof input.limit    === "number" ? input.limit    : null;
+
+  const shortName = filePath?.split("/").pop() ?? filePath;
+  const lineRange = offset != null && limit != null
+    ? `lines ${offset}–${offset + limit}`
+    : offset != null ? `from line ${offset}` : limit != null ? `first ${limit} lines` : "entire file";
+
+  return (
+    <ContentSection label="File" color="var(--cyan)">
+      <div style={{
+        padding: "10px 14px",
+        background: "var(--bg-2)",
+        border: "1px solid var(--border-1)",
+        borderRadius: "var(--radius-md)",
+        display: "flex", flexDirection: "column", gap: "6px",
+      }}>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "14px", fontWeight: 600,
+          color: "var(--cyan)", wordBreak: "break-all",
+        }}>
+          {shortName}
+        </span>
+        {filePath && shortName !== filePath && (
+          <span style={{
+            fontFamily: "var(--font-mono)", fontSize: "11px",
+            color: "var(--text-3)", wordBreak: "break-all",
+          }}>
+            {filePath}
+          </span>
+        )}
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "11px",
+          color: "var(--text-3)",
+        }}>
+          {lineRange}
+        </span>
+      </div>
+    </ContentSection>
+  );
+}
+
+// ── Generic tool input as labeled fields ────────────────────────
+export function GenericToolInput({ input, toolName }: { input: Record<string, unknown>; toolName?: string }) {
+  const entries = Object.entries(input);
+  if (entries.length === 0) return null;
+
+  // For simple inputs (1-3 short values), show as inline fields
+  const isSimple = entries.length <= 4 && entries.every(([, v]) =>
+    typeof v === "string" ? v.length < 200 : typeof v === "number" || typeof v === "boolean"
+  );
+
+  if (isSimple) {
+    return (
+      <ContentSection label="Input" color="var(--amber)">
+        <div style={{
+          display: "flex", flexDirection: "column", gap: "6px",
+          padding: "10px 14px", background: "var(--bg-2)",
+          border: "1px solid var(--border-1)", borderRadius: "var(--radius-md)",
+        }}>
+          {entries.map(([key, value]) => (
+            <div key={key} style={{ display: "flex", gap: "8px", alignItems: "baseline" }}>
+              <span style={{
+                fontFamily: "var(--font-mono)", fontSize: "11px",
+                color: "var(--text-3)", flexShrink: 0, minWidth: "80px",
+              }}>
+                {key}
+              </span>
+              <span style={{
+                fontFamily: "var(--font-mono)", fontSize: "12px",
+                color: "var(--text-1)", wordBreak: "break-all",
+              }}>
+                {String(value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </ContentSection>
+    );
+  }
+
+  // Complex inputs: JSON code block
+  return (
+    <ContentSection label="Input" color="var(--amber)">
+      <CodeRender content={JSON.stringify(input, null, 2)} />
+    </ContentSection>
+  );
+}
+
 // ── Write tool ──────────────────────────────────────────────────
 export function WriteToolDisplay({ input }: { input: Record<string, unknown> }) {
   const filePath = typeof input.file_path === "string" ? input.file_path : null;

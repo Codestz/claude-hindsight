@@ -13,6 +13,8 @@ import {
   BashToolDisplay,
   EditToolDisplay,
   TaskCreateDisplay,
+  ReadToolDisplay,
+  GenericToolInput,
   SerenaResultDisplay,
   parseSerenaResult,
   stripLineNumbers,
@@ -65,6 +67,32 @@ function parseTaskNotification(content: string): TaskNotification | null {
     toolUses: extract("tool_uses"),
     durationMs: extract("duration_ms"),
   };
+}
+
+/** Parse JSON arrays of {type:"text", text:"..."} into clean text */
+function tryExtractTextArray(content: string): string | null {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith("[")) return null;
+  try {
+    const arr = JSON.parse(trimmed);
+    if (!Array.isArray(arr)) return null;
+    const texts: string[] = [];
+    let hasImages = false;
+    for (const item of arr) {
+      if (typeof item !== "object" || item === null) return null;
+      if (item.type === "text" && typeof item.text === "string") {
+        texts.push(item.text);
+      } else if (item.type === "image") {
+        hasImages = true;
+      } else {
+        return null; // unknown block type — don't parse
+      }
+    }
+    if (texts.length === 0 && !hasImages) return null;
+    return texts.join("\n\n") || null;
+  } catch {
+    return null;
+  }
 }
 
 export function NodeDetailPanel({ node, flatNodes, onNavigate }: NodeDetailPanelProps) {
@@ -121,8 +149,15 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   const isTaskCall       = isToolCall && ["task", "todowrite"].includes(toolNameLc);
   const isTaskCreateCall = isToolCall && toolNameLc === "taskcreate";
   const isWriteCall      = isToolCall && toolNameLc === "write";
+  const isReadCall       = isToolCall && toolNameLc === "read";
   const isEditCall       = isToolCall && toolNameLc === "edit";
   const isBashCall       = isToolCall && toolNameLc === "bash";
+
+  // MCP tool name parsing: mcp__server__tool → { server, shortTool }
+  const mcpParts = toolCallName?.match(/^mcp__([^_]+(?:__[^_]+)*)__([^_]+(?:__[^_]+)*)$/);
+  const mcpServer = mcpParts?.[1]?.replace(/__/g, "-") ?? null;
+  const mcpShortTool = mcpParts?.[2]?.replace(/__/g, ".") ?? null;
+  const displayToolName = mcpShortTool ?? toolCallName;
 
   // Tool result content & error detection
   const resultIsError =
@@ -356,12 +391,26 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
           {isToolCall && toolCallName && (
             <>
               <ContentSection label="Tool">
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "16px", fontWeight: 600, color: "var(--amber)" }}>
-                  {toolCallName}
-                </span>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "16px", fontWeight: 600, color: "var(--amber)" }}>
+                    {displayToolName}
+                  </span>
+                  {mcpServer && (
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: "10px",
+                      color: "var(--text-3)", background: "var(--bg-3)",
+                      padding: "1px 6px", borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--border-1)",
+                    }}>
+                      {mcpServer}
+                    </span>
+                  )}
+                </div>
               </ContentSection>
 
-              {isWriteCall && toolCallInput ? (
+              {isReadCall && toolCallInput ? (
+                <ReadToolDisplay input={toolCallInput} />
+              ) : isWriteCall && toolCallInput ? (
                 <WriteToolDisplay input={toolCallInput} />
               ) : isEditCall && toolCallInput ? (
                 <EditToolDisplay input={toolCallInput} />
@@ -403,9 +452,7 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
                 </>
               ) : (
                 toolCallInput && Object.keys(toolCallInput).length > 0 && (
-                  <ContentSection label="Input" color="var(--amber)">
-                    <CodeRender content={JSON.stringify(toolCallInput, null, 2)} />
-                  </ContentSection>
+                  <GenericToolInput input={toolCallInput} toolName={toolCallName} />
                 )
               )}
             </>
@@ -428,9 +475,26 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
               ) : displayResultContent != null ? (
                 (() => {
                   if (displayResultContent === "") return <EmptyResult />;
+
+                  // Parse [{type:"text", text:"..."}] arrays into clean text
+                  const textArrayContent = tryExtractTextArray(displayResultContent);
+                  if (textArrayContent) {
+                    if (looksLikeMarkdown(textArrayContent)) {
+                      return <MarkdownContent text={textArrayContent} />;
+                    }
+                    return (
+                      <div style={{
+                        fontFamily: "var(--font-sans)", fontSize: "14px",
+                        lineHeight: 1.65, color: "var(--text-2)",
+                        whiteSpace: "pre-wrap", wordBreak: "break-word",
+                      }}>
+                        {textArrayContent}
+                      </div>
+                    );
+                  }
+
                   const serena = parseSerenaResult(displayResultContent);
                   if (serena) return <SerenaResultDisplay content={displayResultContent} />;
-                  // Render markdown-like results as markdown
                   if (looksLikeMarkdown(displayResultContent)) {
                     return <MarkdownContent text={displayResultContent} />;
                   }
