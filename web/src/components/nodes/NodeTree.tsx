@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { NodeResponse } from "@/lib/types";
 import type { NodeFilter } from "@/lib/node-utils";
-import { getNodeMeta, isInternalNode } from "@/lib/node-meta";
+import { getNodeMeta, isInternalNode, isTaskNotification } from "@/lib/node-meta";
 import { NodeRow } from "./NodeRow";
 
 // Re-export NodeFilter from canonical location for backward compat
@@ -26,9 +26,7 @@ function nodeMatchesFilter(node: NodeResponse, filter: NodeFilter): boolean {
 
   // Type matching
   if (hasTypes) {
-    const isTaskNotif = node.node_type === "user"
-      && typeof node.message?.content === "string"
-      && node.message.content.includes("<task-notification>");
+    const isTaskNotif = isTaskNotification(node);
     for (const t of filter.types) {
       switch (t) {
         case "user":

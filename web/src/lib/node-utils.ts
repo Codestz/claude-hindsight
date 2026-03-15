@@ -2,6 +2,7 @@
 // No React dependency — unit-testable.
 
 import type { NodeResponse, Turn, TurnCost, SessionStats, OtelSessionSummary } from "./types";
+import { isTaskNotification } from "./node-meta";
 
 /** Filter configuration for the node tree / execution list */
 export interface NodeFilter {
@@ -191,9 +192,7 @@ export function filterNodes(
 
     if (hasTypes) {
       for (const t of filter.types) {
-        const isTaskNotif = node.node_type === "user"
-          && typeof node.message?.content === "string"
-          && node.message.content.includes("<task-notification>");
+        const isTaskNotif = isTaskNotification(node);
         switch (t) {
           case "user":
             if (node.node_type === "user" && node.color !== "blue" && !isTaskNotif) typeMatch = true;

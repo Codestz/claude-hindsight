@@ -1,7 +1,7 @@
 // Extracted tool-specific renderers — pure display components, no state.
 // Used by both ToolCallCard (inline) and NodeDetailDrawer (full detail).
 
-import type { ContentBlock, NodeResponse, TokenUsage } from "@/lib/types";
+import type { TokenUsage } from "@/lib/types";
 import { CodeRender } from "@/components/ui/CodeRender";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
@@ -467,76 +467,3 @@ export function stripLineNumbers(text: string): string {
   return text;
 }
 
-// ── Resolve tool call info from a node ──────────────────────────
-export function resolveToolCall(node: NodeResponse): {
-  toolCallName: string | undefined;
-  toolCallInput: Record<string, unknown> | undefined;
-} {
-  const contentBlocks = Array.isArray(node.message?.content)
-    ? (node.message!.content as ContentBlock[])
-    : [];
-
-  const toolUseBlock = contentBlocks.find((b) => b.type === "tool_use") as
-    | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
-    | undefined;
-
-  const topLevelToolUse = node.tool_use;
-
-  return {
-    toolCallName: toolUseBlock?.name ?? topLevelToolUse?.name ?? node.tool_name,
-    toolCallInput: toolUseBlock?.input ?? (topLevelToolUse?.input as Record<string, unknown> | undefined),
-  };
-}
-
-// ── Resolve tool result info from a node ────────────────────────
-export function resolveToolResult(node: NodeResponse): {
-  displayResultContent: string | null;
-  effectiveIsError: boolean;
-  hasCleanFile: boolean;
-} {
-  const contentBlocks = Array.isArray(node.message?.content)
-    ? (node.message!.content as ContentBlock[])
-    : [];
-
-  const toolResultBlock = contentBlocks.find((b) => b.type === "tool_result") as
-    | { type: "tool_result"; tool_use_id: string; content: unknown; is_error: boolean | null }
-    | undefined;
-
-  const topLevelToolResult = node.tool_result;
-
-  const resultIsError =
-    toolResultBlock?.is_error ?? topLevelToolResult?.is_error ?? false;
-
-  const rawErrorCheckStr: string | null = (() => {
-    if (toolResultBlock?.content != null) {
-      return typeof toolResultBlock.content === "string"
-        ? toolResultBlock.content
-        : JSON.stringify(toolResultBlock.content);
-    }
-    return topLevelToolResult?.content ?? null;
-  })();
-
-  const hasErrorTag = rawErrorCheckStr?.includes("<tool_use_error>") ?? false;
-  const effectiveIsError = !!resultIsError || hasErrorTag;
-
-  const hasCleanFile = !!topLevelToolResult?.file?.content;
-
-  const displayResultContent: string | null = hasCleanFile
-    ? null
-    : (() => {
-        let raw: string | null = null;
-        if (toolResultBlock?.content != null) {
-          raw = typeof toolResultBlock.content === "string"
-            ? toolResultBlock.content
-            : JSON.stringify(toolResultBlock.content, null, 2);
-        } else if (topLevelToolResult?.content != null) {
-          raw = topLevelToolResult.content;
-        }
-        if (raw == null) return null;
-        raw = stripLineNumbers(raw);
-        raw = raw.replace(/<tool_use_error>([\s\S]*?)<\/tool_use_error>/g, "$1").trim();
-        return raw || null;
-      })();
-
-  return { displayResultContent, effectiveIsError, hasCleanFile };
-}

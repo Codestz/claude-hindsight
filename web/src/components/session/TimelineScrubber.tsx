@@ -17,8 +17,13 @@ export function TimelineScrubber({ nodes, selectedId, onSelect, turnCosts }: Tim
   const timestamps = nodes.map((n) => n.timestamp).filter((t): t is number => t != null);
   if (timestamps.length < 2) return null;
 
-  const minTs = Math.min(...timestamps);
-  const maxTs = Math.max(...timestamps);
+  // Loop-based min/max — safe for large arrays (Math.min/max can stack overflow with spread)
+  let minTs = timestamps[0];
+  let maxTs = timestamps[0];
+  for (let i = 1; i < timestamps.length; i++) {
+    if (timestamps[i] < minTs) minTs = timestamps[i];
+    if (timestamps[i] > maxTs) maxTs = timestamps[i];
+  }
   const range = maxTs - minTs || 1;
 
   const handleClick = useCallback(

@@ -196,7 +196,7 @@ export function getNodeMeta(node: NodeResponse): NodeMeta {
   if (t === "user") {
     if (node.color === "blue") return NODE_META.tool_result ?? FALLBACK_META;
     // Task notification from sub-agent completion
-    if (typeof node.message?.content === "string" && node.message.content.includes("<task-notification>")) {
+    if (isTaskNotification(node)) {
       return NODE_META.task ?? FALLBACK_META;
     }
     return NODE_META.user ?? FALLBACK_META;
@@ -282,6 +282,16 @@ export function getPromptScore(node: NodeResponse): number | null {
   return node.prompt_score != null && node.prompt_score >= 40
     ? node.prompt_score
     : null;
+}
+
+/**
+ * True if the node is a task notification from a completed sub-agent.
+ * These are user nodes containing <task-notification> XML.
+ */
+export function isTaskNotification(node: NodeResponse): boolean {
+  return node.node_type === "user"
+    && typeof node.message?.content === "string"
+    && node.message.content.includes("<task-notification>");
 }
 
 /**

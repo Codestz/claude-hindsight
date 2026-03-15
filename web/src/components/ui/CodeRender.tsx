@@ -156,22 +156,22 @@ function colorizeBlock(code: string, lang: string): React.ReactNode {
   });
 }
 
+// Module-level keyword sets — created once, reused across all tokenizeLine calls
+const KW_SETS: Record<string, Set<string>> = {
+  typescript: new Set(["import", "export", "from", "const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "interface", "type", "extends", "implements", "new", "this", "async", "await", "default", "switch", "case", "break", "continue", "throw", "try", "catch", "finally", "typeof", "instanceof", "in", "of", "as", "null", "undefined", "true", "false", "void"]),
+  javascript: new Set(["import", "export", "from", "const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "extends", "new", "this", "async", "await", "default", "switch", "case", "break", "continue", "throw", "try", "catch", "finally", "typeof", "instanceof", "in", "of", "null", "undefined", "true", "false", "void"]),
+  rust: new Set(["use", "fn", "pub", "let", "mut", "const", "struct", "enum", "impl", "trait", "mod", "self", "super", "crate", "return", "if", "else", "for", "while", "loop", "match", "break", "continue", "async", "await", "move", "where", "type", "as", "in", "true", "false", "Some", "None", "Ok", "Err"]),
+  python: new Set(["import", "from", "def", "class", "return", "if", "elif", "else", "for", "while", "with", "as", "try", "except", "finally", "raise", "yield", "async", "await", "pass", "break", "continue", "in", "is", "not", "and", "or", "True", "False", "None", "self", "lambda"]),
+  go: new Set(["package", "import", "func", "return", "if", "else", "for", "range", "switch", "case", "default", "break", "continue", "var", "const", "type", "struct", "interface", "map", "chan", "go", "defer", "select", "true", "false", "nil"]),
+  bash: new Set(["if", "then", "else", "elif", "fi", "for", "while", "do", "done", "case", "esac", "function", "return", "exit", "echo", "export", "local", "readonly", "in", "true", "false"]),
+  html: new Set(["DOCTYPE", "html", "head", "body", "div", "span", "p", "a", "img", "script", "style", "link", "meta", "title", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "table", "tr", "td", "th", "form", "input", "button", "select", "option", "textarea", "label", "section", "header", "footer", "nav", "main", "article", "aside", "canvas", "svg", "path"]),
+  css: new Set(["inherit", "initial", "unset", "none", "auto", "block", "inline", "flex", "grid", "relative", "absolute", "fixed", "sticky", "hidden", "visible", "solid", "dashed", "dotted", "transparent", "important", "normal", "bold", "italic", "center", "left", "right", "top", "bottom"]),
+};
+const EMPTY_KW_SET = new Set<string>();
+
 function tokenizeLine(line: string, lang: string, keyOffset: number): React.ReactNode[] {
   const results: React.ReactNode[] = [];
-
-  // Keywords per language
-  const kwSets: Record<string, Set<string>> = {
-    typescript: new Set(["import", "export", "from", "const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "interface", "type", "extends", "implements", "new", "this", "async", "await", "default", "switch", "case", "break", "continue", "throw", "try", "catch", "finally", "typeof", "instanceof", "in", "of", "as", "null", "undefined", "true", "false", "void"]),
-    javascript: new Set(["import", "export", "from", "const", "let", "var", "function", "return", "if", "else", "for", "while", "class", "extends", "new", "this", "async", "await", "default", "switch", "case", "break", "continue", "throw", "try", "catch", "finally", "typeof", "instanceof", "in", "of", "null", "undefined", "true", "false", "void"]),
-    rust: new Set(["use", "fn", "pub", "let", "mut", "const", "struct", "enum", "impl", "trait", "mod", "self", "super", "crate", "return", "if", "else", "for", "while", "loop", "match", "break", "continue", "async", "await", "move", "where", "type", "as", "in", "true", "false", "Some", "None", "Ok", "Err"]),
-    python: new Set(["import", "from", "def", "class", "return", "if", "elif", "else", "for", "while", "with", "as", "try", "except", "finally", "raise", "yield", "async", "await", "pass", "break", "continue", "in", "is", "not", "and", "or", "True", "False", "None", "self", "lambda"]),
-    go: new Set(["package", "import", "func", "return", "if", "else", "for", "range", "switch", "case", "default", "break", "continue", "var", "const", "type", "struct", "interface", "map", "chan", "go", "defer", "select", "true", "false", "nil"]),
-    bash: new Set(["if", "then", "else", "elif", "fi", "for", "while", "do", "done", "case", "esac", "function", "return", "exit", "echo", "export", "local", "readonly", "in", "true", "false"]),
-    html: new Set(["DOCTYPE", "html", "head", "body", "div", "span", "p", "a", "img", "script", "style", "link", "meta", "title", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "table", "tr", "td", "th", "form", "input", "button", "select", "option", "textarea", "label", "section", "header", "footer", "nav", "main", "article", "aside", "canvas", "svg", "path"]),
-    css: new Set(["inherit", "initial", "unset", "none", "auto", "block", "inline", "flex", "grid", "relative", "absolute", "fixed", "sticky", "hidden", "visible", "solid", "dashed", "dotted", "transparent", "important", "normal", "bold", "italic", "center", "left", "right", "top", "bottom"]),
-  };
-
-  const keywords = kwSets[lang] ?? new Set<string>();
+  const keywords = KW_SETS[lang] ?? EMPTY_KW_SET;
 
   // For HTML: special regex that captures tags, attributes, etc.
   const tokenRe = lang === "html"

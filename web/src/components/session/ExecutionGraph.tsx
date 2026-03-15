@@ -3,6 +3,7 @@ import ForceGraph3D from "react-force-graph-3d";
 import * as THREE from "three";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { NodeResponse } from "@/lib/types";
+import { isTaskNotification } from "@/lib/node-meta";
 
 // ── Colors ───────────────────────────────────────────────────
 const COLORS: Record<string, string> = {
@@ -14,12 +15,6 @@ const SELECTED = "#818CF8";
 const ERROR = "#FB7185";
 const TASK_COLOR = "#c084fc";
 const BG = "#0a0a0e";
-
-function isTaskNotification(n: NodeResponse): boolean {
-  return n.node_type === "user"
-    && typeof n.message?.content === "string"
-    && n.message.content.includes("<task-notification>");
-}
 
 function nodeHex(n: NodeResponse): string {
   if (isTaskNotification(n)) return TASK_COLOR;
@@ -62,11 +57,15 @@ function perfTier(count: number): "high" | "medium" | "low" {
 }
 
 // ── Shared geometry cache (avoid creating per-node) ──────────
-const geoCache = new Map<string, THREE.SphereGeometry>();
+let geoCache = new Map<string, THREE.SphereGeometry>();
 function getSphereGeo(r: number, segs: number): THREE.SphereGeometry {
   const key = `${r}-${segs}`;
   if (!geoCache.has(key)) geoCache.set(key, new THREE.SphereGeometry(r, segs, segs));
   return geoCache.get(key)!;
+}
+function disposeGeoCache() {
+  for (const geo of geoCache.values()) geo.dispose();
+  geoCache = new Map();
 }
 
 // ── Component ────────────────────────────────────────────────
@@ -83,6 +82,9 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: Props) {
 
   const graphData = useMemo(() => buildGraph(roots), [roots]);
   const tier = perfTier(graphData.nodes.length);
+
+  // Dispose geometry cache on unmount
+  useEffect(() => () => disposeGeoCache(), []);
 
   // Add bloom only for small graphs
   useEffect(() => {
@@ -227,19 +229,21 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: Props) {
     return group;
   }, [selectedId, tier]);
 
-  // Tooltip
+  // Tooltip — escape HTML to prevent XSS from node content
   const nodeLabel = useCallback((g: any) => {
     const n = g.node as NodeResponse;
     const isTask = isTaskNotification(n);
     const tool = n.tool_name ?? n.tool_use?.name;
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     const badge = isTask
       ? `<span style="color:#c084fc">[Task]</span> `
-      : tool ? `<span style="color:#F59E0B">[${tool}]</span> ` : "";
-    const text = isTask
+      : tool ? `<span style="color:#F59E0B">[${esc(tool)}]</span> ` : "";
+    const rawText = isTask
       ? (typeof n.message?.content === "string"
           ? n.message.content.match(/<summary>([\s\S]*?)<\/summary>/)?.[1] ?? n.label
           : n.label)
       : (n.summary || n.label);
+    const text = esc(rawText);
     return `<div style="font:11px/1.4 'Geist Mono',monospace;background:rgba(10,10,14,0.92);padding:6px 10px;border-radius:6px;border:1px solid rgba(129,140,248,0.2);color:#ECECF1;max-width:320px;word-wrap:break-word">${badge}${text}</div>`;
   }, []);
 

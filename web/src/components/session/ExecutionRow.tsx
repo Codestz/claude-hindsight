@@ -1,19 +1,11 @@
 import type { NodeResponse } from "@/lib/types";
 import { getNodeMeta } from "@/lib/node-meta";
+import { formatTimestamp } from "@/lib/utils";
 
 interface ExecutionRowProps {
   node: NodeResponse;
   isSelected: boolean;
   onSelect: () => void;
-}
-
-function formatMs(ms: number): string {
-  return new Date(ms).toLocaleTimeString("en-US", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 }
 
 export function ExecutionRow({ node, isSelected, onSelect }: ExecutionRowProps) {
@@ -175,7 +167,7 @@ export function ExecutionRow({ node, isSelected, onSelect }: ExecutionRowProps) 
             opacity: 0.7,
           }}
         >
-          {formatMs(node.timestamp)}
+          {formatTimestamp(node.timestamp)}
         </span>
       )}
     </div>

@@ -56,6 +56,16 @@ export function extractMcpServers(topTools: [string, number][]): [string, number
   return Object.entries(servers).sort((a, b) => b[1] - a[1]) as [string, number][];
 }
 
+// Milliseconds timestamp → HH:MM:SS
+export function formatTimestamp(ms: number): string {
+  return new Date(ms).toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 // Show last 2 path segments: "/a/b/c/d.ts" → ".../c/d.ts"
 export function shortPath(path: string): string {
   const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);

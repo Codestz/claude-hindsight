@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ContentBlock, NodeResponse } from "@/lib/types";
 import { getNodeMeta, getThinkingText, getTokenUsage } from "@/lib/node-meta";
 import { shortId } from "@/lib/utils";
@@ -266,9 +266,12 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   type ImageData = { mediaType: string; data: string };
   const extractedImages: ImageData[] = [];
 
+  // Safe media types for data: URI rendering (SVG can execute scripts)
+  const SAFE_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
   // From message content blocks
   for (const img of imageBlocks) {
-    if (img.source?.data && img.source?.media_type) {
+    if (img.source?.data && img.source?.media_type && SAFE_IMAGE_TYPES.has(img.source.media_type)) {
       extractedImages.push({ mediaType: img.source.media_type, data: img.source.data });
     }
   }
@@ -289,7 +292,7 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
     for (const item of arr) {
       if (typeof item === "object" && item !== null && (item as any).type === "image") {
         const src = (item as any).source;
-        if (src?.data && src?.media_type) {
+        if (src?.data && src?.media_type && SAFE_IMAGE_TYPES.has(src.media_type)) {
           extractedImages.push({ mediaType: src.media_type, data: src.data });
         }
       }
@@ -300,7 +303,7 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   tryExtractImagesFromContent(topLevelToolResult?.content);
 
   // ── Find linked node (tool call ↔ result) ──────────────────
-  const linkedNode: NodeResponse | null = (() => {
+  const linkedNode: NodeResponse | null = useMemo(() => {
     if (!flatNodes) return null;
     if (isToolCall) {
       // Find the result node with matching tool_use_id
@@ -327,7 +330,7 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
       ) ?? null;
     }
     return null;
-  })();
+  }, [node.uuid, flatNodes, isToolCall, isToolResult, toolUseBlock?.id, topLevelToolUse?.id, toolResultBlock?.tool_use_id, topLevelToolResult?.tool_use_id]);
 
   return (
     <div style={{ padding: "24px 28px" }}>

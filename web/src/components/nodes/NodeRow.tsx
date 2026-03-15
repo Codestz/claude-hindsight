@@ -1,5 +1,6 @@
 import type { NodeResponse } from "@/lib/types";
 import type { NodeMeta } from "@/lib/node-meta";
+import { formatTimestamp } from "@/lib/utils";
 
 interface NodeRowProps {
   node: NodeResponse;
@@ -11,17 +12,6 @@ interface NodeRowProps {
   onSelect: () => void;
   onToggle: () => void;
   promptScore?: number;
-}
-
-// Milliseconds → HH:MM:SS display
-function formatMs(ms: number): string {
-  const d = new Date(ms);
-  return d.toLocaleTimeString("en-US", {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
 }
 
 export function NodeRow({
@@ -166,7 +156,7 @@ export function NodeRow({
             opacity: 0.7,
           }}
         >
-          {formatMs(node.timestamp)}
+          {formatTimestamp(node.timestamp)}
         </span>
       )}
     </div>

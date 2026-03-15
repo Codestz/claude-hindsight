@@ -1,6 +1,7 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import type { NodeResponse } from "@/lib/types";
 import { ExecutionRow } from "./ExecutionRow";
+import { formatTimestamp } from "@/lib/utils";
 
 interface ExecutionListProps {
   nodes: NodeResponse[];
@@ -163,7 +164,7 @@ function GroupRow({
             fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums",
             flexShrink: 0, opacity: 0.7,
           }}>
-            {formatMs(first.timestamp)}{"\u2013"}{formatMs(last.timestamp)}
+            {formatTimestamp(first.timestamp)}{"\u2013"}{formatTimestamp(last.timestamp)}
           </span>
         )}
       </div>
@@ -185,11 +186,6 @@ function GroupRow({
   );
 }
 
-function formatMs(ms: number): string {
-  return new Date(ms).toLocaleTimeString("en-US", {
-    hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-}
 
 export function ExecutionList({ nodes, selectedId, onSelect, autoScroll, newestFirst }: ExecutionListProps) {
   const topRef = useRef<HTMLDivElement>(null);
@@ -197,7 +193,7 @@ export function ExecutionList({ nodes, selectedId, onSelect, autoScroll, newestF
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
   const prevCountRef = useRef(nodes.length);
 
-  const displayItems = buildDisplayItems(nodes);
+  const displayItems = useMemo(() => buildDisplayItems(nodes), [nodes]);
 
   // Auto-scroll only when new nodes are actually added (not on sort/filter changes)
   useEffect(() => {
