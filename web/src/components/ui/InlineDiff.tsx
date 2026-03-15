@@ -1,4 +1,4 @@
-type DiffLine = { type: "same" | "removed" | "added"; line: string };
+import type { DiffLine, SideSpec, InlineDiffProps } from "./types";
 
 /** LCS-based line diff. O(n²) — fine for small skill/agent bodies. */
 function computeDiff(a: string, b: string): DiffLine[] {
@@ -38,15 +38,6 @@ function computeDiff(a: string, b: string): DiffLine[] {
   return result;
 }
 
-interface SideSpec {
-  label: string;
-  body: string;
-}
-
-interface InlineDiffProps {
-  left: SideSpec;
-  right: SideSpec;
-}
 
 export function InlineDiff({ left, right }: InlineDiffProps) {
   const lines = computeDiff(left.body, right.body);

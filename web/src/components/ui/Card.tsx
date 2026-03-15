@@ -1,9 +1,4 @@
-interface CardProps {
-  children: React.ReactNode;
-  padding?: string;
-  glow?: string;
-  animate?: boolean;
-}
+import type { CardProps } from "./types";
 
 export function Card({ children, padding, glow, animate }: CardProps) {
   return (

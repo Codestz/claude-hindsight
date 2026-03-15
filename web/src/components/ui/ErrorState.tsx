@@ -1,7 +1,4 @@
-interface ErrorStateProps {
-  message?: string | null;
-  suggestion?: string;
-}
+import type { ErrorStateProps } from "./types";
 
 export function ErrorState({ message, suggestion }: ErrorStateProps) {
   return (

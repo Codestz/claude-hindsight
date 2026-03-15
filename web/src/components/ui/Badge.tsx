@@ -1,13 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
-
-export type BadgeVariant =
-  | "success"   // emerald — healthy, positive
-  | "error"     // rose    — errors, failures
-  | "warn"      // amber   — warnings, cost
-  | "info"      // sky     — tokens, informational
-  | "purple"    // violet  — AI nodes, thinking
-  | "muted"     // dim     — neutral labels, model names
-  | "default";  // subtle  — general purpose
+import type { CSSProperties } from "react";
+import type { BadgeVariant, BadgeProps } from "./types";
 
 const VARIANT_STYLES: Record<BadgeVariant, CSSProperties> = {
   success: {
@@ -46,11 +38,6 @@ const VARIANT_STYLES: Record<BadgeVariant, CSSProperties> = {
     border: "1px solid var(--border-2)",
   },
 };
-
-interface BadgeProps {
-  children: ReactNode;
-  variant?: BadgeVariant;
-}
 
 export function Badge({ children, variant = "default" }: BadgeProps) {
   return (

@@ -15,13 +15,7 @@ import React from "react";
 import { detectLanguage } from "@/lib/syntax/languages";
 import { colorizeJson, colorizeCode } from "@/lib/syntax/colorize";
 
-interface CodeRenderProps {
-  content: string;
-  language?: string;
-  filePath?: string;
-  error?: boolean;
-  maxHeight?: string;
-}
+import type { CodeRenderProps } from "./types";
 
 export function CodeRender({
   content,

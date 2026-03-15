@@ -2,13 +2,28 @@
  * Shared types for UI components.
  *
  * All prop interfaces for reusable UI primitives live here.
+ * Components import from this file — no inline definitions.
  */
+
+import type { ReactNode } from "react";
+
+// ── Badge ────────────────────────────────────────────────────
+
+export type BadgeVariant =
+  | "success" | "error" | "warn" | "info" | "purple" | "muted" | "default";
+
+export interface BadgeProps {
+  children: ReactNode;
+  variant?: BadgeVariant;
+}
 
 // ── Card ─────────────────────────────────────────────────────
 
 export interface CardProps {
   children: React.ReactNode;
+  padding?: string;
   glow?: string;
+  animate?: boolean;
 }
 
 // ── CodeRender ───────────────────────────────────────────────
@@ -33,6 +48,7 @@ export interface EmptyStateProps {
 
 export interface ErrorStateProps {
   message?: string | null;
+  suggestion?: string;
 }
 
 // ── FilterChips ──────────────────────────────────────────────
@@ -40,7 +56,7 @@ export interface ErrorStateProps {
 export interface FilterChipsProps {
   options: string[];
   active: Set<string>;
-  onToggle: (option: string) => void;
+  onToggle: (value: string) => void;
 }
 
 // ── HindsightLogo ────────────────────────────────────────────
@@ -56,7 +72,7 @@ export type DiffLine = { type: "same" | "removed" | "added"; line: string };
 
 export interface SideSpec {
   label: string;
-  content: string;
+  body: string;
 }
 
 export interface InlineDiffProps {
@@ -86,10 +102,9 @@ export interface ResizablePanelProps {
 // ── SectionHeader ────────────────────────────────────────────
 
 export interface SectionHeaderProps {
-  icon?: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   title: string;
   count?: number;
-  accent?: boolean;
+  action?: { label: string; href: string };
 }
 
 // ── StatCard ─────────────────────────────────────────────────
@@ -100,12 +115,4 @@ export interface StatCardProps {
   sub?: string;
   accent?: boolean;
   valueColor?: string;
-}
-
-// ── Badge ────────────────────────────────────────────────────
-
-export interface BadgeProps {
-  children: React.ReactNode;
-  color?: string;
-  bg?: string;
 }

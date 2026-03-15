@@ -1,12 +1,5 @@
 import { Link } from "react-router-dom";
-
-interface SectionHeaderProps {
-  title: string;
-  // Pill count shown next to the title
-  count?: number;
-  // Right-aligned action link
-  action?: { label: string; href: string };
-}
+import type { SectionHeaderProps } from "./types";
 
 export function SectionHeader({ title, count, action }: SectionHeaderProps) {
   return (

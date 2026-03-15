@@ -1,8 +1,4 @@
-interface FilterChipsProps {
-  options: string[];
-  active: Set<string>;
-  onToggle: (value: string) => void;
-}
+import type { FilterChipsProps } from "./types";
 
 export function FilterChips({ options, active, onToggle }: FilterChipsProps) {
   return (

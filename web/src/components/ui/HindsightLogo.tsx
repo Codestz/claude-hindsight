@@ -1,7 +1,4 @@
-interface HindsightLogoProps {
-  size?: number;
-  glow?: boolean;
-}
+import type { HindsightLogoProps } from "./types";
 
 /**
  * Hindsight brand mark — a constellation of three connected nodes

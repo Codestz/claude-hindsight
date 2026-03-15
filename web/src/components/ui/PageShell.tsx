@@ -1,7 +1,4 @@
-interface PageShellProps {
-  children: React.ReactNode;
-  maxWidth?: string;
-}
+import type { PageShellProps } from "./types";
 
 export function PageShell({ children, maxWidth = "1280px" }: PageShellProps) {
   return (

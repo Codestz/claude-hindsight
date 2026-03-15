@@ -1,8 +1,4 @@
-interface EmptyStateProps {
-  icon?: string;
-  title: string;
-  description?: string;
-}
+import type { EmptyStateProps } from "./types";
 
 export function EmptyState({ icon = "∅", title, description }: EmptyStateProps) {
   return (

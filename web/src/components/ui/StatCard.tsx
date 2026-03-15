@@ -1,10 +1,4 @@
-interface StatCardProps {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: boolean;
-  valueColor?: string;
-}
+import type { StatCardProps } from "./types";
 
 export function StatCard({ label, value, sub, accent, valueColor }: StatCardProps) {
   const accentColor = accent ? "var(--indigo)" : undefined;
