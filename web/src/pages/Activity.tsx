@@ -233,18 +233,18 @@ export default function ActivityPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageShell><LoadingState /></PageShell>;
-  if (error) return <PageShell><ErrorState message={error} /></PageShell>;
-
+  // All hooks MUST be called before early returns (Rules of Hooks)
   const filtered = useMemo(() => events.filter((e) => matchesFilter(e, filter)), [events, filter]);
-
-  // Compute event kind distribution for the mini chart
   const kindCounts = useMemo(() => ({
     tools: events.filter((e) => e.kind === "tool").length,
     errors: events.filter((e) => e.kind === "tool_failure").length,
     agents: events.filter((e) => e.kind === "subagent").length,
     lifecycle: events.filter((e) => e.kind === "lifecycle" || e.kind === "permission").length,
   }), [events]);
+
+  if (loading) return <PageShell><LoadingState /></PageShell>;
+  if (error) return <PageShell><ErrorState message={error} /></PageShell>;
+
   const totalKinds = Math.max(kindCounts.tools + kindCounts.errors + kindCounts.agents + kindCounts.lifecycle, 1);
 
   const errorRate = summary && summary.total_tool_events > 0
