@@ -1,3 +1,12 @@
+/**
+ * Session detail page — two-panel resizable layout.
+ *
+ * Composes hooks and components:
+ * - useSessionData: data fetching + SSE subscription
+ * - useNodeFiltering: filter/sort/search state
+ * - ResizablePanel: left (list/graph) + right (node detail)
+ */
+
 import React, { lazy, Suspense, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { flattenTree, computeSessionStats } from "@/lib/node-utils";
@@ -8,51 +17,27 @@ import { TimelineScrubber } from "@/components/session/TimelineScrubber";
 import { ResizablePanel } from "@/components/ui/ResizablePanel";
 import { ExecutionList } from "@/components/session/ExecutionList";
 import { NodeDetailPanel } from "@/components/session/NodeDetailPanel";
+import { GraphErrorBoundary } from "@/components/ui/GraphErrorBoundary";
+import { FullPageMessage } from "@/components/ui/FullPageMessage";
 
 export type ViewMode = "list" | "graph";
 export type { SortOrder } from "@/hooks";
 
-// Lazy-load the 3D graph (Three.js is heavy)
 const ExecutionGraph = lazy(() =>
   import("@/components/session/ExecutionGraph").then((m) => ({ default: m.ExecutionGraph })),
 );
 
-// Error boundary for lazy-loaded components (WebGL can fail)
-class GraphErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
-  static getDerivedStateFromError() { return { hasError: true }; }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-3)", fontFamily: "var(--font-mono)", fontSize: "12px", flexDirection: "column", gap: "8px" }}>
-          <span style={{ fontSize: "18px" }}>⚠</span>
-          <span>3D graph failed to load</span>
-          <span style={{ fontSize: "10px", color: "var(--text-3)" }}>WebGL may not be available</span>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-// ── Root export ───────────────────────────────────────────────
 export default function SessionDetailPage() {
   const { id: rawId } = useParams<{ id: string }>();
   const id = rawId ? decodeURIComponent(rawId) : null;
-
   if (!id) return <FullPageMessage>Loading&hellip;</FullPageMessage>;
   return <SessionDetail id={id} />;
 }
 
-// ── Session detail — two-panel resizable layout ─────────────
 function SessionDetail({ id }: { id: string }) {
   const { session, roots, otelSummary, loading, error } = useSessionData(id);
   const [viewMode, setViewMode] = React.useState<ViewMode>("list");
 
-  // Derived state
   const flatNodes = useMemo(() => flattenTree(roots), [roots]);
   const stats = useMemo(() => computeSessionStats(flatNodes, otelSummary), [flatNodes, otelSummary]);
 
@@ -68,7 +53,7 @@ function SessionDetail({ id }: { id: string }) {
 
   const leftPanel = viewMode === "graph" ? (
     <GraphErrorBoundary>
-      <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-3)", fontFamily: "var(--font-mono)", fontSize: "12px" }}>Loading 3D graph&hellip;</div>}>
+      <Suspense fallback={<FullPageMessage>Loading 3D graph&hellip;</FullPageMessage>}>
         <ExecutionGraph roots={roots} selectedId={selected?.uuid ?? null} onSelect={setSelected} />
       </Suspense>
     </GraphErrorBoundary>
@@ -118,19 +103,6 @@ function SessionDetail({ id }: { id: string }) {
           right={<NodeDetailPanel node={selected} flatNodes={flatNodes} onNavigate={setSelected} />}
         />
       </div>
-    </div>
-  );
-}
-
-function FullPageMessage({ children, error }: { children: React.ReactNode; error?: boolean }) {
-  return (
-    <div style={{
-      height: "calc(100vh - 56px)", display: "flex", alignItems: "center",
-      justifyContent: "center", fontSize: "14px",
-      color: error ? "var(--red)" : "var(--text-3)",
-      fontFamily: "var(--font-sans)", textAlign: "center",
-    }}>
-      {children}
     </div>
   );
 }
