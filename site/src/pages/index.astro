@@ -28,16 +28,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
         <!-- Headline -->
         <div class="hero-headline">
-          <div class="hero-tag">The observability layer for Claude Code</div>
+          <div class="hero-tag">The complete monitoring system for Claude Code</div>
           <h1 class="hero-h1">20/20<br/>HINDSIGHT.</h1>
         </div>
 
         <!-- Sub -->
         <p class="hero-sub">
-          You gave Claude Code a task. Four minutes later,
-          it was done. But what actually happened in there —
-          the decisions, the tools, the dead ends, the errors?
-          <strong>Now you can know.</strong>
+          Every tool call. Every token. Every error. Every sub-agent.
+          Visualize sessions in 3D, inspect code changes with syntax highlighting,
+          preview screenshots, and track costs across all your projects.
+          <strong>See everything Claude does.</strong>
         </p>
 
         <!-- CTAs -->
@@ -94,21 +94,21 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <div class="ticker-track">
       {[...Array(2)].map(() => (
         <>
-          <span class="tick"><span class="tick-accent">01</span>Free &amp; Open Source</span>
+          <span class="tick"><span class="tick-accent">01</span>Free &amp; Open Source · MIT</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">02</span>Single binary — zero runtime deps</span>
+          <span class="tick"><span class="tick-accent">02</span>3D force-directed session graph</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">03</span>Reads ~/.claude/projects/ directly</span>
+          <span class="tick"><span class="tick-accent">03</span>Screenshot preview &amp; image lightbox</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">04</span>No telemetry · No cloud · No accounts</span>
+          <span class="tick"><span class="tick-accent">04</span>Syntax-highlighted code rendering</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">05</span>Memory-safe Rust · ~8 MB</span>
+          <span class="tick"><span class="tick-accent">05</span>Cost tracking per turn &amp; model</span>
           <span class="tick-div">◆</span>
           <span class="tick"><span class="tick-accent">06</span>Real-time OTLP telemetry</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">07</span>Automatic Claude Code hooks</span>
+          <span class="tick"><span class="tick-accent">07</span>No cloud · No accounts · 100% local</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">08</span>Agent &amp; skills discovery</span>
+          <span class="tick"><span class="tick-accent">08</span>Single Rust binary · ~8 MB</span>
           <span class="tick-div">◆</span>
         </>
       ))}
@@ -158,13 +158,15 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
         </div>
 
-        <!-- ── SESSION EXPLORER ───────────────── -->
+        <!-- ── SESSION INSPECTOR ──────────────── -->
         <div class="feat-cell fc-explorer">
-          <div class="fc-label label"><span class="cyan">◉</span>&ensp;SESSION EXPLORER</div>
-          <h3 class="fc-title">Full execution tree.<br/>Every single node.</h3>
+          <div class="fc-label label"><span class="cyan">◉</span>&ensp;SESSION INSPECTOR</div>
+          <h3 class="fc-title">Two-panel inspector.<br/>3D graph view.</h3>
           <p class="fc-desc">
-            Navigate Claude's entire reasoning process — user messages, thinking blocks,
-            tool calls with inputs and results, and spawned subagents. Every UUID, every timestamp.
+            Resizable split layout: compact execution list on the left, full node detail on the right.
+            Switch to 3D graph view to visualize the entire session as an interactive force-directed graph
+            with bloom lighting and node clustering. Preview screenshots, view syntax-highlighted code,
+            navigate tool call ↔ result pairs.
           </p>
           <div class="fc-tree">
             <div class="ftt muted">// session_17b8f9a2.jsonl</div>
@@ -209,13 +211,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
         </div>
 
-        <!-- ── ERROR TRACKING ────────────────── -->
+        <!-- ── COST & ERROR TRACKING ─────────── -->
         <div class="feat-cell fc-tokens">
-          <div class="fc-label label"><span class="amber">◐</span>&ensp;ERROR TRACKING</div>
-          <h3 class="fc-title">Find failures<br/>instantly.</h3>
+          <div class="fc-label label"><span class="amber">◐</span>&ensp;COST &amp; ERROR TRACKING</div>
+          <h3 class="fc-title">Every dollar.<br/>Every failure.</h3>
           <p class="fc-desc">
-            Track errors across all sessions and projects.
-            Jump directly to failed tool calls and see exactly what went wrong.
+            Track token costs per turn, per model, per project.
+            Timeline scrubber shows cost distribution.
+            Filter errors across all sessions with one click.
           </p>
           <div class="fc-chart">
             {[
@@ -512,7 +515,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   width: 1000px;
   height: 640px;
   background: radial-gradient(ellipse at center,
-    rgba(0,255,136,0.045) 0%,
+    rgba(129,140,248,0.08) 0%,
     transparent 68%);
   pointer-events: none;
 }
