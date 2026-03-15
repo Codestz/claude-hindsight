@@ -64,7 +64,6 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // All hooks MUST be called before any early returns (Rules of Hooks)
   const mcpServers = useMemo(() => analytics ? extractMcpServers(analytics.top_tools) : [], [analytics]);
   const nativeTools = useMemo(() => analytics ? analytics.top_tools.filter(([n]) => !n.startsWith("mcp__")) : [], [analytics]);
   const topFilesForChart = useMemo(() => topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]), [topFiles]);

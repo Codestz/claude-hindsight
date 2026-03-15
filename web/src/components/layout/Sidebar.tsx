@@ -215,4 +215,3 @@ export function Sidebar({ onSearch }: SidebarProps) {
   );
 }
 
-// Constants re-exported from ./config via ./index.ts

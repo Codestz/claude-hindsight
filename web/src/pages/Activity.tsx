@@ -73,14 +73,9 @@ function permissionToUnified(e: HookPermissionEvent): UnifiedEvent {
   };
 }
 
-// KIND_CONFIG, FILTERS, matchesFilter imported from @/components/activity/config
-
-// Aliases for backward compat within this file
 type Filter = EventFilter;
 const FILTERS = EVENT_FILTERS;
 const matchesFilter = matchesEventFilter;
-
-// Keep page-specific KIND_CONFIG override (rose vs red for tool_failure)
 const PAGE_KIND_CONFIG: Record<UnifiedEvent["kind"], { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; color: string }> = {
   tool:         { icon: Wrench,        color: "var(--amber)" },
   tool_failure: { icon: AlertTriangle, color: "var(--rose)" },
@@ -233,7 +228,6 @@ export default function ActivityPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // All hooks MUST be called before early returns (Rules of Hooks)
   const filtered = useMemo(() => events.filter((e) => matchesFilter(e, filter)), [events, filter]);
   const kindCounts = useMemo(() => ({
     tools: events.filter((e) => e.kind === "tool").length,

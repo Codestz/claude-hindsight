@@ -12,7 +12,6 @@ import { shortId, relativeTime } from "@/lib/utils";
 import { KIND_CONFIG } from "./config";
 import type { UnifiedEvent } from "./types";
 
-// Re-export for backward compatibility
 export type { UnifiedEvent } from "./types";
 
 interface EventRowProps {
