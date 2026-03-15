@@ -1,48 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Activity,
-  FolderOpen,
-  MessageSquare,
-  Bot,
-  Sparkles,
-  Search,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { HindsightLogo } from "@/components/ui/HindsightLogo";
+import type { SidebarProps } from "./types";
+import { SIDEBAR_W, SIDEBAR_COLLAPSED_W, SIDEBAR_BREAKPOINT, NAV_ITEMS, isNavActive } from "./config";
 
-const SIDEBAR_W = 232;
-const SIDEBAR_COLLAPSED_W = 56;
-const BREAKPOINT = 1024;
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  section?: string;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/activity", label: "Activity", icon: Activity },
-  { to: "/projects", label: "Projects", icon: FolderOpen, section: "Analyze" },
-  { to: "/prompts", label: "Prompts", icon: MessageSquare },
-  { to: "/agents", label: "Agents", icon: Bot, section: "Configure" },
-  { to: "/skills", label: "Skills", icon: Sparkles },
-];
-
-function isActive(to: string, pathname: string): boolean {
-  if (to === "/") return pathname === "/";
-  return pathname.startsWith(to) || (to === "/projects" && pathname.startsWith("/sessions"));
-}
-
-export function Sidebar({ onSearch }: { onSearch: () => void }) {
+export function Sidebar({ onSearch }: SidebarProps) {
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [hoveredTo, setHoveredTo] = useState<string | null>(null);
 
   useEffect(() => {
-    const check = () => setCollapsed(window.innerWidth < BREAKPOINT);
+    const check = () => setCollapsed(window.innerWidth < SIDEBAR_BREAKPOINT);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -168,7 +137,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
 
-          const active = isActive(item.to, pathname);
+          const active = isNavActive(item.to, pathname);
           const hovered = hoveredTo === item.to;
           const Icon = item.icon;
 
@@ -246,4 +215,4 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
   );
 }
 
-export { SIDEBAR_W, SIDEBAR_COLLAPSED_W, BREAKPOINT };
+// Constants re-exported from ./config via ./index.ts
