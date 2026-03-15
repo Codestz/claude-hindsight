@@ -211,17 +211,23 @@ export default function ActivityPage() {
     Promise.all([
       api.hookActivitySummary(),
       api.hookToolEvents({ limit }),
+      api.hookToolFailures({ limit: 100 }),
       api.hookSubagentEvents({ limit }),
       api.hookLifecycleEvents({ limit }),
       api.hookPermissionEvents({ limit }),
       api.globalAnalytics().catch(() => null),
     ])
-      .then(([sum, tools, subagents, lifecycle, permissions, analytics]) => {
+      .then(([sum, tools, failures, subagents, lifecycle, permissions, analytics]) => {
         setSummary(sum);
         if (analytics) setGlobalErrors(analytics.total_errors);
 
+        // Merge tools + failures, dedup by id
+        const toolIds = new Set(tools.map((t) => t.id));
+        const extraFailures = failures.filter((f) => !toolIds.has(f.id));
+
         const unified: UnifiedEvent[] = [
           ...tools.map(toolToUnified),
+          ...extraFailures.map(toolToUnified),
           ...subagents.map(subagentToUnified),
           ...lifecycle.map(lifecycleToUnified),
           ...permissions.map(permissionToUnified),
