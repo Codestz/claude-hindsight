@@ -22,7 +22,7 @@ Claude Hindsight is the observability layer for Claude Code. Every time Claude r
 ### Homebrew (recommended — macOS & Linux)
 
 ```bash
-brew tap Codestz/claude-hindsight
+brew tap Codestz/homebrew-tap
 brew install claude-hindsight
 ```
 

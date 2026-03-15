@@ -61,7 +61,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="snippet-lines">
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
-                <span class="bright">brew tap Codestz/claude-hindsight</span>
+                <span class="bright">brew tap Codestz/homebrew-tap</span>
               </div>
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
@@ -71,7 +71,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <button
               class="copy-btn"
               onclick="
-                navigator.clipboard.writeText('brew tap Codestz/claude-hindsight\nbrew install claude-hindsight');
+                navigator.clipboard.writeText('brew tap Codestz/homebrew-tap\nbrew install claude-hindsight');
                 this.textContent = 'COPIED';
                 setTimeout(() => this.textContent = 'COPY', 2000);
               "
@@ -342,13 +342,64 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   </section>
 
   <!-- ═══════════════════════════════════════════
-       [03] HOW IT WORKS
+       [03] WHAT'S NEW IN v2.2
   ═══════════════════════════════════════════ -->
   <section class="section section-sep">
     <div class="section-inner">
 
       <div class="section-header">
         <span class="sec-num">[03]</span>
+        <span class="label">WHAT'S NEW IN v{VERSION}</span>
+        <span class="section-line"></span>
+        <span class="label muted">// latest release highlights</span>
+      </div>
+
+      <div class="whats-new-grid bento">
+        {[
+          {
+            icon: "◎", color: "var(--accent)", title: "3D Session Graph",
+            desc: "Visualize entire sessions as interactive force-directed graphs. Radial DAG layout, bloom lighting, click-to-focus camera. Powered by Three.js + WebGL.",
+          },
+          {
+            icon: "◉", color: "var(--cyan)", title: "Image Previews",
+            desc: "Screenshots embedded in tool results render as inline previews with expand-to-lightbox. Base64 data decoded directly — works even after files are deleted.",
+          },
+          {
+            icon: "◈", color: "var(--amber)", title: "Smart Tool Rendering",
+            desc: "Read, Edit, Write, Bash — each tool type gets a specialized display. MCP tools show server badges. Syntax highlighting for 8+ languages.",
+          },
+          {
+            icon: "↻", color: "var(--purple)", title: "Task Notifications",
+            desc: "Sub-agent completions parsed from XML into structured cards with status, token usage, duration, and markdown result rendering.",
+          },
+          {
+            icon: "⊕", color: "var(--green)", title: "Timeline Scrubber",
+            desc: "Horizontal timeline bar with colored node markers. Click anywhere to jump. Token-per-turn cost bars overlay in the background.",
+          },
+          {
+            icon: "⚡", color: "var(--red)", title: "Unified Error Tracking",
+            desc: "Global error count consistent across Dashboard and Activity. Errors tab loads failure events separately so they're always visible.",
+          },
+        ].map((item) => (
+          <div class="wn-card">
+            <div class="wn-icon" style={`color:${item.color}`}>{item.icon}</div>
+            <div class="wn-title">{item.title}</div>
+            <div class="wn-desc">{item.desc}</div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       [04] HOW IT WORKS
+  ═══════════════════════════════════════════ -->
+  <section class="section section-sep">
+    <div class="section-inner">
+
+      <div class="section-header">
+        <span class="sec-num">[04]</span>
         <span class="label">UP AND RUNNING IN 60 SECONDS</span>
         <span class="section-line"></span>
       </div>
@@ -359,8 +410,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             num: "01", title: "INSTALL",
             desc: "One command via Homebrew or cargo install. Pre-built binaries have zero external dependencies — no Node.js, no Python, nothing.",
             lines: [
-              { t: "prompt",  text: "brew tap Codestz/claude-hindsight"      },
-              { t: "dim",     text: "==> Tapping Codestz/claude-hindsight..." },
+              { t: "prompt",  text: "brew tap Codestz/homebrew-tap"      },
+              { t: "dim",     text: "==> Tapping Codestz/homebrew-tap..." },
               { t: "prompt",  text: "brew install claude-hindsight"           },
               { t: "success", text: `✓  claude-hindsight ${VERSION} installed` },
             ],
@@ -431,7 +482,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <div class="section-inner">
 
       <div class="section-header">
-        <span class="sec-num">[04]</span>
+        <span class="sec-num">[05]</span>
         <span class="label">INSTALL</span>
         <span class="section-line"></span>
         <span class="label muted">// pick your method</span>
@@ -442,7 +493,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           {
             method: "HOMEBREW",
             note: "macOS &amp; Linux — Recommended",
-            lines: ["brew tap Codestz/claude-hindsight", "brew install claude-hindsight"],
+            lines: ["brew tap Codestz/homebrew-tap", "brew install claude-hindsight"],
           },
           {
             method: "CARGO",
@@ -966,7 +1017,39 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 .inst-docs-link:hover { text-decoration: underline; }
 
 /* ─── RESPONSIVE ─────────────────────────────── */
+/* ─── WHAT'S NEW ─────────────────────────────── */
+.whats-new-grid { grid-template-columns: repeat(3, 1fr); }
+
+.wn-card {
+  background: var(--bg);
+  padding: 2rem;
+  transition: background 0.2s;
+}
+.wn-card:hover { background: var(--bg-2); }
+
+.wn-icon {
+  font-size: 20px;
+  margin-bottom: 0.75rem;
+}
+
+.wn-title {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 0.625rem;
+  letter-spacing: -0.01em;
+}
+
+.wn-desc {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.65;
+}
+
 @media (max-width: 1024px) {
+  .whats-new-grid { grid-template-columns: repeat(2, 1fr); }
   .hero-inner { grid-template-columns: 1fr; min-height: auto; gap: 3rem; }
 
   .feat-bento { grid-template-columns: repeat(6, 1fr); }
@@ -984,6 +1067,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 }
 
 @media (max-width: 640px) {
+  .whats-new-grid { grid-template-columns: 1fr; }
   /* Hero */
   .hero-inner    { padding: 3rem 1.25rem 2.5rem; }
   .section       { padding: 3rem 0; }
