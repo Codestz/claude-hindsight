@@ -148,7 +148,7 @@ export default function DashboardPage() {
           <StatCard
             label="Errors"
             value={analytics.total_errors.toLocaleString()}
-            sub={analytics.total_errors === 0 ? "clean" : "across sessions"}
+            sub={analytics.total_errors === 0 ? "clean" : "tool errors across sessions"}
             valueColor={analytics.total_errors > 0 ? "var(--red)" : undefined}
           />
         </div>

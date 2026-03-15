@@ -287,7 +287,7 @@ export default function ActivityPage() {
           <StatTile icon={Wrench} color="var(--amber)" label="Tools" value={summary.total_tool_events} />
           <StatTile icon={Bot} color="var(--violet)" label="Agents" value={summary.total_subagent_events} />
           <StatTile icon={Shield} color="var(--sky)" label="Perms" value={summary.total_permission_events} />
-          <StatTile icon={AlertTriangle} color="var(--rose)" label="Errors" value={summary.recent_errors} />
+          <StatTile icon={AlertTriangle} color="var(--rose)" label="Hook Errors" value={summary.recent_errors} />
 
           {/* Distribution bar */}
           <div style={{
@@ -345,7 +345,9 @@ export default function ActivityPage() {
           }}>
             {FILTERS.map((f) => {
               const active = filter === f;
-              const count = f === "All" ? events.length : events.filter((e) => matchesFilter(e, f)).length;
+              const count = f === "All" ? events.length
+                : f === "Errors" && summary ? summary.recent_errors
+                : events.filter((e) => matchesFilter(e, f)).length;
               return (
                 <button
                   key={f}
@@ -410,7 +412,7 @@ export default function ActivityPage() {
                 </span>
               )}
             </div>
-            <RecentErrors events={events} />
+            <RecentErrors events={events} totalErrors={summary?.recent_errors ?? 0} />
           </Card>
         </div>
       </div>
@@ -488,13 +490,15 @@ function TopToolsChart({ data }: { data: [string, number][] }) {
 }
 
 // ── Recent errors ─────────────────────────────────────────────
-function RecentErrors({ events }: { events: UnifiedEvent[] }) {
+function RecentErrors({ events, totalErrors }: { events: UnifiedEvent[]; totalErrors: number }) {
   const errors = events.filter((e) => e.kind === "tool_failure").slice(0, 6);
 
   if (errors.length === 0) {
     return (
       <div style={{ padding: "20px", textAlign: "center", fontSize: "12px", color: "var(--text-3)" }}>
-        No recent errors
+        {totalErrors > 0
+          ? `${totalErrors} hook error${totalErrors > 1 ? "s" : ""} recorded — not in recent events`
+          : "No recent errors"}
       </div>
     );
   }
