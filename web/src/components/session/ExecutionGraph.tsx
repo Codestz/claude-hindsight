@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { NodeResponse } from "@/lib/types";
 import { isTaskNotification } from "@/lib/node-meta";
+import type { ExecutionGraphProps, GraphNode, GraphLink } from "./types";
 
 // ── Colors ───────────────────────────────────────────────────
 const COLORS: Record<string, string> = {
@@ -33,12 +34,9 @@ function nodeRadius(n: NodeResponse): number {
 }
 
 // ── Graph data ───────────────────────────────────────────────
-interface GNode { id: string; node: NodeResponse; color: string; r: number }
-interface GLink { source: string; target: string }
-
-function buildGraph(roots: NodeResponse[]): { nodes: GNode[]; links: GLink[] } {
-  const nodes: GNode[] = [];
-  const links: GLink[] = [];
+function buildGraph(roots: NodeResponse[]): { nodes: GraphNode[]; links: GraphLink[] } {
+  const nodes: GraphNode[] = [];
+  const links: GraphLink[] = [];
   const walk = (n: NodeResponse, pid: string | null) => {
     const id = n.uuid ?? `n${nodes.length}`;
     nodes.push({ id, node: n, color: nodeHex(n), r: nodeRadius(n) });
@@ -69,13 +67,7 @@ function disposeGeoCache() {
 }
 
 // ── Component ────────────────────────────────────────────────
-interface Props {
-  roots: NodeResponse[];
-  selectedId: string | null;
-  onSelect: (node: NodeResponse) => void;
-}
-
-export function ExecutionGraph({ roots, selectedId, onSelect }: Props) {
+export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphProps) {
   const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const bloomAdded = useRef(false);

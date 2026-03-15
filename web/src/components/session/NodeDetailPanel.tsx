@@ -22,11 +22,7 @@ import {
   stripLineNumbers,
 } from "./tool-displays";
 
-interface NodeDetailPanelProps {
-  node: NodeResponse | null;
-  flatNodes?: NodeResponse[];
-  onNavigate?: (node: NodeResponse) => void;
-}
+import type { NodeDetailPanelProps, ImageData } from "./types";
 
 // ── Detect if content is markdown (not code) ─────────────────
 function looksLikeMarkdown(text: string): boolean {
@@ -238,7 +234,6 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   const progress = node.progress;
 
   // ── Extract images from all sources ────────────────────────
-  type ImageData = { mediaType: string; data: string };
   const extractedImages: ImageData[] = [];
 
   // Safe media types for data: URI rendering (SVG can execute scripts)

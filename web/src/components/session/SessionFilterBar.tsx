@@ -1,23 +1,5 @@
 import { FilterChips } from "@/components/ui/FilterChips";
-import type { ViewMode, SortOrder } from "@/pages/SessionDetail";
-
-interface SessionFilterBarProps {
-  filterTypes: Set<string>;
-  onToggleType: (type: string) => void;
-  filterKeyword: string;
-  onKeywordChange: (keyword: string) => void;
-  autoScroll: boolean;
-  onToggleAutoScroll: () => void;
-  activeFilePaths: Set<string>;
-  onRemoveFilePath: (path: string) => void;
-  onClearFilePaths: () => void;
-  viewMode?: ViewMode;
-  onViewModeChange?: (mode: ViewMode) => void;
-  sortOrder?: SortOrder;
-  onSortOrderChange?: (order: SortOrder) => void;
-  filteredCount?: number;
-  totalCount?: number;
-}
+import type { SessionFilterBarProps } from "./types";
 
 const FILTER_OPTIONS = ["User", "Assistant", "Tool", "Task", "Error", "Thinking", "Prompt"];
 

@@ -2,19 +2,7 @@ import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import type { NodeResponse } from "@/lib/types";
 import { ExecutionRow } from "./ExecutionRow";
 import { formatTimestamp } from "@/lib/utils";
-
-interface ExecutionListProps {
-  nodes: NodeResponse[];
-  selectedId: string | null;
-  onSelect: (node: NodeResponse) => void;
-  autoScroll: boolean;
-  newestFirst?: boolean;
-}
-
-// A display item is either a single node or a collapsed group of progress/agent nodes
-type DisplayItem =
-  | { kind: "node"; node: NodeResponse }
-  | { kind: "group"; nodes: NodeResponse[]; label: string };
+import type { ExecutionListProps, DisplayItem } from "./types";
 
 function isCollapsibleNode(node: NodeResponse): boolean {
   // Progress events (hooks, agents, etc.)

@@ -1,13 +1,7 @@
 import React from "react";
-import type { NodeResponse } from "@/lib/types";
 import { getNodeMeta } from "@/lib/node-meta";
 import { formatTimestamp } from "@/lib/utils";
-
-interface ExecutionRowProps {
-  node: NodeResponse;
-  isSelected: boolean;
-  onSelect: () => void;
-}
+import type { ExecutionRowProps } from "./types";
 
 export const ExecutionRow = React.memo(function ExecutionRow({ node, isSelected, onSelect }: ExecutionRowProps) {
   const meta = getNodeMeta(node);

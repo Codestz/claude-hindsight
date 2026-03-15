@@ -11,6 +11,7 @@
 
 import { ContentSection } from "./tool-displays";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import type { TaskNotification, TaskNotificationCardProps } from "./types";
 
 // Pre-compiled regexes for XML tag extraction
 const TASK_RE = {
@@ -23,15 +24,7 @@ const TASK_RE = {
   durationMs: /<duration_ms>([\s\S]*?)<\/duration_ms>/,
 } as const;
 
-export interface TaskNotification {
-  taskId: string | null;
-  status: string | null;
-  summary: string | null;
-  result: string | null;
-  totalTokens: string | null;
-  toolUses: string | null;
-  durationMs: string | null;
-}
+// TaskNotification type imported from ./types
 
 export function parseTaskNotification(content: string): TaskNotification | null {
   if (!content.includes("<task-notification>")) return null;
@@ -44,10 +37,6 @@ export function parseTaskNotification(content: string): TaskNotification | null 
     toolUses: content.match(TASK_RE.toolUses)?.[1]?.trim() ?? null,
     durationMs: content.match(TASK_RE.durationMs)?.[1]?.trim() ?? null,
   };
-}
-
-interface TaskNotificationCardProps {
-  task: TaskNotification;
 }
 
 export function TaskNotificationCard({ task }: TaskNotificationCardProps) {

@@ -1,13 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import type { SessionFile, SessionStats, OtelSessionSummary } from "@/lib/types";
 import { formatBytes, formatCost, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
-
-interface SessionHeaderProps {
-  session: SessionFile;
-  otelSummary: OtelSessionSummary | null;
-  stats: SessionStats;
-}
+import type { SessionHeaderProps } from "./types";
 
 export const SessionHeader = React.memo(function SessionHeader({ session, otelSummary, stats }: SessionHeaderProps) {
   return (

@@ -1,13 +1,6 @@
 import { useCallback, useRef } from "react";
-import type { NodeResponse, TurnCost } from "@/lib/types";
 import { getNodeMeta } from "@/lib/node-meta";
-
-interface TimelineScrubberProps {
-  nodes: NodeResponse[];
-  selectedId: string | null;
-  onSelect: (node: NodeResponse) => void;
-  turnCosts?: TurnCost[];
-}
+import type { TimelineScrubberProps } from "./types";
 
 export function TimelineScrubber({ nodes, selectedId, onSelect, turnCosts }: TimelineScrubberProps) {
   const barRef = useRef<HTMLDivElement>(null);

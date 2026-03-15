@@ -10,16 +10,7 @@
  */
 
 import { useState } from "react";
-
-interface ImageData {
-  mediaType: string;
-  data: string;
-}
-
-interface ImagePreviewProps {
-  img: ImageData;
-  index: number;
-}
+import type { ImagePreviewProps } from "./types";
 
 const MAX_IMAGE_SIZE_KB = 5000; // 5MB limit
 const BASE64_RE = /^[A-Za-z0-9+/\n\r]*={0,2}$/;
