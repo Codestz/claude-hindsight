@@ -6,14 +6,19 @@ description: "What Claude Hindsight gives you, how to install it, and how to get
 
 # Introduction
 
-Claude Hindsight is the observability layer for Claude Code. Every time Claude runs a task for you — reading files, editing code, running tests — Hindsight captures the complete picture and makes it explorable.
+Claude Hindsight is the complete monitoring system for Claude Code. Every time Claude runs a task — reading files, editing code, running tests, spawning sub-agents — Hindsight captures everything and makes it explorable through a rich web dashboard.
+
+> **We recommend using the web dashboard** (`claude-hindsight serve --open`) for the best experience. The TUI is useful for quick terminal browsing, but the dashboard provides 3D graph visualization, image previews, syntax-highlighted code, resizable panels, and the full suite of v2.2 features.
 
 ## What you get
 
-- **See every tool call** — the full execution tree: thinking blocks, every Glob, Read, Edit, and Bash call, with inputs and outputs
-- **Catch errors instantly** — failed tool calls are flagged so you can jump straight to what went wrong
-- **Track token usage** — input, output, and cached tokens per session, cost estimates across all projects
-- **Set up once with hooks** — one command installs Claude Code hooks so every future session is captured automatically, no manual steps needed
+- **Two-panel session inspector** — compact execution list on the left, full node detail on the right, with resizable split layout
+- **3D force-directed graph** — visualize entire sessions as interactive WebGL graphs with bloom lighting
+- **Smart tool rendering** — Read, Edit, Bash, Write each get specialized displays with syntax highlighting for 8+ languages
+- **Image previews** — screenshots embedded in tool results render inline with expand-to-lightbox
+- **Cost & error tracking** — track token costs per turn, per model, per project across all sessions
+- **Real-time streaming** — watch sessions live as Claude works, powered by SSE
+- **Set up once with hooks** — one command installs Claude Code hooks so every future session is captured automatically
 
 ---
 
@@ -22,7 +27,7 @@ Claude Hindsight is the observability layer for Claude Code. Every time Claude r
 ### Homebrew (recommended — macOS & Linux)
 
 ```bash
-brew tap Codestz/claude-hindsight
+brew tap codestz/tap
 brew install claude-hindsight
 ```
 
@@ -90,13 +95,14 @@ See the [Hooks Setup](/docs/hooks) page for details, including how to verify the
 
 | Page | What it shows |
 |------|---------------|
-| **Dashboard** | Global stats: session count, total cost, error count, recent sessions, top tools |
-| **Sessions** | Full list with search, project filter, and error filter |
-| **Session Detail** | Complete execution tree for one session — every node, expandable |
-| **Projects** | Per-project analytics |
-| **Activity** | Real-time OTLP event feed (requires hooks) |
-| **Skills** | Skill files discovered in your project directories |
-| **Agents** | Agent definitions discovered in your project directories |
+| **Dashboard** | Global stats, cost by model, conversations/day chart, top tools, recent sessions |
+| **Sessions** | Full list with search, project filter, error filter |
+| **Session Detail** | Two-panel inspector with LIST/GRAPH views, image previews, timeline scrubber |
+| **Projects** | Per-project session count, size, activity |
+| **Activity** | Real-time OTLP event feed with error tracking (requires hooks) |
+| **Prompts** | Scored user prompts across all sessions |
+| **Skills** | Skill files discovered across all scopes |
+| **Agents** | Agent definitions discovered across all scopes |
 
 Full tour: [Web Dashboard](/docs/dashboard)
 

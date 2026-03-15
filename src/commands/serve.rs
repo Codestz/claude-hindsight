@@ -2,52 +2,35 @@
 
 use crate::error::Result;
 
-/// Kill an existing background daemon bound to `port` so `serve` can take over.
-fn kill_existing_daemon(port: u16) {
+/// Check whether something is already listening on `port`.
+fn port_in_use(port: u16) -> bool {
     use std::net::TcpStream;
     use std::time::Duration;
 
-    // Quick check — if nothing is listening, nothing to kill.
-    if TcpStream::connect_timeout(
+    TcpStream::connect_timeout(
         &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
         Duration::from_millis(200),
     )
-    .is_err()
-    {
-        return;
-    }
-
-    // Use lsof to find the PID bound to this port, then kill it.
-    let output = std::process::Command::new("lsof")
-        .args(["-ti", &format!("tcp:{port}")])
-        .output();
-
-    if let Ok(out) = output {
-        let pids = String::from_utf8_lossy(&out.stdout);
-        let my_pid = std::process::id();
-        for pid_str in pids.split_whitespace() {
-            if let Ok(pid) = pid_str.parse::<u32>() {
-                if pid != my_pid {
-                    eprintln!("Stopping existing daemon (PID {pid}) on port {port}...");
-                    let _ = std::process::Command::new("kill")
-                        .arg(pid.to_string())
-                        .output();
-                }
-            }
-        }
-        // Give the old process a moment to release the port.
-        std::thread::sleep(Duration::from_millis(500));
-    }
+    .is_ok()
 }
 
 pub fn run(port: u16, open: bool, otel_port: u16) -> Result<()> {
-    // If an OTLP daemon is already running on the target port, kill it so
-    // `serve` can take over both the dashboard and OTLP receiver.  When the
-    // user later stops `serve`, the next hook invocation will re-spawn a
-    // lightweight background daemon automatically.
-    if otel_port > 0 {
-        kill_existing_daemon(otel_port);
-    }
+    // If an OTLP daemon is already running on the target port, let it be.
+    // Both the daemon and `serve` write to the same SQLite database, so
+    // there is no need to kill the daemon — it will continue collecting
+    // OTLP data while `serve` provides the web dashboard.  The `serve`
+    // server already has /v1/metrics and /v1/logs on its own port (the
+    // dashboard port), so OTLP is still reachable on both addresses.
+    //
+    // Only start the embedded OTLP listener if nothing is on the port.
+    let effective_otel_port = if otel_port > 0 && port_in_use(otel_port) {
+        eprintln!(
+            "OTLP daemon already running on port {otel_port} — reusing it (no restart needed)."
+        );
+        0 // skip starting the OTLP listener inside serve
+    } else {
+        otel_port
+    };
 
     let addr: std::net::SocketAddr =
         format!("0.0.0.0:{port}")
@@ -74,7 +57,7 @@ pub fn run(port: u16, open: bool, otel_port: u16) -> Result<()> {
         .enable_all()
         .build()
         .map_err(|e| crate::error::HindsightError::Config(e.to_string()))?
-        .block_on(async { crate::server::serve(addr, otel_port).await })
+        .block_on(async { crate::server::serve(addr, effective_otel_port).await })
         .map_err(|e| crate::error::HindsightError::Config(e.to_string()))?;
 
     Ok(())

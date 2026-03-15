@@ -1,0 +1,29 @@
+---
+source: tests/snapshot_tests.rs
+expression: redacted_json(node)
+---
+{
+  "color": "cyan",
+  "depth": 0,
+  "has_error": false,
+  "isSidechain": true,
+  "label": " User Explore the codebase structure",
+  "message": {
+    "content": "Explore the codebase structure",
+    "role": "user"
+  },
+  "node_type": "user",
+  "parentUuid": "synth-agent-parent",
+  "progress": null,
+  "prompt_score": 40,
+  "sessionId": "02d344a3-a7f9-478b-bbba-2cce347e2196",
+  "summary": "Explore the codebase structure",
+  "thinking": null,
+  "timestamp": 0,
+  "token_usage": null,
+  "toolUseResult": null,
+  "tool_result": null,
+  "tool_use": null,
+  "type": "user",
+  "uuid": "[uuid]"
+}

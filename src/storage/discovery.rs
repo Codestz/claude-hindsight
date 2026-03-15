@@ -61,7 +61,13 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
     let home = dirs::home_dir()
         .ok_or_else(|| HindsightError::Config("Could not determine home directory".to_string()))?;
 
-    let config = crate::config::Config::load().unwrap_or_default();
+    let config = match crate::config::Config::load() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Warning: failed to load config, using defaults: {}", e);
+            Default::default()
+        }
+    };
 
     // Resolve configured directories: expand ~ and filter to those that exist.
     // Each entry carries (expanded_path, raw_config_path) for source_dir tracking.
@@ -157,18 +163,95 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
 /// Decode project name from directory path
 ///
 /// Converts `-Users-ediazestrada-Documents-Projects-experiment` to `experiment`
+/// Decode a project name from Claude Code's encoded directory name.
+///
+/// Claude Code encodes project paths by replacing `/` with `-`:
+///   `-Users-codestz-Documents-PersonalProjects-claude-hindsight` → `claude-hindsight`
+///   `-Users-codestz-Documents-Projects-dev-container-poc` → `dev-container-poc`
+///   `-Users-codestz` → `codestz`
+///   `-` → (unnamed, root scope)
+///
+/// Strategy: reconstruct the original path, take the last component.
 fn decode_project_name(path: &Path) -> String {
-    path.file_name()
+    let dir_name = path
+        .file_name()
         .and_then(|s| s.to_str())
-        .map(|s| {
-            // Try to extract the last meaningful part
-            if s.starts_with('-') {
-                s.split('-').next_back().unwrap_or(s).to_string()
-            } else {
-                s.to_string()
+        .unwrap_or("");
+
+    // Edge case: just "-" or empty → unnamed project
+    if dir_name.is_empty() || dir_name == "-" {
+        return String::new();
+    }
+
+    // If it doesn't start with '-', it's already a plain name
+    if !dir_name.starts_with('-') {
+        return dir_name.to_string();
+    }
+
+    // The encoded format: `-Users-name-path-to-project` represents `/Users/name/path/to/project`
+    // We need to figure out where the actual path separators were.
+    // Claude Code uses the *full absolute path* encoded with `-` for `/`.
+    // Known path segments that are always single words: Users, Documents, home, var, tmp, etc.
+    // The project name is the last directory component which may contain hyphens.
+    //
+    // Strategy: find the last known parent directory marker and take everything after it.
+    let known_parents = [
+        "PersonalProjects-",
+        "Projects-",
+        "workspace-",
+        "Workspace-",
+        "repos-",
+        "Repos-",
+        "src-",
+        "dev-",
+        "code-",
+        "Code-",
+        "github-",
+        "GitHub-",
+        "git-",
+    ];
+
+    for parent in &known_parents {
+        if let Some(pos) = dir_name.rfind(parent) {
+            let after = &dir_name[pos + parent.len()..];
+            if !after.is_empty() {
+                return after.to_string();
             }
-        })
-        .unwrap_or_else(|| "unknown".to_string())
+        }
+    }
+
+    // Fallback: for paths like `-Users-codestz` (home dir sessions),
+    // take the last segment after the last `-` that follows a known single-word segment
+    // Simple heuristic: split by `-`, skip known path components, rejoin the rest
+    let segments: Vec<&str> = dir_name.split('-').filter(|s| !s.is_empty()).collect();
+
+    // Skip known prefixes: Users, username, Documents, etc.
+    // Find the first segment that's NOT a common path component
+    let skip_words: std::collections::HashSet<&str> = [
+        "Users", "home", "var", "tmp", "opt", "Documents", "Desktop",
+        "Downloads", "Library",
+    ].iter().copied().collect();
+
+    let mut project_start = 0;
+    for (i, seg) in segments.iter().enumerate() {
+        if skip_words.contains(seg) {
+            project_start = i + 1;
+        } else if i > 0 && i == project_start {
+            // This is probably the username — skip one more
+            project_start = i + 1;
+        } else {
+            break;
+        }
+    }
+
+    if project_start < segments.len() {
+        segments[project_start..].join("-")
+    } else if !segments.is_empty() {
+        // All segments were "known" — use the last one (e.g., username)
+        segments.last().unwrap().to_string()
+    } else {
+        String::new()
+    }
 }
 
 #[cfg(test)]
@@ -177,10 +260,34 @@ mod tests {
 
     #[test]
     fn test_decode_project_name() {
-        let path = Path::new("-Users-ediazestrada-Documents-Projects-experiment");
-        assert_eq!(decode_project_name(path), "experiment");
+        // Standard project paths
+        assert_eq!(
+            decode_project_name(Path::new("-Users-codestz-Documents-PersonalProjects-claude-hindsight")),
+            "claude-hindsight"
+        );
+        assert_eq!(
+            decode_project_name(Path::new("-Users-codestz-Documents-PersonalProjects-prompt-evaluator")),
+            "prompt-evaluator"
+        );
+        assert_eq!(
+            decode_project_name(Path::new("-Users-codestz-Documents-PersonalProjects-mcpx")),
+            "mcpx"
+        );
+        assert_eq!(
+            decode_project_name(Path::new("-Users-codestz-Documents-Projects-dev-container-poc")),
+            "dev-container-poc"
+        );
 
-        let path = Path::new("my-project");
-        assert_eq!(decode_project_name(path), "my-project");
+        // Home directory sessions
+        assert_eq!(
+            decode_project_name(Path::new("-Users-codestz")),
+            "codestz"
+        );
+
+        // Root/empty
+        assert_eq!(decode_project_name(Path::new("-")), "");
+
+        // Plain names (non-encoded)
+        assert_eq!(decode_project_name(Path::new("my-project")), "my-project");
     }
 }

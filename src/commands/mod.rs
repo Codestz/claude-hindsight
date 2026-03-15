@@ -14,4 +14,5 @@ pub mod reindex;
 pub mod search;
 pub mod serve;
 pub mod show;
+pub mod update_check;
 pub mod watch;

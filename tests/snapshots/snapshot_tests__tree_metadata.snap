@@ -1,0 +1,9 @@
+---
+source: tests/snapshot_tests.rs
+expression: metadata
+---
+{
+  "max_depth": 7,
+  "root_count": 23,
+  "total_nodes": 42
+}

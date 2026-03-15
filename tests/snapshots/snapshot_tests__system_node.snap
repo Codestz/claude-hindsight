@@ -1,0 +1,30 @@
+---
+source: tests/snapshot_tests.rs
+expression: redacted_json(node)
+---
+{
+  "color": "amber",
+  "compactMetadata": {
+    "postTokens": 50000,
+    "preTokens": 1250000
+  },
+  "depth": 0,
+  "has_error": false,
+  "isSidechain": false,
+  "label": "⟐ Compacted · 1.2M tokens",
+  "message": null,
+  "node_type": "system",
+  "parentUuid": null,
+  "progress": null,
+  "sessionId": "02d344a3-a7f9-478b-bbba-2cce347e2196",
+  "subtype": "compact_boundary",
+  "summary": "Compacted 1.2M tokens",
+  "thinking": null,
+  "timestamp": 0,
+  "token_usage": null,
+  "toolUseResult": null,
+  "tool_result": null,
+  "tool_use": null,
+  "type": "system",
+  "uuid": "[uuid]"
+}

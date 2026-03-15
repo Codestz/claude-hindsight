@@ -22,243 +22,231 @@
   <!-- Scenes container -->
   <div class="demo-scenes">
 
-    <!-- ── Scene 0: You gave Claude a task ──── -->
+    <!-- ── Scene 0: Full Dashboard ──────────── -->
     <div class="demo-scene demo-scene--active" data-scene="0">
       <div class="demo-scene-label">
-        <span class="dim">01 / 04</span>&ensp;<span class="bright">You gave Claude a task</span>
-      </div>
-      <div class="demo-split">
-
-        <!-- Left: Claude Code terminal -->
-        <div class="demo-terminal">
-          <div class="dt-chrome">
-            <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
-            <span class="dt-title">claude · ~/my-app</span>
-          </div>
-          <div class="dt-body">
-            <div class="dt-line" style="--delay:0.05s">
-              <span class="dim">›</span>
-              <span class="bright">Refactor the auth module to use JWT</span>
-            </div>
-            <div class="dt-line" style="--delay:0.55s">
-              <span class="dim">●</span>
-              <span class="muted">Thinking...</span>
-            </div>
-            <div class="dt-line" style="--delay:1.1s">
-              <span class="dim">├─</span>
-              <span class="muted">Reading src/auth/session.ts</span>
-            </div>
-            <div class="dt-line" style="--delay:1.6s">
-              <span class="dim">├─</span>
-              <span class="muted">Scanning for all usages</span>
-            </div>
-            <div class="dt-line" style="--delay:2.1s">
-              <span class="dim">├─</span>
-              <span class="muted">Planning the refactor</span>
-            </div>
-            <div class="dt-line" style="--delay:2.6s">
-              <span class="dim">...</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: Hindsight starting -->
-        <div class="demo-portal">
-          <div class="dp-header">
-            <span class="dp-hlabel">HINDSIGHT PORTAL</span>
-          </div>
-          <div class="dp-waiting">
-            <div class="dim dp-wait-sub">WAITING FOR SESSION</div>
-            <div class="bright cursor dp-wait-main" style="--delay:0.3s">Session starting</div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ── Scene 1: Claude ran 14 tool calls ── -->
-    <div class="demo-scene" data-scene="1">
-      <div class="demo-scene-label">
-        <span class="dim">02 / 04</span>&ensp;<span class="amber">Claude ran 14 tool calls</span>
-      </div>
-      <div class="demo-split">
-
-        <!-- Left: tool call stream -->
-        <div class="demo-terminal">
-          <div class="dt-chrome">
-            <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
-            <span class="dt-title">claude · ~/my-app</span>
-          </div>
-          <div class="dt-body">
-            <div class="dt-line" style="--delay:0.05s">
-              <span class="tbadge tbadge-tool">TOOL</span>
-              <span class="dim">Glob · src/auth/**</span>
-            </div>
-            <div class="dt-line" style="--delay:0.4s">
-              <span class="tbadge tbadge-ok">OK</span>
-              <span class="dim">9 files matched</span>
-            </div>
-            <div class="dt-line" style="--delay:0.75s">
-              <span class="tbadge tbadge-tool">TOOL</span>
-              <span class="dim">Read · session.ts</span>
-            </div>
-            <div class="dt-line" style="--delay:1.1s">
-              <span class="tbadge tbadge-tool">TOOL</span>
-              <span class="dim">Edit · session.ts</span>
-            </div>
-            <div class="dt-line" style="--delay:1.45s">
-              <span class="tbadge tbadge-tool">TOOL</span>
-              <span class="dim">Bash · npm test</span>
-            </div>
-            <div class="dt-line" style="--delay:1.8s">
-              <span class="tbadge tbadge-err">ERR</span>
-              <span class="amber">2 failures</span>
-            </div>
-            <div class="dt-line dt-pulse-line" style="--delay:2.2s">
-              <span class="dim">still running</span><span class="cursor"></span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: execution tree building -->
-        <div class="demo-portal demo-portal--tree">
-          <div class="dp-header">
-            <span class="dp-hlabel"><span class="accent">⚡</span> EXECUTION TRACE</span>
-          </div>
-          <div class="dp-tree">
-            <div class="dp-node" style="--delay:0.1s; padding-left:0">
-              <span class="dim">├─</span>
-              <span class="tbadge tbadge-user">USER</span>
-              <span class="muted">"Refactor the auth module"</span>
-            </div>
-            <div class="dp-node" style="--delay:0.4s; padding-left:0">
-              <span class="dim">└─</span>
-              <span class="tbadge tbadge-asst">ASST</span>
-              <span class="muted">claude-sonnet-4-6</span>
-            </div>
-            <div class="dp-node" style="--delay:0.7s; padding-left:1.25rem">
-              <span class="dim">├─</span>
-              <span class="tbadge tbadge-think">THINK</span>
-              <span class="dim">1,204 tokens</span>
-            </div>
-            <div class="dp-node" style="--delay:1.0s; padding-left:1.25rem">
-              <span class="dim">├─</span>
-              <span class="tbadge tbadge-tool">TOOL</span>
-              <span class="dim">Glob · src/auth/**</span>
-            </div>
-            <div class="dp-node" style="--delay:1.3s; padding-left:2.5rem">
-              <span class="dim">└─</span>
-              <span class="tbadge tbadge-ok">OK</span>
-              <span class="dim">9 files</span>
-            </div>
-            <div class="dp-node" style="--delay:1.6s; padding-left:1.25rem">
-              <span class="dim">├─</span>
-              <span class="tbadge tbadge-tool">TOOL</span>
-              <span class="dim">Bash · npm test</span>
-            </div>
-            <div class="dp-node" style="--delay:1.9s; padding-left:2.5rem">
-              <span class="dim">└─</span>
-              <span class="tbadge tbadge-err">ERR</span>
-              <span class="amber">2 failures</span>
-            </div>
-            <div class="dp-node" style="--delay:2.2s; padding-left:1.25rem">
-              <span class="dim">└─</span>
-              <span class="tbadge tbadge-sub">SUB</span>
-              <span class="amber">TypeScript validator</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- ── Scene 2: Dashboard analytics ──────── -->
-    <div class="demo-scene" data-scene="2">
-      <div class="demo-scene-label">
-        <span class="dim">03 / 04</span>&ensp;<span class="cyan">You saw the whole picture</span>
+        <span class="dim">01 / 04</span>&ensp;<span class="bright">Complete monitoring dashboard</span>
       </div>
       <div class="demo-dashboard">
-
         <div class="dd-header">
-          <div>
-            <div class="dd-meta-label">SESSION</div>
-            <div class="bright" style="font-family:var(--code);font-size:12px;">sess_17b8f9a2</div>
-          </div>
-          <div style="display:flex;gap:1.5rem;">
+          <div style="display:flex;gap:1.5rem;align-items:center;">
             <div>
-              <div class="dd-meta-label">DURATION</div>
-              <div class="bright" style="font-size:15px;font-weight:700;letter-spacing:-0.02em;">4m 12s</div>
+              <div class="dd-meta-label">SESSIONS</div>
+              <div class="bright" style="font-size:18px;font-weight:700;">61</div>
             </div>
             <div>
+              <div class="dd-meta-label">PROJECTS</div>
+              <div class="bright" style="font-size:18px;font-weight:700;">13</div>
+            </div>
+            <div>
+              <div class="dd-meta-label">TOTAL COST</div>
+              <div class="amber" style="font-size:18px;font-weight:700;">$356</div>
+            </div>
+            <div>
+              <div class="dd-meta-label">ERRORS</div>
+              <div style="font-size:18px;font-weight:700;color:var(--red);">283</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:1rem;align-items:center;">
+            <div>
               <div class="dd-meta-label">MODEL</div>
-              <div class="bright" style="font-family:var(--code);font-size:10px;">claude-sonnet-4-6</div>
+              <div style="font-family:var(--code);font-size:9px;color:var(--accent);border:1px solid rgba(129,140,248,0.25);padding:1px 6px;">opus-4-6</div>
             </div>
           </div>
         </div>
-
         <div class="dd-body">
-
           <!-- Token breakdown -->
-          <div class="dd-section">
-            <div class="dd-section-label">TOKEN BREAKDOWN</div>
-            <div class="dd-bars">
-              <div class="dd-bar-row">
-                <span class="dd-bar-lbl">Input</span>
-                <span class="dd-bar-wrap"><span class="dd-bar-fill" style="width:55%"></span></span>
-                <span class="dd-bar-val bright">18k</span>
-              </div>
-              <div class="dd-bar-row">
-                <span class="dd-bar-lbl">Output</span>
-                <span class="dd-bar-wrap"><span class="dd-bar-fill dd-bar-o" style="width:13%"></span></span>
-                <span class="dd-bar-val bright">4.2k</span>
-              </div>
-              <div class="dd-bar-row">
-                <span class="dd-bar-lbl">Cache</span>
-                <span class="dd-bar-wrap"><span class="dd-bar-fill dd-bar-c" style="width:34%"></span></span>
-                <span class="dd-bar-val bright">11k</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Top tools -->
           <div class="dd-section">
             <div class="dd-section-label">TOP TOOLS</div>
             <div class="dd-tools">
               <div class="dd-tool-row">
-                <span class="dd-tool-lbl">Edit</span>
-                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:84%;background:var(--accent)"></span></span>
-                <span class="dd-tool-val" style="color:var(--accent)">6</span>
-              </div>
-              <div class="dd-tool-row">
-                <span class="dd-tool-lbl">Glob</span>
-                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:56%;background:var(--cyan)"></span></span>
-                <span class="dd-tool-val" style="color:var(--cyan)">4</span>
-              </div>
-              <div class="dd-tool-row">
                 <span class="dd-tool-lbl">Bash</span>
-                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:42%;background:var(--amber)"></span></span>
-                <span class="dd-tool-val" style="color:var(--amber)">3</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:90%;background:var(--accent)"></span></span>
+                <span class="dd-tool-val" style="color:var(--accent)">1,821</span>
               </div>
               <div class="dd-tool-row">
                 <span class="dd-tool-lbl">Read</span>
-                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:14%;background:var(--text-3)"></span></span>
-                <span class="dd-tool-val" style="color:var(--text-3)">1</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:64%;background:var(--cyan)"></span></span>
+                <span class="dd-tool-val" style="color:var(--cyan)">1,264</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl">Edit</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:45%;background:var(--amber)"></span></span>
+                <span class="dd-tool-val" style="color:var(--amber)">894</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl">Write</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:27%;background:var(--green)"></span></span>
+                <span class="dd-tool-val" style="color:var(--green)">540</span>
               </div>
             </div>
           </div>
-
-          <!-- Stats row -->
-          <div class="dd-stats">
-            <div class="dd-stat dd-stat--err">
-              <span>⚠</span>
-              <span>1 error detected</span>
-            </div>
-            <div class="dd-stat">
-              <span class="dim">Subagents</span>
-              <span class="bright" style="font-weight:700;margin-left:0.375rem;">1</span>
+          <!-- Cost by model -->
+          <div class="dd-section">
+            <div class="dd-section-label">COST BY MODEL</div>
+            <div class="dd-tools">
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl" style="width:56px">opus-4-6</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:85%;background:var(--accent)"></span></span>
+                <span class="dd-tool-val bright">$279</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl" style="width:56px">sonnet-4-6</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:20%;background:var(--amber)"></span></span>
+                <span class="dd-tool-val bright">$62</span>
+              </div>
+              <div class="dd-tool-row">
+                <span class="dd-tool-lbl" style="width:56px">haiku-4-5</span>
+                <span class="dd-tool-bar"><span class="dd-tool-fill" style="width:5%;background:var(--green)"></span></span>
+                <span class="dd-tool-val bright">$15</span>
+              </div>
             </div>
           </div>
+          <!-- Stats row -->
+          <div class="dd-stats">
+            <div class="dd-stat">
+              <span class="dim">Conversations/day</span>
+              <span class="bright" style="font-weight:700;margin-left:0.375rem;">57</span>
+            </div>
+            <div class="dd-stat">
+              <span class="dim">Peak</span>
+              <span class="bright" style="font-weight:700;margin-left:0.375rem;">14</span>
+            </div>
+            <div class="dd-stat">
+              <span class="dim">Cache Read</span>
+              <span class="cyan" style="font-weight:700;margin-left:0.375rem;">465.7M</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- ── Scene 1: Two-panel session inspector ── -->
+    <div class="demo-scene" data-scene="1">
+      <div class="demo-scene-label">
+        <span class="dim">02 / 04</span>&ensp;<span class="amber">Two-panel session inspector</span>
+      </div>
+      <div class="demo-split">
+
+        <!-- Left: execution list -->
+        <div class="demo-terminal" style="background:var(--bg)">
+          <div class="dt-chrome">
+            <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+            <span class="dt-title">Execution List</span>
+          </div>
+          <div class="dt-body" style="gap:0;padding:0">
+            {[
+              { badge: "tbadge-user", label: "user", text: "Refactor the auth module", delay: "0.05s" },
+              { badge: "tbadge-think", label: "think", text: "Planning the approach...", delay: "0.3s" },
+              { badge: "tbadge-tool", label: "tool", text: "Read · session.ts", delay: "0.55s", tool: true },
+              { badge: "tbadge-result", label: "result", text: "148 lines · typescript", delay: "0.8s" },
+              { badge: "tbadge-tool", label: "tool", text: "Edit · session.ts", delay: "1.05s", active: true, tool: true },
+              { badge: "tbadge-result", label: "result", text: "−12 +28 lines", delay: "1.3s" },
+              { badge: "tbadge-tool", label: "tool", text: "Bash · npm test", delay: "1.55s", tool: true },
+              { badge: "tbadge-err", label: "result", text: "Exit code 1 · 2 failures", delay: "1.8s", err: true },
+              { badge: "tbadge-sub", label: "task", text: "Agent: TypeScript validator", delay: "2.05s" },
+            ].map((r) => (
+              <div class={`dt-line`} style={`--delay:${r.delay};padding:3px 10px;border-left:2px solid ${r.active ? 'var(--accent)' : 'transparent'};${r.active ? 'background:rgba(129,140,248,0.06)' : ''}`}>
+                <span class={`tbadge ${r.badge}`} style="font-size:7px;padding:0 4px;">{r.label}</span>
+                {r.tool && <span class="amber" style="font-size:9px;font-family:var(--code)">{r.text.split(' · ')[0]}</span>}
+                <span class={r.err ? "amber" : "dim"} style="font-size:10px">{r.tool ? r.text.split(' · ')[1] : r.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Right: node detail panel -->
+        <div class="demo-portal">
+          <div class="dp-header" style="display:flex;justify-content:space-between">
+            <span class="dp-hlabel"><span class="amber">●</span> Tool · Edit</span>
+            <span style="display:flex;gap:4px">
+              <span style="font-family:var(--code);font-size:8px;color:var(--text-3);border:1px solid var(--border-2);padding:1px 5px;">RAW</span>
+              <span style="font-family:var(--code);font-size:8px;color:var(--accent);border:1px solid rgba(129,140,248,0.3);padding:1px 5px;">→ RESULT</span>
+            </span>
+          </div>
+          <div style="padding:10px 12px;font-family:var(--code)">
+            <div style="font-size:14px;font-weight:600;color:var(--amber);margin-bottom:8px">Edit</div>
+            <div style="font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">EDIT</div>
+            <div style="background:var(--bg-2);border:1px solid var(--border);overflow:hidden;font-size:10px;">
+              <div style="display:flex;justify-content:space-between;padding:5px 10px;background:var(--bg-3);border-bottom:1px solid var(--border);">
+                <span class="muted">session.ts</span>
+                <span><span style="color:var(--red)">−12</span> <span style="color:var(--green)">+28</span></span>
+              </div>
+              <div style="padding:4px 0">
+                <div style="padding:1px 10px;background:rgba(255,69,69,0.05);border-left:2px solid rgba(255,69,69,0.4)"><span style="color:rgba(255,100,100,0.5);width:20px;display:inline-block">−</span><span class="dim">const session = cookies.get('sid');</span></div>
+                <div style="padding:1px 10px;background:rgba(52,211,153,0.04);border-left:2px solid rgba(52,211,153,0.3)"><span style="color:rgba(0,220,100,0.5);width:20px;display:inline-block">+</span><span class="bright">const token = jwt.verify(bearer);</span></div>
+                <div style="padding:1px 10px;background:rgba(52,211,153,0.04);border-left:2px solid rgba(52,211,153,0.3)"><span style="color:rgba(0,220,100,0.5);width:20px;display:inline-block">+</span><span class="bright">const session = token.payload;</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Scene 2: 3D Graph View ────────────── -->
+    <div class="demo-scene" data-scene="2">
+      <div class="demo-scene-label">
+        <span class="dim">03 / 04</span>&ensp;<span class="cyan">Interactive 3D session graph</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div style="flex:1;background:var(--bg);position:relative;overflow:hidden;">
+          <!-- Simulated 3D graph with CSS -->
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+            <!-- Constellation of nodes -->
+            <svg viewBox="0 0 400 300" style="width:100%;height:100%;max-width:400px;" preserveAspectRatio="xMidYMid meet">
+              <!-- Edges -->
+              <line x1="200" y1="150" x2="120" y2="80" stroke="#818CF8" stroke-width="0.5" opacity="0.3"/>
+              <line x1="200" y1="150" x2="280" y2="90" stroke="#818CF8" stroke-width="0.5" opacity="0.3"/>
+              <line x1="200" y1="150" x2="150" y2="220" stroke="#818CF8" stroke-width="0.5" opacity="0.3"/>
+              <line x1="200" y1="150" x2="290" y2="200" stroke="#818CF8" stroke-width="0.5" opacity="0.3"/>
+              <line x1="200" y1="150" x2="100" y2="180" stroke="#818CF8" stroke-width="0.5" opacity="0.3"/>
+              <line x1="120" y1="80" x2="80" y2="50" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="120" y1="80" x2="160" y2="40" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="280" y1="90" x2="320" y2="60" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="280" y1="90" x2="340" y2="120" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="150" y1="220" x2="110" y2="260" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="150" y1="220" x2="190" y2="260" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="290" y1="200" x2="330" y2="240" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <line x1="100" y1="180" x2="60" y2="210" stroke="#818CF8" stroke-width="0.4" opacity="0.2"/>
+              <!-- Glow -->
+              <circle cx="200" cy="150" r="30" fill="#818CF8" opacity="0.06"/>
+              <!-- Leaf nodes -->
+              <circle cx="80" cy="50" r="3" fill="#38BDF8" opacity="0.7"><animate attributeName="opacity" values="0.5;0.9;0.5" dur="3s" repeatCount="indefinite"/></circle>
+              <circle cx="160" cy="40" r="2.5" fill="#F59E0B" opacity="0.7"/>
+              <circle cx="320" cy="60" r="3" fill="#34D399" opacity="0.7"/>
+              <circle cx="340" cy="120" r="2" fill="#F59E0B" opacity="0.6"/>
+              <circle cx="110" cy="260" r="2.5" fill="#38BDF8" opacity="0.6"/>
+              <circle cx="190" cy="260" r="2" fill="#A78BFA" opacity="0.6"/>
+              <circle cx="330" cy="240" r="3" fill="#FB7185" opacity="0.7"/>
+              <circle cx="60" cy="210" r="2" fill="#34D399" opacity="0.6"/>
+              <!-- Branch nodes -->
+              <circle cx="120" cy="80" r="5" fill="#38BDF8" opacity="0.8"/>
+              <circle cx="280" cy="90" r="4.5" fill="#34D399" opacity="0.8"/>
+              <circle cx="150" cy="220" r="4" fill="#F59E0B" opacity="0.8"/>
+              <circle cx="290" cy="200" r="3.5" fill="#A78BFA" opacity="0.7"/>
+              <circle cx="100" cy="180" r="3" fill="#38BDF8" opacity="0.7"/>
+              <!-- Center node -->
+              <circle cx="200" cy="150" r="8" fill="#818CF8"><animate attributeName="r" values="7.5;8.5;7.5" dur="2s" repeatCount="indefinite"/></circle>
+              <circle cx="200" cy="150" r="12" fill="none" stroke="#818CF8" stroke-width="0.5" opacity="0.3"/>
+              <circle cx="198" cy="148" r="2.5" fill="white" opacity="0.25"/>
+            </svg>
+          </div>
+          <!-- Legend overlay -->
+          <div style="position:absolute;bottom:10px;left:10px;display:flex;gap:8px;padding:4px 8px;background:rgba(5,5,5,0.8);border:1px solid var(--border);font-family:var(--code);font-size:8px;">
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:5px;height:5px;border-radius:50%;background:#38BDF8;display:inline-block"></span><span class="dim">User</span></span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:5px;height:5px;border-radius:50%;background:#34D399;display:inline-block"></span><span class="dim">Asst</span></span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:5px;height:5px;border-radius:50%;background:#F59E0B;display:inline-block"></span><span class="dim">Tool</span></span>
+            <span style="display:flex;align-items:center;gap:3px"><span style="width:5px;height:5px;border-radius:50%;background:#A78BFA;display:inline-block"></span><span class="dim">Think</span></span>
+          </div>
+          <!-- Control hint -->
+          <div style="position:absolute;top:8px;right:8px;font-family:var(--code);font-size:8px;color:var(--text-3);background:rgba(5,5,5,0.7);padding:2px 6px;border:1px solid var(--border);">
+            Drag: orbit · Scroll: zoom · Click: inspect
+          </div>
+          <!-- Node count -->
+          <div style="position:absolute;top:8px;left:8px;font-family:var(--code);font-size:9px;color:var(--text-3);">
+            168 nodes · radial layout
+          </div>
         </div>
       </div>
     </div>
@@ -350,10 +338,10 @@
 
   <!-- Scene indicator dots -->
   <div class="demo-dots" role="tablist" aria-label="Demo scenes">
-    <button class="demo-dot demo-dot--active" data-target="0" role="tab" aria-selected="true" aria-label="Scene 1: You gave Claude a task"></button>
-    <button class="demo-dot" data-target="1" role="tab" aria-selected="false" aria-label="Scene 2: Claude ran 14 tool calls"></button>
-    <button class="demo-dot" data-target="2" role="tab" aria-selected="false" aria-label="Scene 3: You saw the whole picture"></button>
-    <button class="demo-dot" data-target="3" role="tab" aria-selected="false" aria-label="Scene 4: Set it up once"></button>
+    <button class="demo-dot demo-dot--active" data-target="0" role="tab" aria-selected="true" aria-label="Scene 1: Dashboard"></button>
+    <button class="demo-dot" data-target="1" role="tab" aria-selected="false" aria-label="Scene 2: Session Inspector"></button>
+    <button class="demo-dot" data-target="2" role="tab" aria-selected="false" aria-label="Scene 3: 3D Graph"></button>
+    <button class="demo-dot" data-target="3" role="tab" aria-selected="false" aria-label="Scene 4: One-command setup"></button>
   </div>
 
 </div><!-- /#session-demo -->

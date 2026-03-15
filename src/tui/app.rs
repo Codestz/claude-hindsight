@@ -5,7 +5,7 @@
 use crate::analyzer::prompt_detect;
 use crate::analyzer::{build_simple_tree, SessionAnalytics, TreeNode};
 use crate::error::Result;
-use crate::parser::models::ContentBlock;
+use crate::parser::models::{ContentBlock, NodeType};
 use crate::parser::Session;
 use crate::tui::search::SearchState;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
@@ -247,13 +247,13 @@ impl App {
         let prompt_scores = {
             let mut scores = HashMap::new();
             let mut seen_first_user = false;
-            let mut prev_node_type: Option<&str> = None;
+            let mut prev_node_type: Option<NodeType> = None;
             for node in &session.nodes {
-                if node.node_type == "user" {
+                if node.node_type == NodeType::User {
                     if let Some(ref uuid) = node.uuid {
                         let is_first = !seen_first_user;
                         let is_after_assistant =
-                            prev_node_type.map(|t| t == "assistant").unwrap_or(false);
+                            prev_node_type.map(|t| t == NodeType::Assistant).unwrap_or(false);
                         let score =
                             prompt_detect::prompt_score(node, is_first, is_after_assistant);
                         if score > 0 {
@@ -262,7 +262,7 @@ impl App {
                         seen_first_user = true;
                     }
                 }
-                prev_node_type = Some(&node.node_type);
+                prev_node_type = Some(node.node_type);
             }
             scores
         };
@@ -282,66 +282,21 @@ impl App {
         let mut tree_state = tui_tree_widget::TreeState::default();
         tree_state.select_first();
 
-        // ── #7 / #14: collect error nodes ───────────────────────────────
-        // Broadened to match Session::new() error detection: top-level tool_result.is_error,
-        // <tool_use_error> tags in content, and ContentBlock::ToolResult with is_error.
+        // ── Collect error nodes using consolidated has_error() ────────────
         let (error_node_uuids, error_nodes_info) = {
             let mut uuids = vec![];
             let mut info = vec![];
             for node in &session.nodes {
-                let tr = node.tool_result.as_ref();
-                let flag_error = tr.and_then(|r| r.is_error).unwrap_or(false);
-                let tag_error = tr
-                    .and_then(|r| r.content.as_deref())
-                    .map(|c| c.contains("<tool_use_error>"))
-                    .unwrap_or(false);
-                let block_error = node
-                    .message
-                    .as_ref()
-                    .map(|m| {
-                        m.content_blocks().iter().any(|b| match b {
-                            ContentBlock::ToolResult {
-                                content, is_error, ..
-                            } => {
-                                is_error.unwrap_or(false)
-                                    || content
-                                        .as_ref()
-                                        .and_then(|v| v.as_str())
-                                        .map(|s| s.contains("<tool_use_error>"))
-                                        .unwrap_or(false)
-                            }
-                            _ => false,
-                        })
-                    })
-                    .unwrap_or(false);
-
-                let is_err =
-                    node.node_type == "error" || flag_error || tag_error || block_error;
-
-                if is_err {
+                if node.has_error() {
                     if let Some(ref uuid) = node.uuid {
-                        let desc: String = if node.node_type == "error" {
-                            node.extra
-                                .as_ref()
-                                .and_then(|e| e.get("error"))
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("Unknown error")
-                                .chars()
-                                .take(50)
-                                .collect()
-                        } else {
-                            node.tool_result
-                                .as_ref()
-                                .and_then(|r| {
-                                    r.error
-                                        .as_ref()
-                                        .or(r.content.as_ref())
-                                })
-                                .map(|e| e.chars().take(50).collect::<String>())
-                                .unwrap_or_else(|| "Tool error".to_string())
-                        };
+                        let desc: String = node
+                            .tool_result
+                            .as_ref()
+                            .and_then(|r| r.error.as_ref().or(r.content.as_ref()))
+                            .map(|e| e.chars().take(50).collect::<String>())
+                            .unwrap_or_else(|| "Tool error".to_string());
                         uuids.push(uuid.clone());
-                        info.push((uuid.clone(), node.node_type.clone(), desc));
+                        info.push((uuid.clone(), node.node_type.to_string(), desc));
                     }
                 }
             }
@@ -577,19 +532,11 @@ impl App {
 
         while let Some(uuid) = current_uuid {
             if let Some(node) = self.uuid_to_node.get(&uuid) {
-                let label = match node.node.node_type.as_str() {
-                    "user" => "User".to_string(),
-                    "assistant" => "Assistant".to_string(),
-                    "tool_use" => node
-                        .node
-                        .tool_use
-                        .as_ref()
-                        .map(|t| format!("Tool:{}", t.name))
-                        .unwrap_or_else(|| "Tool".to_string()),
-                    "tool_result" => "Result".to_string(),
-                    "thinking" => "Think".to_string(),
-                    "progress" => "Progress".to_string(),
-                    _ => node.node.node_type.clone(),
+                let label = match node.node.node_type {
+                    NodeType::User => "User".to_string(),
+                    NodeType::Assistant => "Assistant".to_string(),
+                    NodeType::Progress => "Progress".to_string(),
+                    _ => node.node.node_type.to_string(),
                 };
                 path.push(label);
                 current_uuid = node.node.parent_uuid.clone();

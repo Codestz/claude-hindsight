@@ -20,12 +20,15 @@
     --text-2:    #909090;
     --text-3:    #606060;
 
-    --accent:    #00FF88;
-    --amber:     #FFB547;
-    --cyan:      #00C8FF;
+    --accent:    #818CF8;
+    --amber:     #F59E0B;
+    --cyan:      #38BDF8;
     --purple:    #A78BFA;
-    --red:       #FF4545;
-    --green:     #3FB950;
+    --red:       #FB7185;
+    --green:     #34D399;
+    --emerald:   #34D399;
+    --rose:      #FB7185;
+    --indigo:    #818CF8;
 
     /* ── Fonts ───────────────────────────────── */
     --display:   "Inter", system-ui, sans-serif;
@@ -90,8 +93,8 @@
 .dot--amber { background: var(--amber); }
 
 @keyframes dot-pulse {
-  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,136,0.45); }
-  50%      { opacity: 0.8; box-shadow: 0 0 0 5px rgba(0,255,136,0); }
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(129,140,248,0.45); }
+  50%      { opacity: 0.8; box-shadow: 0 0 0 5px rgba(129,140,248,0); }
 }
 
 /* ── Blinking cursor ──────────────────────── */
@@ -144,11 +147,11 @@
 .btn-fill {
   padding: 0.625rem 1.25rem;
   background: var(--accent);
-  color: #000;
+  color: #fff;
 }
 .btn-fill:hover {
   opacity: 0.9;
-  box-shadow: 0 0 24px rgba(0,255,136,0.28);
+  box-shadow: 0 0 24px rgba(129,140,248,0.35);
 }
 .btn-outline {
   padding: 0.625rem 1.25rem;
@@ -207,9 +210,9 @@
 }
 .tbadge-user   { background: rgba(222,222,222,0.05); color: #777; }
 .tbadge-asst   { background: rgba(222,222,222,0.05); color: #777; }
-.tbadge-think  { background: rgba(0,255,136,0.10);   color: #00FF88; }
+.tbadge-think  { background: rgba(129,140,248,0.10);   color: #818CF8; }
 .tbadge-tool   { background: rgba(255,181,71,0.10);  color: #FFB547; }
 .tbadge-result { background: rgba(0,200,255,0.08);   color: #00C8FF; }
 .tbadge-sub    { background: rgba(167,139,250,0.10); color: #A78BFA; }
-.tbadge-ok     { background: rgba(0,255,136,0.10);   color: #00FF88; }
+.tbadge-ok     { background: rgba(129,140,248,0.10);   color: #818CF8; }
 .tbadge-err    { background: rgba(255,69,69,0.10);   color: #FF4545; }

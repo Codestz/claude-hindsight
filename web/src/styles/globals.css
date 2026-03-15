@@ -2,51 +2,92 @@
 @config "../../tailwind.config.ts";
 
 /* ============================================================
-   HINDSIGHT — Design System
-   Palette: Near-black + Green accent
+   HINDSIGHT — "Obsidian Prism" Design System
+
+   Philosophy: An obsidian lens — dark, precise, revealing hidden
+   structure through refracted light. Every color is semantic.
+   Nothing decorative. A precision instrument.
+
+   Color theory:
+     Indigo  = AI intelligence, system actions
+     Amber   = Human attention, cost, warnings
+     Emerald = Success, health, completion
+     Rose    = Errors, failures, things that broke
+     Sky     = Information, tokens, data flow
+     Violet  = Thinking, reasoning, AI internal process
+
+   Surfaces: Three-tier warm-black elevation (not pure black —
+   avoids halation for ~47% of astigmatic users).
    ============================================================ */
 
 @layer base {
   :root {
     color-scheme: dark;
 
-    /* ── Backgrounds ────────────────────────────────────────── */
-    --bg-0: #050505;
-    --bg-1: #090909;
-    --bg-2: #0E0E0E;
-    --bg-3: #141414;
+    /* ── Surfaces ─ warm blue-black, never pure #000 ──────── */
+    --bg-0: #0C0C0F;
+    --bg-1: #111116;
+    --bg-2: #18181E;
+    --bg-3: #1F1F28;
 
-    /* ── Borders ────────────────────────────────────────────── */
-    --border-1: #1C1C1C;
-    --border-2: #282828;
-    --border-3: #383838;
+    /* ── Borders ─ subtle, warm ───────────────────────────── */
+    --border-1: rgba(255, 255, 255, 0.06);
+    --border-2: rgba(255, 255, 255, 0.09);
+    --border-3: rgba(255, 255, 255, 0.14);
 
-    /* ── Text ───────────────────────────────────────────────── */
-    --text-1: #E8E8E8;
-    --text-2: #B0B0B0;
-    --text-3: #707070;
+    /* ── Text ─ warm whites, not clinical ─────────────────── */
+    --text-1: #ECECF1;
+    --text-2: #A1A1B5;
+    --text-3: #63637A;
 
-    /* ── Accent palette ─────────────────────────────────────── */
-    --green:  #00FF88;
-    --amber:  #FFB547;
-    --cyan:   #00C8FF;
-    --purple: #A78BFA;
-    --red:    #FF4545;
+    /* ── Semantic palette ─ desaturated for dark, no neon ─── */
+    --indigo:  #818CF8;
+    --amber:   #F59E0B;
+    --emerald: #34D399;
+    --rose:    #FB7185;
+    --sky:     #38BDF8;
+    --violet:  #A78BFA;
 
-    /* ── Semantic shortcuts ─────────────────────────────────── */
-    --accent: var(--green);
+    /* ── Semantic shortcuts ───────────────────────────────── */
+    --accent: var(--indigo);
     --warn:   var(--amber);
-    --info:   var(--cyan);
-    --error:  var(--red);
+    --info:   var(--sky);
+    --error:  var(--rose);
+    --success: var(--emerald);
 
-    /* ── Typography ─────────────────────────────────────────── */
-    --font-sans: "Inter", system-ui, sans-serif;
-    --font-mono: "JetBrains Mono", monospace;
+    /* legacy aliases used by existing components */
+    --green:  var(--emerald);
+    --cyan:   var(--sky);
+    --purple: var(--violet);
+    --red:    var(--rose);
 
-    /* ── Radii ──────────────────────────────────────────────── */
-    --radius-sm: 3px;
-    --radius-md: 5px;
-    --radius-lg: 8px;
+    /* ── Typography ───────────────────────────────────────── */
+    --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+    --font-mono: "Geist Mono", "SF Mono", "Fira Code", monospace;
+
+    /* ── Radii ─ slightly larger for modern feel ──────────── */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 10px;
+    --radius-xl: 14px;
+
+    /* ── Shadows ─ layered for realistic depth ────────────── */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+
+    /* ── Spacing ─ 8px grid ──────────────────────────────── */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* ── Transitions ─────────────────────────────────────── */
+    --transition-fast: 0.1s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.35s ease;
   }
 
   /* ── Reset ──────────────────────────────────────────────── */
@@ -73,16 +114,23 @@
   }
 
   ::selection {
-    background: rgba(0, 255, 136, 0.18);
+    background: rgba(129, 140, 248, 0.25);
     color: var(--text-1);
   }
 
   ::-webkit-scrollbar        { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track  { background: transparent; }
-  ::-webkit-scrollbar-thumb  { background: var(--border-2); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-3); }
+  ::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.08); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.14); }
 
   a { color: inherit; text-decoration: none; }
+
+  /* ── Focus ring ─ indigo, consistent ────────────────────── */
+  :focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 }
 
 /* ── Thinking animations ─────────────────────────────────────── */
@@ -95,3 +143,59 @@
   0%, 100% { transform: scale(1);    opacity: 0.4; }
   50%       { transform: scale(1.4); opacity: 1; }
 }
+
+/* ── Staggered entry for dashboard widgets ────────────────────── */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Subtle shimmer for loading states ────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── Fade-scale-in for modals/overlays ─────────────────────── */
+@keyframes fadeScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Slide-in from right (drawer) ─────────────────────────── */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Simple fade-in (backdrop) ────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Staggered entry utility ───────────────────────────────── */
+.animate-in {
+  opacity: 0;
+  animation: fadeSlideIn 0.4s ease forwards;
+  animation-delay: var(--delay, 0s);
+}
+

@@ -33,6 +33,7 @@ function SkillCard({ skill }: { skill: SkillConfig }) {
           flexDirection: "column",
           gap: "12px",
           height: "100%",
+          boxShadow: hovered ? "var(--shadow-md)" : "var(--shadow-sm)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -75,17 +76,17 @@ function SkillCard({ skill }: { skill: SkillConfig }) {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "auto" }}>
           {skill.user_invocable && (
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--green)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--green)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-sm)" }}>
               <Terminal size={11} />/{skill.name}
             </span>
           )}
           {skill.model && (
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-sm)" }}>
               <Cpu size={11} />{skill.model.replace(/^claude-/, "").replace(/-\d{8}$/, "")}
             </span>
           )}
           {skill.allowed_tools && skill.allowed_tools.length > 0 && (
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-sm)" }}>
               <Wrench size={11} />{skill.allowed_tools.length} tools
             </span>
           )}
@@ -119,6 +120,7 @@ function MergedSkillCard({ group }: { group: SkillGroup }) {
           flexDirection: "column",
           gap: "12px",
           height: "100%",
+          boxShadow: hovered ? "var(--shadow-md)" : "var(--shadow-sm)",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -163,17 +165,17 @@ function MergedSkillCard({ group }: { group: SkillGroup }) {
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "auto" }}>
           {first.user_invocable && (
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--green)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--green)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-sm)" }}>
               <Terminal size={11} />/{group.name}
             </span>
           )}
           {first.model && (
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-sm)" }}>
               <Cpu size={11} />{first.model.replace(/^claude-/, "").replace(/-\d{8}$/, "")}
             </span>
           )}
           {first.allowed_tools && first.allowed_tools.length > 0 && (
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)", background: "var(--bg-2)", padding: "2px 8px", borderRadius: "var(--radius-sm)" }}>
               <Wrench size={11} />{first.allowed_tools.length} tools
             </span>
           )}
@@ -249,11 +251,13 @@ export default function SkillsPage() {
         />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "12px" }}>
-          {filtered.map((group) =>
-            group.items.length === 1
-              ? <SkillCard key={group.items[0].file_path} skill={group.items[0]} />
-              : <MergedSkillCard key={group.name} group={group} />
-          )}
+          {filtered.map((group, i) => (
+            <div key={group.name} className="animate-in" style={{ "--delay": `${i * 0.06}s` } as React.CSSProperties}>
+              {group.items.length === 1
+                ? <SkillCard skill={group.items[0]} />
+                : <MergedSkillCard group={group} />}
+            </div>
+          ))}
         </div>
       )}
     </PageShell>

@@ -7,7 +7,16 @@ export function formatBytes(n: number): string {
   return `${n} B`;
 }
 
-// Unix seconds → human-readable relative time
+// Unix seconds → precise relative time (includes seconds)
+export function relativeTime(unixSeconds: number): string {
+  const diff = Math.floor(Date.now() / 1000) - unixSeconds;
+  if (diff < 60)     return `${diff}s ago`;
+  if (diff < 3_600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86_400) return `${Math.floor(diff / 3_600)}h ago`;
+  return `${Math.floor(diff / 86_400)}d ago`;
+}
+
+// Unix seconds → human-readable relative time (coarser, for display)
 export function timeAgo(unixSeconds: number): string {
   const diff = Math.floor(Date.now() / 1000) - unixSeconds;
   if (diff < 60)     return "just now";
@@ -54,6 +63,35 @@ export function extractMcpServers(topTools: [string, number][]): [string, number
     }
   }
   return Object.entries(servers).sort((a, b) => b[1] - a[1]) as [string, number][];
+}
+
+// Milliseconds timestamp → HH:MM:SS
+export function formatTimestamp(ms: number): string {
+  return new Date(ms).toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+// Time-of-day greeting
+export function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return s > 0 ? `${h}h ${m}m ${s}s` : `${h}h ${m}m`;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
 // Show last 2 path segments: "/a/b/c/d.ts" → ".../c/d.ts"

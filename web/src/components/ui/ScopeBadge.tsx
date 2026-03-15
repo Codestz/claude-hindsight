@@ -2,7 +2,7 @@ export function ScopeBadge({ scope }: { scope: string }) {
   const isGlobal = scope === "global";
   const isPlugin = scope.startsWith("plugin:");
   const label = isPlugin ? scope.replace("plugin:", "") : scope;
-  const color = isGlobal ? "var(--cyan)" : isPlugin ? "var(--purple)" : "var(--amber)";
+  const color = isGlobal ? "var(--info)" : isPlugin ? "var(--violet)" : "var(--amber)";
 
   return (
     <span
@@ -13,7 +13,7 @@ export function ScopeBadge({ scope }: { scope: string }) {
         color,
         background: `color-mix(in srgb, ${color} 12%, transparent)`,
         border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
-        borderRadius: "var(--radius-sm)",
+        borderRadius: "var(--radius-md)",
         padding: "1px 6px",
       }}
     >

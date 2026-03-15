@@ -4,26 +4,14 @@ import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { SessionFile } from "@/lib/types";
 import { shortId, shortModel, timeAgo } from "@/lib/utils";
-
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
-
-// Quick-links shown before the user types anything
-const QUICK_LINKS = [
-  { label: "Dashboard", href: "/", category: "Navigate" },
-  { label: "Activity", href: "/activity", category: "Navigate" },
-  { label: "Projects", href: "/projects", category: "Navigate" },
-  { label: "Sessions", href: "/sessions", category: "Navigate" },
-  { label: "Prompts", href: "/prompts", category: "Navigate" },
-];
+import type { CommandPaletteProps } from "./types";
+import { QUICK_LINKS } from "./config";
 
 type ResultItem =
   | { kind: "link"; label: string; href: string; category: string }
   | { kind: "session"; session: SessionFile };
 
-export function CommandPalette({ open, onClose }: Props) {
+export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [sessionResults, setSessionResults] = useState<SessionFile[]>([]);
@@ -172,7 +160,8 @@ export function CommandPalette({ open, onClose }: Props) {
           background: "var(--bg-1)",
           border: "1px solid var(--border-2)",
           borderRadius: "var(--radius-lg)",
-          boxShadow: "0 32px 80px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0,255,136,0.06)",
+          boxShadow: "0 32px 80px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(129, 140, 248, 0.08)",
+          animation: "fadeScaleIn 0.15s ease",
           overflow: "hidden",
         }}
       >
@@ -228,7 +217,7 @@ export function CommandPalette({ open, onClose }: Props) {
                       fontSize: "13px",
                       color: "var(--text-1)",
                       cursor: "pointer",
-                      background: globalIdx === selectedIndex ? "var(--bg-2)" : "transparent",
+                      background: globalIdx === selectedIndex ? "rgba(129, 140, 248, 0.08)" : "transparent",
                       transition: "background 0.1s",
                       textDecoration: "none",
                     }}
@@ -263,7 +252,7 @@ export function CommandPalette({ open, onClose }: Props) {
                       gap: "2px",
                       padding: "8px 16px",
                       cursor: "pointer",
-                      background: globalIdx === selectedIndex ? "var(--bg-2)" : "transparent",
+                      background: globalIdx === selectedIndex ? "rgba(129, 140, 248, 0.08)" : "transparent",
                       transition: "background 0.1s",
                     }}
                   >

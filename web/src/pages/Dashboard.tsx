@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type {
@@ -9,7 +9,8 @@ import type {
   SessionFile,
   TelemetrySummary,
 } from "@/lib/types";
-import { formatBytes, formatCost, formatTokens, shortId, extractMcpServers, shortPath } from "@/lib/utils";
+import { formatBytes, formatCost, formatTokens, shortId, extractMcpServers, shortPath, greeting } from "@/lib/utils";
+import { MiniKpi } from "@/components/ui/MiniKpi";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Card } from "@/components/ui/Card";
@@ -25,14 +26,6 @@ import {
   AlertTriangle,
   ChevronRight,
 } from "lucide-react";
-
-// ── Greeting based on time of day ─────────────────────────────
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<GlobalAnalytics | null>(null);
@@ -71,8 +64,25 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageShell maxWidth="1400px"><LoadingState /></PageShell>;
-  if (error || !analytics) return <PageShell maxWidth="1400px"><ErrorState message={error} /></PageShell>;
+  const mcpServers = useMemo(() => analytics ? extractMcpServers(analytics.top_tools) : [], [analytics]);
+  const nativeTools = useMemo(() => analytics ? analytics.top_tools.filter(([n]) => !n.startsWith("mcp__")) : [], [analytics]);
+  const topFilesForChart = useMemo(() => topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]), [topFiles]);
+  const modelCosts = useMemo(() => {
+    if (otelLogs.length === 0) return [] as [string, number][];
+    const byCost: Record<string, number> = {};
+    for (const log of otelLogs) {
+      if (log.model && log.cost_usd) {
+        const short = log.model.replace(/^claude-/, "").replace(/-\d{8}$/, "");
+        byCost[short] = (byCost[short] ?? 0) + log.cost_usd;
+      }
+    }
+    return Object.entries(byCost)
+      .sort((a, b) => b[1] - a[1])
+      .map(([m, c]) => [m, Math.round(c * 100) / 100] as [string, number]);
+  }, [otelLogs]);
+
+  if (loading) return <PageShell maxWidth="1320px"><LoadingState /></PageShell>;
+  if (error || !analytics) return <PageShell maxWidth="1320px"><ErrorState message={error} /></PageShell>;
 
   const sessionsSub = [
     analytics.sessions_today > 0 && `+${analytics.sessions_today} today`,
@@ -81,33 +91,13 @@ export default function DashboardPage() {
     .filter(Boolean)
     .join(" · ");
 
-  const mcpServers = extractMcpServers(analytics.top_tools);
-  const nativeTools = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
-  const topFilesForChart = topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]);
-
   const hasTelemetry = telemetry && telemetry.cost_usd > 0;
-  const modelCosts: [string, number][] = [];
-  if (otelLogs.length > 0) {
-    const byCost: Record<string, number> = {};
-    for (const log of otelLogs) {
-      if (log.model && log.cost_usd) {
-        const short = log.model.replace(/^claude-/, "").replace(/-\d{8}$/, "");
-        byCost[short] = (byCost[short] ?? 0) + log.cost_usd;
-      }
-    }
-    modelCosts.push(
-      ...Object.entries(byCost)
-        .sort((a, b) => b[1] - a[1])
-        .map(([m, c]) => [m, Math.round(c * 100) / 100] as [string, number]),
-    );
-  }
-
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <PageShell maxWidth="1400px">
+    <PageShell maxWidth="1320px">
       {/* ── Greeting header ──────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-1)", paddingBottom: "16px" }}>
         <h1 style={{ fontSize: "20px", fontWeight: 600, color: "var(--text-1)", fontFamily: "var(--font-sans)", margin: 0 }}>
           {greeting()}
         </h1>
@@ -117,7 +107,8 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Row ──────────────────────────────────────── */}
-      <Card>
+      <div className="animate-in" style={{ "--delay": "0s" } as React.CSSProperties}>
+      <Card glow="var(--indigo)">
         <div style={{ display: "grid", gridTemplateColumns: hasTelemetry ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
             <StatCard
@@ -152,9 +143,24 @@ export default function DashboardPage() {
           />
         </div>
       </Card>
+      </div>
+
+      {/* Quick insight */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "8px",
+        padding: "0 4px",
+        fontSize: "12px", fontFamily: "var(--font-sans)", color: "var(--text-3)",
+      }}>
+        <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "var(--indigo)", flexShrink: 0 }} />
+        {analytics.sessions_today > 0
+          ? `${analytics.sessions_today} session${analytics.sessions_today > 1 ? "s" : ""} today across ${analytics.total_projects} projects`
+          : `${analytics.sessions_this_week} sessions this week`
+        }
+      </div>
 
       {/* ── Sparkline + Token Breakdown ──────────────────── */}
-      <Card>
+      <div className="animate-in" style={{ "--delay": "0.06s" } as React.CSSProperties}>
+      <Card glow="var(--accent)">
         <div style={{ display: "grid", gridTemplateColumns: hasTelemetry ? "2fr 1fr" : "1fr" }}>
           <div style={{ padding: "24px 28px", borderRight: hasTelemetry ? "1px solid var(--border-1)" : "none" }}>
             <DayChart data={sparkline} />
@@ -174,8 +180,10 @@ export default function DashboardPage() {
           )}
         </div>
       </Card>
+      </div>
 
       {/* ── Recent Sessions + Top Tools ──────────────────── */}
+      <div className="animate-in" style={{ "--delay": "0.12s" } as React.CSSProperties}>
       <Card>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr" }}>
           <div style={{ borderRight: "1px solid var(--border-1)" }}>
@@ -188,6 +196,9 @@ export default function DashboardPage() {
           <div style={{ padding: "24px 28px" }}>
             <div style={{ marginBottom: "18px" }}>
               <SectionHeader title="Top Tools" />
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-3)", marginBottom: "12px" }}>
+              Most used tools across all sessions
             </div>
             <BarChart data={nativeTools} limit={6} color="var(--cyan)" />
 
@@ -203,8 +214,10 @@ export default function DashboardPage() {
           </div>
         </div>
       </Card>
+      </div>
 
       {/* ── Recent Activity + Top Files ──────────────────── */}
+      <div className="animate-in" style={{ "--delay": "0.18s" } as React.CSSProperties}>
       <Card>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr" }}>
           {/* Recent Activity preview */}
@@ -300,31 +313,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </Card>
+      </div>
     </PageShell>
   );
 }
 
-// ── Mini KPI for activity preview ─────────────────────────────
-function MiniKpi({
-  icon: Icon,
-  label,
-  value,
-  color = "var(--text-1)",
-}: {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  label: string;
-  value: number;
-  color?: string;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-      <span style={{ color: "var(--text-3)", display: "flex" }}>
-        <Icon size={13} strokeWidth={2} />
-      </span>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "16px", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
-        {value.toLocaleString()}
-      </span>
-      <span style={{ fontSize: "11px", color: "var(--text-3)" }}>{label}</span>
-    </div>
-  );
-}

@@ -1,0 +1,32 @@
+---
+source: tests/snapshot_tests.rs
+expression: redacted_json(node)
+---
+{
+  "color": "yellow",
+  "cwd": "/Users/codestz/Documents/PersonalProjects/claude-hindsight",
+  "depth": 0,
+  "gitBranch": "main",
+  "has_error": false,
+  "isSidechain": false,
+  "label": " Hook: SessionStart:clear",
+  "message": null,
+  "node_type": "progress",
+  "parentToolUseID": "da41bab6-1b77-4a2c-8292-141dcc016e7d",
+  "parentUuid": null,
+  "progress": null,
+  "sessionId": "02d344a3-a7f9-478b-bbba-2cce347e2196",
+  "slug": "tingly-launching-flask",
+  "summary": "Hook: SessionStart:clear",
+  "thinking": null,
+  "timestamp": 0,
+  "token_usage": null,
+  "toolUseID": "da41bab6-1b77-4a2c-8292-141dcc016e7d",
+  "toolUseResult": null,
+  "tool_result": null,
+  "tool_use": null,
+  "type": "progress",
+  "userType": "external",
+  "uuid": "[uuid]",
+  "version": "2.1.76"
+}

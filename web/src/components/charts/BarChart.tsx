@@ -62,13 +62,13 @@ export function BarChart({
 
             {/* Bar track */}
             <div style={{
-              flex: 1, height: "6px", background: "var(--border-2)",
-              borderRadius: "3px", overflow: "hidden",
+              flex: 1, height: "8px", background: "var(--border-2)",
+              borderRadius: "4px", overflow: "hidden",
             }}>
               <div style={{
                 width: `${pct}%`, height: "100%",
-                background: color, borderRadius: "3px",
-                opacity: 0.7, transition: "width 0.3s ease",
+                background: color, borderRadius: "4px",
+                opacity: 0.8, transition: "width 0.3s ease, opacity 0.15s",
               }} />
             </div>
 

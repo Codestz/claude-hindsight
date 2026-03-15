@@ -62,7 +62,7 @@ export default function SessionsPage() {
         </div>
 
         {/* Filters */}
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", background: "var(--bg-1)", border: "1px solid var(--border-1)", borderRadius: "var(--radius-lg)", padding: "8px 16px" }}>
           {/* Project dropdown */}
           <select
             value={projectFilter}
@@ -97,7 +97,7 @@ export default function SessionsPage() {
               padding: "4px 10px",
               borderRadius: "var(--radius-sm)",
               border: errorsOnly ? "1px solid var(--red)" : "1px solid var(--border-2)",
-              background: errorsOnly ? "rgba(255,69,69,0.08)" : "transparent",
+              background: errorsOnly ? "color-mix(in srgb, var(--rose) 10%, transparent)" : "transparent",
               color: errorsOnly ? "var(--red)" : "var(--text-3)",
               cursor: "pointer",
               transition: "all 0.12s",

@@ -1,8 +1,4 @@
-interface EmptyStateProps {
-  icon?: string;
-  title: string;
-  description?: string;
-}
+import type { EmptyStateProps } from "./types";
 
 export function EmptyState({ icon = "∅", title, description }: EmptyStateProps) {
   return (
@@ -17,7 +13,21 @@ export function EmptyState({ icon = "∅", title, description }: EmptyStateProps
         textAlign: "center",
       }}
     >
-      <span style={{ fontSize: "28px", color: "var(--text-3)", opacity: 0.5 }}>
+      <span
+        className="animate-in"
+        style={{
+          width: "48px",
+          height: "48px",
+          borderRadius: "50%",
+          background: "var(--bg-2)",
+          border: "1px solid var(--border-1)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "22px",
+          color: "var(--text-3)",
+        }}
+      >
         {icon}
       </span>
       <div

@@ -163,7 +163,10 @@ mod tests {
             uuid: Some("test-uuid".to_string()),
             parent_uuid: None,
             timestamp: Some(1000),
-            node_type: "tool_use".to_string(),
+            node_type: crate::parser::models::NodeType::Unknown,
+            is_sidechain: None,
+            session_id: None,
+            cwd: None,
             message: None,
             tool_use: Some(ToolUse {
                 name: "Read".to_string(),
@@ -184,6 +187,6 @@ mod tests {
         // Read new nodes
         let new_nodes = watcher.read_new_nodes().unwrap();
         assert_eq!(new_nodes.len(), 1);
-        assert_eq!(new_nodes[0].node_type, "tool_use");
+        assert_eq!(new_nodes[0].node_type, crate::parser::models::NodeType::Unknown);
     }
 }

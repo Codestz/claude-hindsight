@@ -1,4 +1,4 @@
-type DiffLine = { type: "same" | "removed" | "added"; line: string };
+import type { DiffLine, SideSpec, InlineDiffProps } from "./types";
 
 /** LCS-based line diff. O(n²) — fine for small skill/agent bodies. */
 function computeDiff(a: string, b: string): DiffLine[] {
@@ -38,15 +38,6 @@ function computeDiff(a: string, b: string): DiffLine[] {
   return result;
 }
 
-interface SideSpec {
-  label: string;
-  body: string;
-}
-
-interface InlineDiffProps {
-  left: SideSpec;
-  right: SideSpec;
-}
 
 export function InlineDiff({ left, right }: InlineDiffProps) {
   const lines = computeDiff(left.body, right.body);
@@ -59,6 +50,7 @@ export function InlineDiff({ left, right }: InlineDiffProps) {
         overflow: "hidden",
         fontFamily: "var(--font-mono)",
         fontSize: "12px",
+        boxShadow: "var(--shadow-sm)",
       }}
     >
       {/* Column headers */}
@@ -89,15 +81,15 @@ export function InlineDiff({ left, right }: InlineDiffProps) {
         {lines.map((line, idx) => {
           const bg =
             line.type === "removed"
-              ? "color-mix(in srgb, var(--red, #f87171) 10%, transparent)"
+              ? "color-mix(in srgb, var(--rose) 10%, transparent)"
               : line.type === "added"
-              ? "color-mix(in srgb, var(--green) 10%, transparent)"
+              ? "color-mix(in srgb, var(--success) 10%, transparent)"
               : "transparent";
           const color =
             line.type === "removed"
-              ? "var(--red, #f87171)"
+              ? "var(--rose)"
               : line.type === "added"
-              ? "var(--green)"
+              ? "var(--success)"
               : "var(--text-3)";
           const prefix =
             line.type === "removed" ? "−" : line.type === "added" ? "+" : " ";

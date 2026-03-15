@@ -1,5 +1,6 @@
 import { Suspense, useState, useEffect } from 'react';
-import { Sidebar, SIDEBAR_W, SIDEBAR_COLLAPSED_W, BREAKPOINT } from '@/components/layout/Sidebar';
+import { Sidebar, SIDEBAR_W, SIDEBAR_COLLAPSED_W } from '@/components/layout';
+import { SIDEBAR_BREAKPOINT } from '@/components/layout/config';
 import { CommandPalette } from '@/components/layout/CommandPalette';
 import { AppRoutes } from './router';
 
@@ -8,7 +9,7 @@ export function App() {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    const check = () => setCollapsed(window.innerWidth < BREAKPOINT);
+    const check = () => setCollapsed(window.innerWidth < SIDEBAR_BREAKPOINT);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);

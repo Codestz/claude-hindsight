@@ -59,8 +59,8 @@ export default function PromptsPage() {
           {prompts.map((p, i) => {
             const hovered = hoveredIdx === i;
             return (
+              <div key={`${p.session_id}-${i}`} className="animate-in" style={{ "--delay": `${Math.min(i * 0.04, 0.4)}s` } as React.CSSProperties}>
               <Link
-                key={`${p.session_id}-${i}`}
                 to={`/sessions/${encodeURIComponent(p.session_id)}`}
                 onMouseEnter={() => setHoveredIdx(i)}
                 onMouseLeave={() => setHoveredIdx(null)}
@@ -69,10 +69,12 @@ export default function PromptsPage() {
                   padding: "16px 20px",
                   background: hovered ? "var(--bg-2)" : "var(--bg-1)",
                   border: `1px solid ${hovered ? "var(--border-3)" : "var(--border-1)"}`,
+                  borderLeft: hovered ? "2px solid var(--indigo)" : "2px solid transparent",
                   borderRadius: "var(--radius-lg)",
                   textDecoration: "none",
                   color: "inherit",
-                  transition: "background 0.1s, border-color 0.15s",
+                  transition: "background 0.1s, border-color 0.15s, box-shadow 0.15s",
+                  boxShadow: hovered ? "var(--shadow-md)" : "var(--shadow-sm)",
                 }}
               >
                 <div style={{
@@ -95,6 +97,7 @@ export default function PromptsPage() {
                   <span style={{ color: "var(--text-3)" }}>{shortId(p.session_id)}</span>
                 </div>
               </Link>
+              </div>
             );
           })}
         </div>

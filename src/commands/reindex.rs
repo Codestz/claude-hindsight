@@ -58,8 +58,16 @@ pub fn run(verbose: bool) -> Result<()> {
     }
 
     // ── Step 3: re-parse every session for fresh analytics ───────────────
-    let sessions = index.list_sessions()?;
-    let total = sessions.len();
+    // Use discovered sessions (with correct project names from disk)
+    // to refresh ALL sessions, not just new ones. This fixes stale
+    // project names from older versions of decode_project_name.
+    let discovered_map: std::collections::HashMap<String, &crate::storage::SessionFile> = discovered
+        .iter()
+        .map(|s| (s.session_id.clone(), s))
+        .collect();
+
+    let db_sessions = index.list_sessions()?;
+    let total = db_sessions.len();
 
     if total == 0 {
         println!("  [3/3] No sessions to reparse.");
@@ -72,7 +80,14 @@ pub fn run(verbose: bool) -> Result<()> {
     let mut updated = 0;
     let mut errors = 0;
 
-    for (i, session) in sessions.iter().enumerate() {
+    for (i, db_session) in db_sessions.iter().enumerate() {
+        // Prefer the discovered version (has correct project_name from disk)
+        // Fall back to DB version if session wasn't found on disk
+        let session = discovered_map
+            .get(&db_session.session_id)
+            .copied()
+            .unwrap_or(db_session);
+
         if verbose {
             println!(
                 "     [{}/{}] {} ({})",

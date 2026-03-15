@@ -1,0 +1,67 @@
+---
+source: tests/snapshot_tests.rs
+expression: redacted_json(node)
+---
+{
+  "color": "magenta",
+  "depth": 1,
+  "file_paths": [
+    "src/main.rs"
+  ],
+  "has_error": false,
+  "isSidechain": false,
+  "label": " Thinking",
+  "message": {
+    "content": [
+      {
+        "signature": "sig_synth",
+        "thinking": "Let me read multiple files.",
+        "type": "thinking"
+      },
+      {
+        "id": "toolu_synth_read1",
+        "input": {
+          "file_path": "src/main.rs"
+        },
+        "name": "Read",
+        "type": "tool_use"
+      },
+      {
+        "id": "toolu_synth_read2",
+        "input": {
+          "pattern": "**/*.rs"
+        },
+        "name": "Glob",
+        "type": "tool_use"
+      }
+    ],
+    "id": "msg_synth_multi",
+    "model": "claude-sonnet-4-5-20250929",
+    "role": "assistant",
+    "usage": {
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 400,
+      "input_tokens": 500,
+      "output_tokens": 120
+    }
+  },
+  "node_type": "assistant",
+  "parentUuid": "synth-sidechain-user",
+  "progress": null,
+  "sessionId": "02d344a3-a7f9-478b-bbba-2cce347e2196",
+  "summary": "Thinking + 2 tool calls",
+  "thinking": null,
+  "timestamp": 0,
+  "token_usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 400,
+    "input_tokens": 500,
+    "output_tokens": 120
+  },
+  "toolUseResult": null,
+  "tool_name": "Read",
+  "tool_result": null,
+  "tool_use": null,
+  "type": "assistant",
+  "uuid": "[uuid]"
+}

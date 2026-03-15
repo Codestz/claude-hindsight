@@ -35,15 +35,18 @@ export function ProjectRow({ project: p }: ProjectRowProps) {
         fontFamily: "var(--font-mono)",
         fontVariantNumeric: "tabular-nums",
         textDecoration: "none",
-        transition: "background 0.1s",
+        borderLeft: "2px solid transparent",
+        transition: "background 0.1s, border-color 0.1s",
         cursor: "pointer",
         userSelect: "none",
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.background = "var(--bg-2)";
+        (e.currentTarget as HTMLElement).style.borderLeft = "2px solid var(--indigo)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.background = "transparent";
+        (e.currentTarget as HTMLElement).style.borderLeft = "2px solid transparent";
       }}
     >
       {/* Project name */}
