@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="site/public/og-image.png" alt="Claude Hindsight" width="600" />
-</p>
-
 <h1 align="center">Claude Hindsight</h1>
 
 <p align="center">
