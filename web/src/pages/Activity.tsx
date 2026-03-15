@@ -14,8 +14,8 @@ import { Card } from "@/components/ui/Card";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { EVENT_FILTERS, type UnifiedEvent, type EventFilter } from "@/components/activity/types";
-import { matchesEventFilter } from "@/components/activity/config";
+import type { UnifiedEvent, EventFilter } from "@/components/activity/types";
+import { EVENT_FILTERS, matchesEventFilter } from "@/components/activity/config";
 import {
   Wrench,
   Bot,

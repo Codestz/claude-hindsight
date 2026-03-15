@@ -22,5 +22,4 @@ export interface EventKindConfig {
   color: string;
 }
 
-export const EVENT_FILTERS = ["All", "Tools", "Agents", "Lifecycle", "Errors"] as const;
-export type EventFilter = (typeof EVENT_FILTERS)[number];
+export type EventFilter = "All" | "Tools" | "Agents" | "Lifecycle" | "Errors";

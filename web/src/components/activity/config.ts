@@ -8,6 +8,9 @@
 import { Wrench, Bot, Shield, Zap, AlertTriangle } from "lucide-react";
 import type { EventKind, EventKindConfig, EventFilter, UnifiedEvent } from "./types";
 
+/** Ordered list of filter options for the activity timeline tabs. */
+export const EVENT_FILTERS: readonly EventFilter[] = ["All", "Tools", "Agents", "Lifecycle", "Errors"];
+
 export const KIND_CONFIG: Record<EventKind, EventKindConfig> = {
   tool:         { icon: Wrench,        color: "var(--amber)" },
   tool_failure: { icon: AlertTriangle, color: "var(--red)" },

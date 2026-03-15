@@ -8,8 +8,8 @@
 import { useState } from "react";
 import { EventRow } from "./EventRow";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { matchesEventFilter } from "./config";
-import { EVENT_FILTERS, type EventFilter, type UnifiedEvent } from "./types";
+import { EVENT_FILTERS, matchesEventFilter } from "./config";
+import type { EventFilter, UnifiedEvent } from "./types";
 
 interface EventTimelineProps {
   events: UnifiedEvent[];
