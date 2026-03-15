@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type {
@@ -81,13 +81,13 @@ export default function DashboardPage() {
     .filter(Boolean)
     .join(" · ");
 
-  const mcpServers = extractMcpServers(analytics.top_tools);
-  const nativeTools = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
-  const topFilesForChart = topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]);
+  const mcpServers = useMemo(() => extractMcpServers(analytics.top_tools), [analytics.top_tools]);
+  const nativeTools = useMemo(() => analytics.top_tools.filter(([n]) => !n.startsWith("mcp__")), [analytics.top_tools]);
+  const topFilesForChart = useMemo(() => topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]), [topFiles]);
 
   const hasTelemetry = telemetry && telemetry.cost_usd > 0;
-  const modelCosts: [string, number][] = [];
-  if (otelLogs.length > 0) {
+  const modelCosts = useMemo(() => {
+    if (otelLogs.length === 0) return [] as [string, number][];
     const byCost: Record<string, number> = {};
     for (const log of otelLogs) {
       if (log.model && log.cost_usd) {
@@ -95,12 +95,10 @@ export default function DashboardPage() {
         byCost[short] = (byCost[short] ?? 0) + log.cost_usd;
       }
     }
-    modelCosts.push(
-      ...Object.entries(byCost)
-        .sort((a, b) => b[1] - a[1])
-        .map(([m, c]) => [m, Math.round(c * 100) / 100] as [string, number]),
-    );
-  }
+    return Object.entries(byCost)
+      .sort((a, b) => b[1] - a[1])
+      .map(([m, c]) => [m, Math.round(c * 100) / 100] as [string, number]);
+  }, [otelLogs]);
 
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 

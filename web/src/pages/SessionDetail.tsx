@@ -2,7 +2,6 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "rea
 import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { NodeResponse, OtelSessionSummary, SessionFile } from "@/lib/types";
-import type { NodeFilter } from "@/lib/node-utils";
 import { flattenTree, computeSessionStats, filterNodes } from "@/lib/node-utils";
 import { SessionHeader } from "@/components/session/SessionHeader";
 import { SessionFilterBar } from "@/components/session/SessionFilterBar";
@@ -46,8 +45,6 @@ function SessionDetail({ id }: { id: string }) {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const autoSelectedRef = useRef(false);
-
-  const nodeFilter: NodeFilter = { types: filterTypes, keyword: filterKeyword };
 
   const toggleFilterType = (type: string) => {
     setFilterTypes((prev) => {
@@ -107,8 +104,8 @@ function SessionDetail({ id }: { id: string }) {
   const flatNodes = useMemo(() => flattenTree(roots), [roots]);
   const stats = useMemo(() => computeSessionStats(flatNodes, otelSummary), [flatNodes, otelSummary]);
   const filteredNodes = useMemo(
-    () => filterNodes(flatNodes, nodeFilter, activeFilePaths),
-    [flatNodes, nodeFilter, activeFilePaths],
+    () => filterNodes(flatNodes, { types: filterTypes, keyword: filterKeyword }, activeFilePaths),
+    [flatNodes, filterTypes, filterKeyword, activeFilePaths],
   );
 
   // Apply sort order

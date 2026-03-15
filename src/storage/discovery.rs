@@ -61,7 +61,13 @@ pub fn discover_sessions() -> Result<Vec<SessionFile>> {
     let home = dirs::home_dir()
         .ok_or_else(|| HindsightError::Config("Could not determine home directory".to_string()))?;
 
-    let config = crate::config::Config::load().unwrap_or_default();
+    let config = match crate::config::Config::load() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("Warning: failed to load config, using defaults: {}", e);
+            Default::default()
+        }
+    };
 
     // Resolve configured directories: expand ~ and filter to those that exist.
     // Each entry carries (expanded_path, raw_config_path) for source_dir tracking.

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type {
@@ -242,15 +242,15 @@ export default function ActivityPage() {
   if (loading) return <PageShell><LoadingState /></PageShell>;
   if (error) return <PageShell><ErrorState message={error} /></PageShell>;
 
-  const filtered = events.filter((e) => matchesFilter(e, filter));
+  const filtered = useMemo(() => events.filter((e) => matchesFilter(e, filter)), [events, filter]);
 
   // Compute event kind distribution for the mini chart
-  const kindCounts = {
+  const kindCounts = useMemo(() => ({
     tools: events.filter((e) => e.kind === "tool").length,
     errors: events.filter((e) => e.kind === "tool_failure").length,
     agents: events.filter((e) => e.kind === "subagent").length,
     lifecycle: events.filter((e) => e.kind === "lifecycle" || e.kind === "permission").length,
-  };
+  }), [events]);
   const totalKinds = Math.max(kindCounts.tools + kindCounts.errors + kindCounts.agents + kindCounts.lifecycle, 1);
 
   const errorRate = summary && summary.total_tool_events > 0

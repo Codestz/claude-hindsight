@@ -1,3 +1,4 @@
+import React from "react";
 import { Link } from "react-router-dom";
 import type { SessionFile, SessionStats, OtelSessionSummary } from "@/lib/types";
 import { formatBytes, formatCost, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
@@ -8,7 +9,7 @@ interface SessionHeaderProps {
   stats: SessionStats;
 }
 
-export function SessionHeader({ session, otelSummary, stats }: SessionHeaderProps) {
+export const SessionHeader = React.memo(function SessionHeader({ session, otelSummary, stats }: SessionHeaderProps) {
   return (
     <div style={{ flexShrink: 0, marginBottom: "6px" }}>
       <div style={{
@@ -52,7 +53,7 @@ export function SessionHeader({ session, otelSummary, stats }: SessionHeaderProp
       </div>
     </div>
   );
-}
+});
 
 function Pill({ label, color }: { label: string; color?: string }) {
   return (

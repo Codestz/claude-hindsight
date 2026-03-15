@@ -124,9 +124,16 @@ fn merge_hooks(existing: &mut serde_json::Value) {
         existing["hooks"] = serde_json::json!({});
     }
 
-    let hooks_obj = existing["hooks"].as_object_mut().unwrap();
+    let Some(hooks_obj) = existing["hooks"].as_object_mut() else {
+        eprintln!("Warning: hooks field is not an object, skipping merge");
+        return;
+    };
 
-    for (event, desired_entries) in desired["hooks"].as_object().unwrap() {
+    let Some(desired_hooks) = desired["hooks"].as_object() else {
+        return; // Internal error — our template is always valid
+    };
+
+    for (event, desired_entries) in desired_hooks {
         let arr = hooks_obj
             .entry(event)
             .or_insert_with(|| serde_json::json!([]));
@@ -258,9 +265,10 @@ fn install_otel_env(settings_path: &PathBuf) -> Result<()> {
     }
 
     // Merge our vars into the env object.
-    let env = value
+    let obj = value
         .as_object_mut()
-        .unwrap()
+        .ok_or_else(|| crate::error::HindsightError::Config("settings value is not an object".into()))?;
+    let env = obj
         .entry("env")
         .or_insert_with(|| serde_json::json!({}));
 

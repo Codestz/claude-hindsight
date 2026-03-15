@@ -699,11 +699,31 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
 }
 
 // ── Image preview with lightbox ──────────────────────────────
+const MAX_IMAGE_SIZE_KB = 5000; // 5MB limit
+const BASE64_RE = /^[A-Za-z0-9+/\n\r]*={0,2}$/;
+
 function ImagePreview({ img, index }: { img: { mediaType: string; data: string }; index: number }) {
   const [lightbox, setLightbox] = useState(false);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
-  const src = `data:${img.mediaType};base64,${img.data}`;
   const sizeKb = Math.round(img.data.length * 0.75 / 1024);
+
+  // Validate base64 and size
+  if (sizeKb > MAX_IMAGE_SIZE_KB) {
+    return (
+      <div style={{ padding: "12px", background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: "var(--radius-md)", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)" }}>
+        Image too large ({sizeKb}KB, max {MAX_IMAGE_SIZE_KB}KB)
+      </div>
+    );
+  }
+  if (!BASE64_RE.test(img.data.slice(0, 100))) {
+    return (
+      <div style={{ padding: "12px", background: "var(--bg-2)", border: "1px solid var(--border-1)", borderRadius: "var(--radius-md)", fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-3)" }}>
+        Invalid image data
+      </div>
+    );
+  }
+
+  const src = `data:${img.mediaType};base64,${img.data}`;
 
   return (
     <>
