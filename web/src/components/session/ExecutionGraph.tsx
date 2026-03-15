@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ForceGraph3D from "react-force-graph-3d";
 import * as THREE from "three";
-import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { NodeResponse } from "@/lib/types";
 import { isTaskNotification } from "@/lib/node-meta";
 import type { ExecutionGraphProps } from "./types";
 import { buildGraph } from "./utils";
+import { useGraphSetup } from "@/hooks/useGraphSetup";
 import {
   GRAPH_COLORS, GRAPH_SELECTED, GRAPH_ERROR, GRAPH_TASK_COLOR, GRAPH_BG,
   graphPerfTier,
@@ -35,68 +35,9 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
   // Dispose geometry cache on unmount
   useEffect(() => () => disposeGeoCache(), []);
 
-  // Add bloom only for small graphs
-  useEffect(() => {
-    const fg = fgRef.current;
-    if (!fg || bloomAdded.current) return;
-    const renderer = fg.renderer?.();
-    if (!renderer) return;
-    bloomAdded.current = true;
 
-    // Only add bloom for high/medium perf tiers
-    if (tier !== "low") {
-      const bloom = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        tier === "high" ? 0.8 : 0.4,
-        0.4,
-        0.85,
-      );
-      fg.postProcessingComposer?.().addPass(bloom);
-    }
-
-    const scene = fg.scene?.();
-    if (scene) {
-      scene.add(new THREE.AmbientLight(0x404060, 0.8));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 0.3);
-      dirLight.position.set(100, 200, 100);
-      scene.add(dirLight);
-
-      // Starfield — fewer for large graphs
-      const starCount = tier === "high" ? 1500 : tier === "medium" ? 500 : 200;
-      const starsGeo = new THREE.BufferGeometry();
-      const positions = new Float32Array(starCount * 3);
-      for (let i = 0; i < starCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * 1200;
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 1200;
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 1200;
-      }
-      starsGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-      scene.add(new THREE.Points(starsGeo,
-        new THREE.PointsMaterial({ color: 0x444466, size: 0.5, transparent: true, opacity: 0.5 }),
-      ));
-    }
-  }, [graphData, tier]);
-
-  // Tune forces — weaker for large graphs (faster convergence)
-  useEffect(() => {
-    const fg = fgRef.current;
-    if (!fg) return;
-    if (tier === "low") {
-      fg.d3Force("charge")?.strength(-80).distanceMax(250);
-      fg.d3Force("link")?.distance(30).strength(0.7);
-      fg.d3Force("center")?.strength(0.5);
-    } else {
-      fg.d3Force("charge")?.strength(-150).distanceMax(400);
-      fg.d3Force("link")?.distance(40).strength(0.6);
-      fg.d3Force("center")?.strength(0.4);
-    }
-  }, [graphData, tier]);
-
-  // Fit to view
-  useEffect(() => {
-    const t = setTimeout(() => fgRef.current?.zoomToFit(800, 80), tier === "low" ? 3500 : 2500);
-    return () => clearTimeout(t);
-  }, [graphData, tier]);
+  // Scene setup (bloom, lights, forces, fit)
+  useGraphSetup(fgRef, tier, graphData.nodes.length);
 
   // Click → select + fly
   const handleClick = useCallback((g: any) => {
