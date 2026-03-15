@@ -9,7 +9,8 @@ import type {
   SessionFile,
   TelemetrySummary,
 } from "@/lib/types";
-import { formatBytes, formatCost, formatTokens, shortId, extractMcpServers, shortPath } from "@/lib/utils";
+import { formatBytes, formatCost, formatTokens, shortId, extractMcpServers, shortPath, greeting } from "@/lib/utils";
+import { MiniKpi } from "@/components/ui/MiniKpi";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Card } from "@/components/ui/Card";
@@ -25,14 +26,6 @@ import {
   AlertTriangle,
   ChevronRight,
 } from "lucide-react";
-
-// ── Greeting based on time of day ─────────────────────────────
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default function DashboardPage() {
   const [analytics, setAnalytics] = useState<GlobalAnalytics | null>(null);
@@ -326,27 +319,3 @@ export default function DashboardPage() {
   );
 }
 
-// ── Mini KPI for activity preview ─────────────────────────────
-function MiniKpi({
-  icon: Icon,
-  label,
-  value,
-  color = "var(--text-1)",
-}: {
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  label: string;
-  value: number;
-  color?: string;
-}) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-      <span style={{ color: "var(--text-3)", display: "flex" }}>
-        <Icon size={13} strokeWidth={2} />
-      </span>
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: "16px", fontWeight: 700, color, fontVariantNumeric: "tabular-nums" }}>
-        {value.toLocaleString()}
-      </span>
-      <span style={{ fontSize: "11px", color: "var(--text-3)" }}>{label}</span>
-    </div>
-  );
-}

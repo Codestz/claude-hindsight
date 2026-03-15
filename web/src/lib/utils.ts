@@ -75,6 +75,14 @@ export function formatTimestamp(ms: number): string {
   });
 }
 
+// Time-of-day greeting
+export function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 // Milliseconds → human-readable duration (e.g. "4m 12s")
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
