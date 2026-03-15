@@ -2,57 +2,8 @@ import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import type { NodeResponse } from "@/lib/types";
 import { ExecutionRow } from "./ExecutionRow";
 import { formatTimestamp } from "@/lib/utils";
-import type { ExecutionListProps, DisplayItem } from "./types";
-
-function isCollapsibleNode(node: NodeResponse): boolean {
-  // Progress events (hooks, agents, etc.)
-  if (node.node_type === "progress") return true;
-  // System events (stop_hook_summary, turn durations)
-  if (node.node_type === "system") return true;
-  // Queue operations
-  if (node.node_type === "queue-operation") return true;
-  // File snapshots
-  if (node.node_type === "file-history-snapshot") return true;
-  return false;
-}
-
-/** Collapse consecutive progress/agent nodes into groups */
-function buildDisplayItems(nodes: NodeResponse[]): DisplayItem[] {
-  const items: DisplayItem[] = [];
-  let i = 0;
-
-  while (i < nodes.length) {
-    if (isCollapsibleNode(nodes[i])) {
-      // Collect consecutive progress nodes
-      const group: NodeResponse[] = [];
-      while (i < nodes.length && isCollapsibleNode(nodes[i])) {
-        group.push(nodes[i]);
-        i++;
-      }
-      if (group.length <= 2) {
-        for (const n of group) items.push({ kind: "node", node: n });
-      } else {
-        // Smart label: count types in the group
-        const types = new Map<string, number>();
-        for (const n of group) {
-          const t = n.node_type;
-          types.set(t, (types.get(t) ?? 0) + 1);
-        }
-        const dominant = [...types.entries()].sort((a, b) => b[1] - a[1])[0];
-        const label = dominant[0] === "progress" ? "Hook / progress events"
-          : dominant[0] === "system" ? "System events"
-          : dominant[0] === "queue-operation" ? "Queue operations"
-          : "Internal events";
-        items.push({ kind: "group", nodes: group, label });
-      }
-    } else {
-      items.push({ kind: "node", node: nodes[i] });
-      i++;
-    }
-  }
-
-  return items;
-}
+import type { ExecutionListProps } from "./types";
+import { buildDisplayItems } from "./utils";
 
 function GroupRow({
   group,

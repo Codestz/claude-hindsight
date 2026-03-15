@@ -1,7 +1,6 @@
 import { FilterChips } from "@/components/ui/FilterChips";
 import type { SessionFilterBarProps } from "./types";
-
-const FILTER_OPTIONS = ["User", "Assistant", "Tool", "Task", "Error", "Thinking", "Prompt"];
+import { FILTER_OPTIONS } from "./config";
 
 export function SessionFilterBar({
   filterTypes,

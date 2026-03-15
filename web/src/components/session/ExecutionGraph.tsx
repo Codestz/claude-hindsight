@@ -4,55 +4,12 @@ import * as THREE from "three";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import type { NodeResponse } from "@/lib/types";
 import { isTaskNotification } from "@/lib/node-meta";
-import type { ExecutionGraphProps, GraphNode, GraphLink } from "./types";
-
-// ── Colors ───────────────────────────────────────────────────
-const COLORS: Record<string, string> = {
-  cyan: "#38BDF8", green: "#34D399", magenta: "#A78BFA",
-  yellow: "#F59E0B", amber: "#F59E0B", blue: "#38BDF8",
-  gray: "#4a4a5a", white: "#ECECF1",
-};
-const SELECTED = "#818CF8";
-const ERROR = "#FB7185";
-const TASK_COLOR = "#c084fc";
-const BG = "#0a0a0e";
-
-function nodeHex(n: NodeResponse): string {
-  if (isTaskNotification(n)) return TASK_COLOR;
-  return COLORS[n.color] ?? "#A1A1B5";
-}
-
-function nodeRadius(n: NodeResponse): number {
-  if (isTaskNotification(n)) return 4;
-  if (n.node_type === "user" && n.color !== "blue") return 5;
-  if (n.node_type === "assistant" && n.color === "green") return 4.5;
-  if (n.color === "yellow") return 3.5;
-  if (n.color === "blue") return 3;
-  if (n.color === "magenta") return 3;
-  if (n.node_type === "progress") return 1.5;
-  return 1.5;
-}
-
-// ── Graph data ───────────────────────────────────────────────
-function buildGraph(roots: NodeResponse[]): { nodes: GraphNode[]; links: GraphLink[] } {
-  const nodes: GraphNode[] = [];
-  const links: GraphLink[] = [];
-  const walk = (n: NodeResponse, pid: string | null) => {
-    const id = n.uuid ?? `n${nodes.length}`;
-    nodes.push({ id, node: n, color: nodeHex(n), r: nodeRadius(n) });
-    if (pid) links.push({ source: pid, target: id });
-    for (const c of n.children ?? []) walk(c, id);
-  };
-  for (const root of roots) walk(root, null);
-  return { nodes, links };
-}
-
-// ── Performance tier based on node count ─────────────────────
-function perfTier(count: number): "high" | "medium" | "low" {
-  if (count < 300) return "high";
-  if (count < 1000) return "medium";
-  return "low";
-}
+import type { ExecutionGraphProps } from "./types";
+import { buildGraph } from "./utils";
+import {
+  GRAPH_COLORS, GRAPH_SELECTED, GRAPH_ERROR, GRAPH_TASK_COLOR, GRAPH_BG,
+  graphPerfTier,
+} from "./config";
 
 // ── Shared geometry cache (avoid creating per-node) ──────────
 let geoCache = new Map<string, THREE.SphereGeometry>();
@@ -73,7 +30,7 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
   const bloomAdded = useRef(false);
 
   const graphData = useMemo(() => buildGraph(roots), [roots]);
-  const tier = perfTier(graphData.nodes.length);
+  const tier = graphPerfTier(graphData.nodes.length);
 
   // Dispose geometry cache on unmount
   useEffect(() => () => disposeGeoCache(), []);
@@ -156,7 +113,7 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
   const nodeObj = useCallback((g: any) => {
     const sel = g.node.uuid === selectedId;
     const err = g.node.has_error;
-    const hex = sel ? SELECTED : err ? ERROR : g.color;
+    const hex = sel ? GRAPH_SELECTED : err ? GRAPH_ERROR : g.color;
     const r = g.r as number;
 
     // Low tier: single mesh, basic material, low-poly
@@ -196,7 +153,7 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
     if (sel) {
       group.add(new THREE.Mesh(
         new THREE.TorusGeometry(r + 2, 0.4, 6, 20),
-        new THREE.MeshBasicMaterial({ color: SELECTED, transparent: true, opacity: 0.7 }),
+        new THREE.MeshBasicMaterial({ color: GRAPH_SELECTED, transparent: true, opacity: 0.7 }),
       ));
     }
 
@@ -204,7 +161,7 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
     if (isTaskNotification(g.node) && !sel) {
       group.add(new THREE.Mesh(
         new THREE.TorusGeometry(r + 1.5, 0.3, 6, 16),
-        new THREE.MeshBasicMaterial({ color: TASK_COLOR, transparent: true, opacity: 0.5 }),
+        new THREE.MeshBasicMaterial({ color: GRAPH_TASK_COLOR, transparent: true, opacity: 0.5 }),
       ));
     }
 
@@ -212,7 +169,7 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
     if (err && !sel) {
       const pip = new THREE.Mesh(
         getSphereGeo(1.2, 4),
-        new THREE.MeshBasicMaterial({ color: ERROR }),
+        new THREE.MeshBasicMaterial({ color: GRAPH_ERROR }),
       );
       pip.position.set(r + 1, r + 1, 0);
       group.add(pip);
@@ -276,7 +233,7 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
         graphData={graphData}
         width={dims.w}
         height={dims.h}
-        backgroundColor={BG}
+        backgroundColor={GRAPH_BG}
         dagMode="radialout"
         dagLevelDistance={tier === "low" ? 35 : 50}
         // Nodes
@@ -313,10 +270,10 @@ export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphPr
         background: "rgba(10,10,14,0.85)", border: "1px solid rgba(255,255,255,0.06)",
       }}>
         {[
-          { l: "User", c: COLORS.cyan }, { l: "Asst", c: COLORS.green },
-          { l: "Tool", c: COLORS.yellow }, { l: "Result", c: COLORS.blue },
-          { l: "Think", c: COLORS.magenta }, { l: "Task", c: "#c084fc" },
-          { l: "Error", c: ERROR },
+          { l: "User", c: GRAPH_COLORS.cyan }, { l: "Asst", c: GRAPH_COLORS.green },
+          { l: "Tool", c: GRAPH_COLORS.yellow }, { l: "Result", c: GRAPH_COLORS.blue },
+          { l: "Think", c: GRAPH_COLORS.magenta }, { l: "Task", c: "#c084fc" },
+          { l: "Error", c: GRAPH_ERROR },
         ].map(({ l, c }) => (
           <div key={l} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: c }} />
