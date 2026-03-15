@@ -159,10 +159,22 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   const mcpShortTool = mcpParts?.[2]?.replace(/__/g, ".") ?? null;
   const displayToolName = mcpShortTool ?? toolCallName;
 
+  // ── Extract toolUseResult.file (Read tool result metadata) ──
+  const tur = node.toolUseResult as Record<string, unknown> | null | undefined;
+  const turFile = (tur && typeof tur === "object" && tur.file && typeof tur.file === "object")
+    ? tur.file as { content?: string; filePath?: string; file_path?: string; numLines?: number; startLine?: number; totalLines?: number }
+    : undefined;
+
   // ── Resolve file path from all possible sources ─────────────
-  // Priority: content blocks > toolCallInput > toolResultBlock > topLevelToolResult > node.file_paths
+  // Check every possible location where a file path might be stored.
+  // The file path determines syntax highlighting language via extension.
   const resolvedFilePath: string | undefined = (() => {
-    // From raw message content blocks — Read results embed filePath as sibling of text
+    // 1. toolUseResult.file.filePath (Read tool results — most reliable)
+    if (turFile) {
+      if (typeof turFile.filePath === "string") return turFile.filePath;
+      if (typeof turFile.file_path === "string") return turFile.file_path;
+    }
+    // 2. Raw message content blocks — filePath as sibling of text/content
     const rawContent = node.message?.content;
     if (Array.isArray(rawContent)) {
       for (const block of rawContent) {
@@ -170,7 +182,6 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
           const b = block as Record<string, unknown>;
           if (typeof b.filePath === "string") return b.filePath;
           if (typeof b.file_path === "string") return b.file_path;
-          // Also check nested content objects
           if (typeof b.content === "object" && b.content !== null && !Array.isArray(b.content)) {
             const inner = b.content as Record<string, unknown>;
             if (typeof inner.filePath === "string") return inner.filePath;
@@ -178,17 +189,17 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
         }
       }
     }
-    // From the tool call input (Read, Write, Edit all have file_path)
+    // 3. Tool call input (Read, Write, Edit all have file_path)
     if (typeof toolCallInput?.file_path === "string") return toolCallInput.file_path;
-    // From nested tool_result content object
+    // 4. tool_result content block with nested filePath
     if (toolResultBlock?.content && typeof toolResultBlock.content === "object" && !Array.isArray(toolResultBlock.content)) {
       const obj = toolResultBlock.content as Record<string, unknown>;
       if (typeof obj.filePath === "string") return obj.filePath;
       if (typeof obj.file_path === "string") return obj.file_path;
     }
-    // From top-level tool result file
+    // 5. Top-level tool_result.file (snake_case)
     if (topLevelToolResult?.file?.file_path) return topLevelToolResult.file.file_path;
-    // From backend-computed file_paths
+    // 6. Backend-computed file_paths array
     if (node.file_paths?.[0]) return node.file_paths[0];
     return undefined;
   })();
@@ -209,7 +220,7 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   const hasErrorTag = rawErrorCheckStr?.includes("<tool_use_error>") ?? false;
   const effectiveIsError = !!resultIsError || hasErrorTag;
 
-  const hasCleanFile = !!topLevelToolResult?.file?.content;
+  const hasCleanFile = !!topLevelToolResult?.file?.content || !!turFile?.content;
 
   const displayResultContent: string | null = hasCleanFile
     ? null
@@ -550,23 +561,32 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
                     />
                   );
                 })()
-              ) : topLevelToolResult?.file ? (
-                <div>
-                  {topLevelToolResult.file.file_path && (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-3)", marginBottom: "8px" }}>
-                      {topLevelToolResult.file.file_path}
-                      {topLevelToolResult.file.num_lines != null && ` \u00b7 ${topLevelToolResult.file.num_lines} lines`}
+              ) : (topLevelToolResult?.file || turFile) ? (
+                (() => {
+                  const f = topLevelToolResult?.file ?? turFile;
+                  const fp = f?.file_path ?? (f as any)?.filePath ?? resolvedFilePath;
+                  const content = f?.content ?? "";
+                  const numLines = (f as any)?.numLines ?? (f as any)?.num_lines;
+                  const startLine = (f as any)?.startLine;
+                  const lineInfo = startLine != null && numLines != null
+                    ? `lines ${startLine}–${startLine + numLines}`
+                    : numLines != null ? `${numLines} lines` : null;
+                  return (
+                    <div>
+                      {fp && (
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-3)", marginBottom: "8px" }}>
+                          {fp}
+                          {lineInfo && ` \u00b7 ${lineInfo}`}
+                        </div>
+                      )}
+                      {content ? (
+                        <CodeRender content={content} filePath={fp ?? undefined} />
+                      ) : (
+                        <EmptyResult />
+                      )}
                     </div>
-                  )}
-                  {topLevelToolResult.file.content ? (
-                    <CodeRender
-                      content={topLevelToolResult.file.content}
-                      filePath={topLevelToolResult.file.file_path ?? undefined}
-                    />
-                  ) : (
-                    <EmptyResult />
-                  )}
-                </div>
+                  );
+                })()
               ) : (
                 <EmptyResult label={node.summary || node.label || undefined} />
               )}
