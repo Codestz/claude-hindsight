@@ -237,6 +237,24 @@ claude-hindsight paths remove ~/old-projects
 
 ## Troubleshooting
 
+### Homebrew tap migration
+
+The Homebrew tap was renamed from `Codestz/homebrew-tap` to `codestz/tap`. If you installed with the old tap, you will get errors on upgrade. To fix:
+
+```bash
+brew untap Codestz/homebrew-tap      # remove the old tap
+brew tap codestz/tap                 # add the new one
+brew install claude-hindsight        # reinstall
+```
+
+If you are unsure which tap you have:
+
+```bash
+brew tap                             # lists all taps
+```
+
+If you see `Codestz/homebrew-tap` in the list, run the migration above.
+
 ### After upgrading
 
 Hindsight automatically detects version changes and suggests running `reindex`:
