@@ -8,8 +8,8 @@ import {
   Bot,
   Sparkles,
   Search,
-  SearchAlertIcon,
 } from "lucide-react";
+import { HindsightLogo } from "@/components/ui/HindsightLogo";
 
 const SIDEBAR_W = 232;
 const SIDEBAR_COLLAPSED_W = 56;
@@ -81,7 +81,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
           flexShrink: 0,
         }}
       >
-        <SearchAlertIcon />
+        <HindsightLogo size={collapsed ? 24 : 28} />
         {!collapsed && (
           <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
             <span
