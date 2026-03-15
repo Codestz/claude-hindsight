@@ -200,6 +200,7 @@ function ActivityRow({ event }: { event: UnifiedEvent }) {
 export default function ActivityPage() {
   const [summary, setSummary] = useState<HookActivitySummary | null>(null);
   const [events, setEvents] = useState<UnifiedEvent[]>([]);
+  const [globalErrors, setGlobalErrors] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("All");
@@ -213,9 +214,11 @@ export default function ActivityPage() {
       api.hookSubagentEvents({ limit }),
       api.hookLifecycleEvents({ limit }),
       api.hookPermissionEvents({ limit }),
+      api.globalAnalytics().catch(() => null),
     ])
-      .then(([sum, tools, subagents, lifecycle, permissions]) => {
+      .then(([sum, tools, subagents, lifecycle, permissions, analytics]) => {
         setSummary(sum);
+        if (analytics) setGlobalErrors(analytics.total_errors);
 
         const unified: UnifiedEvent[] = [
           ...tools.map(toolToUnified),
@@ -245,7 +248,7 @@ export default function ActivityPage() {
   const totalKinds = Math.max(kindCounts.tools + kindCounts.errors + kindCounts.agents + kindCounts.lifecycle, 1);
 
   const errorRate = summary && summary.total_tool_events > 0
-    ? ((summary.recent_errors / summary.total_tool_events) * 100).toFixed(1)
+    ? ((globalErrors / summary.total_tool_events) * 100).toFixed(1)
     : "0";
 
   return (
@@ -287,7 +290,7 @@ export default function ActivityPage() {
           <StatTile icon={Wrench} color="var(--amber)" label="Tools" value={summary.total_tool_events} />
           <StatTile icon={Bot} color="var(--violet)" label="Agents" value={summary.total_subagent_events} />
           <StatTile icon={Shield} color="var(--sky)" label="Perms" value={summary.total_permission_events} />
-          <StatTile icon={AlertTriangle} color="var(--rose)" label="Hook Errors" value={summary.recent_errors} />
+          <StatTile icon={AlertTriangle} color="var(--rose)" label="Errors" value={globalErrors} />
 
           {/* Distribution bar */}
           <div style={{
@@ -346,7 +349,7 @@ export default function ActivityPage() {
             {FILTERS.map((f) => {
               const active = filter === f;
               const count = f === "All" ? events.length
-                : f === "Errors" && summary ? summary.recent_errors
+                : f === "Errors" ? globalErrors
                 : events.filter((e) => matchesFilter(e, f)).length;
               return (
                 <button
@@ -394,7 +397,7 @@ export default function ActivityPage() {
             <TopToolsChart data={summary?.tool_event_counts ?? []} />
           </Card>
 
-          {/* Recent errors */}
+          {/* Errors */}
           <Card glow="var(--rose)">
             <div style={{
               fontFamily: "var(--font-mono)", fontSize: "9px", fontWeight: 600,
@@ -402,17 +405,17 @@ export default function ActivityPage() {
               color: "var(--text-3)", padding: "14px 16px 0",
               display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
-              <span>Recent errors</span>
-              {summary && summary.recent_errors > 0 && (
+              <span>Errors</span>
+              {globalErrors > 0 && (
                 <span style={{
                   fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 600,
                   color: "var(--rose)",
                 }}>
-                  {summary.recent_errors}
+                  {globalErrors}
                 </span>
               )}
             </div>
-            <RecentErrors events={events} totalErrors={summary?.recent_errors ?? 0} />
+            <ErrorList events={events} totalErrors={globalErrors} />
           </Card>
         </div>
       </div>
@@ -489,16 +492,16 @@ function TopToolsChart({ data }: { data: [string, number][] }) {
   );
 }
 
-// ── Recent errors ─────────────────────────────────────────────
-function RecentErrors({ events, totalErrors }: { events: UnifiedEvent[]; totalErrors: number }) {
+// ── Error list ───────────────────────────────────────────────
+function ErrorList({ events, totalErrors }: { events: UnifiedEvent[]; totalErrors: number }) {
   const errors = events.filter((e) => e.kind === "tool_failure").slice(0, 6);
 
   if (errors.length === 0) {
     return (
       <div style={{ padding: "20px", textAlign: "center", fontSize: "12px", color: "var(--text-3)" }}>
         {totalErrors > 0
-          ? `${totalErrors} hook error${totalErrors > 1 ? "s" : ""} recorded — not in recent events`
-          : "No recent errors"}
+          ? `${totalErrors} error${totalErrors > 1 ? "s" : ""} recorded — older than loaded events`
+          : "No errors"}
       </div>
     );
   }
