@@ -61,7 +61,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="snippet-lines">
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
-                <span class="bright">brew tap Codestz/homebrew-tap</span>
+                <span class="bright">brew tap codestz/tap</span>
               </div>
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
@@ -71,7 +71,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <button
               class="copy-btn"
               onclick="
-                navigator.clipboard.writeText('brew tap Codestz/homebrew-tap\nbrew install claude-hindsight');
+                navigator.clipboard.writeText('brew tap codestz/tap\nbrew install claude-hindsight');
                 this.textContent = 'COPIED';
                 setTimeout(() => this.textContent = 'COPY', 2000);
               "
@@ -410,8 +410,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             num: "01", title: "INSTALL",
             desc: "One command via Homebrew or cargo install. Pre-built binaries have zero external dependencies — no Node.js, no Python, nothing.",
             lines: [
-              { t: "prompt",  text: "brew tap Codestz/homebrew-tap"      },
-              { t: "dim",     text: "==> Tapping Codestz/homebrew-tap..." },
+              { t: "prompt",  text: "brew tap codestz/tap"      },
+              { t: "dim",     text: "==> Tapping codestz/tap..." },
               { t: "prompt",  text: "brew install claude-hindsight"           },
               { t: "success", text: `✓  claude-hindsight ${VERSION} installed` },
             ],
@@ -493,7 +493,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           {
             method: "HOMEBREW",
             note: "macOS &amp; Linux — Recommended",
-            lines: ["brew tap Codestz/homebrew-tap", "brew install claude-hindsight"],
+            lines: ["brew tap codestz/tap", "brew install claude-hindsight"],
           },
           {
             method: "CARGO",
