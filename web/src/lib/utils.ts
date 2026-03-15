@@ -83,14 +83,15 @@ export function greeting(): string {
   return "Good evening";
 }
 
-// Milliseconds → human-readable duration (e.g. "4m 12s")
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
-  const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(0)}s`;
-  const m = Math.floor(s / 60);
-  const rem = Math.round(s % 60);
-  return `${m}m ${rem}s`;
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return s > 0 ? `${h}h ${m}m ${s}s` : `${h}h ${m}m`;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
 // Show last 2 path segments: "/a/b/c/d.ts" → ".../c/d.ts"
