@@ -71,21 +71,10 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageShell maxWidth="1320px"><LoadingState /></PageShell>;
-  if (error || !analytics) return <PageShell maxWidth="1320px"><ErrorState message={error} /></PageShell>;
-
-  const sessionsSub = [
-    analytics.sessions_today > 0 && `+${analytics.sessions_today} today`,
-    `${analytics.sessions_this_week} this week`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  const mcpServers = useMemo(() => extractMcpServers(analytics.top_tools), [analytics.top_tools]);
-  const nativeTools = useMemo(() => analytics.top_tools.filter(([n]) => !n.startsWith("mcp__")), [analytics.top_tools]);
+  // All hooks MUST be called before any early returns (Rules of Hooks)
+  const mcpServers = useMemo(() => analytics ? extractMcpServers(analytics.top_tools) : [], [analytics]);
+  const nativeTools = useMemo(() => analytics ? analytics.top_tools.filter(([n]) => !n.startsWith("mcp__")) : [], [analytics]);
   const topFilesForChart = useMemo(() => topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]), [topFiles]);
-
-  const hasTelemetry = telemetry && telemetry.cost_usd > 0;
   const modelCosts = useMemo(() => {
     if (otelLogs.length === 0) return [] as [string, number][];
     const byCost: Record<string, number> = {};
@@ -100,6 +89,17 @@ export default function DashboardPage() {
       .map(([m, c]) => [m, Math.round(c * 100) / 100] as [string, number]);
   }, [otelLogs]);
 
+  if (loading) return <PageShell maxWidth="1320px"><LoadingState /></PageShell>;
+  if (error || !analytics) return <PageShell maxWidth="1320px"><ErrorState message={error} /></PageShell>;
+
+  const sessionsSub = [
+    analytics.sessions_today > 0 && `+${analytics.sessions_today} today`,
+    `${analytics.sessions_this_week} this week`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const hasTelemetry = telemetry && telemetry.cost_usd > 0;
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
