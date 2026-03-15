@@ -14,7 +14,8 @@ import { Card } from "@/components/ui/Card";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { UnifiedEvent } from "@/components/activity/EventRow";
+import { EVENT_FILTERS, type UnifiedEvent, type EventFilter } from "@/components/activity/types";
+import { matchesEventFilter } from "@/components/activity/config";
 import {
   Wrench,
   Bot,
@@ -72,22 +73,15 @@ function permissionToUnified(e: HookPermissionEvent): UnifiedEvent {
   };
 }
 
-// ── Filter types ──────────────────────────────────────────────
-const FILTERS = ["All", "Tools", "Agents", "Lifecycle", "Errors"] as const;
-type Filter = (typeof FILTERS)[number];
+// KIND_CONFIG, FILTERS, matchesFilter imported from @/components/activity/config
 
-function matchesFilter(event: UnifiedEvent, filter: Filter): boolean {
-  switch (filter) {
-    case "All":       return true;
-    case "Tools":     return event.kind === "tool";
-    case "Agents":    return event.kind === "subagent";
-    case "Lifecycle": return event.kind === "lifecycle" || event.kind === "permission";
-    case "Errors":    return event.kind === "tool_failure";
-  }
-}
+// Aliases for backward compat within this file
+type Filter = EventFilter;
+const FILTERS = EVENT_FILTERS;
+const matchesFilter = matchesEventFilter;
 
-// ── Kind config ───────────────────────────────────────────────
-const KIND_CONFIG: Record<UnifiedEvent["kind"], { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; color: string }> = {
+// Keep page-specific KIND_CONFIG override (rose vs red for tool_failure)
+const PAGE_KIND_CONFIG: Record<UnifiedEvent["kind"], { icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; color: string }> = {
   tool:         { icon: Wrench,        color: "var(--amber)" },
   tool_failure: { icon: AlertTriangle, color: "var(--rose)" },
   subagent:     { icon: Bot,           color: "var(--violet)" },
@@ -106,7 +100,7 @@ function relativeTime(unixSec: number): string {
 // ── Inline event row ──────────────────────────────────────────
 function ActivityRow({ event }: { event: UnifiedEvent }) {
   const [expanded, setExpanded] = useState(false);
-  const cfg = KIND_CONFIG[event.kind];
+  const cfg = PAGE_KIND_CONFIG[event.kind];
   const Icon = cfg.icon;
   const hasDetail = !!(event.detail || event.error);
 

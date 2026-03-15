@@ -7,7 +7,16 @@ export function formatBytes(n: number): string {
   return `${n} B`;
 }
 
-// Unix seconds → human-readable relative time
+// Unix seconds → precise relative time (includes seconds)
+export function relativeTime(unixSeconds: number): string {
+  const diff = Math.floor(Date.now() / 1000) - unixSeconds;
+  if (diff < 60)     return `${diff}s ago`;
+  if (diff < 3_600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86_400) return `${Math.floor(diff / 3_600)}h ago`;
+  return `${Math.floor(diff / 86_400)}d ago`;
+}
+
+// Unix seconds → human-readable relative time (coarser, for display)
 export function timeAgo(unixSeconds: number): string {
   const diff = Math.floor(Date.now() / 1000) - unixSeconds;
   if (diff < 60)     return "just now";
