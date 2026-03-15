@@ -142,7 +142,7 @@ impl SearchState {
                 }
                 _ => {
                     // Literal match (existing behavior)
-                    if self.node_types.contains(&nt.as_str().to_string()) {
+                    if self.node_types.contains(nt.as_str()) {
                         return true;
                     }
                 }

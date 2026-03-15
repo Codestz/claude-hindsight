@@ -182,11 +182,7 @@ fn decode_project_name(path: &Path) -> String {
         return dir_name.to_string();
     }
 
-    // Reconstruct the original filesystem path by replacing leading `-` with `/`
     // The encoded format: `-Users-name-path-to-project` represents `/Users/name/path/to/project`
-    let reconstructed = dir_name.replacen('-', "/", 1); // first `-` → `/`
-
-    // Now we have something like `/Users-name-path-to-project`
     // We need to figure out where the actual path separators were.
     // Claude Code uses the *full absolute path* encoded with `-` for `/`.
     // Known path segments that are always single words: Users, Documents, home, var, tmp, etc.

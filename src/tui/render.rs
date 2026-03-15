@@ -347,6 +347,7 @@ fn render_assistant(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> 
 }
 
 /// Render tool use (also handles assistant messages with tool_use content)
+#[allow(dead_code)]
 fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
@@ -436,6 +437,7 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
 }
 
 /// Render tool result
+#[allow(dead_code)]
 fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
@@ -502,6 +504,7 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
 }
 
 /// Render thinking block
+#[allow(dead_code)]
 fn render_thinking(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 

@@ -69,8 +69,6 @@ impl NodeResponseContext {
 fn build_node_extras(
     node: &crate::parser::ExecutionNode,
 ) -> (String, Option<String>, Vec<String>) {
-    use crate::parser::models::ContentBlock;
-
     match node.node_type {
         NodeType::User => {
             if let Some(up) = extract::extract_user(node) {

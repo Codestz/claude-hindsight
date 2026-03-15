@@ -21,6 +21,7 @@ pub struct UserPrompt {
 
 /// A single tool call extracted from an assistant message.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ToolCallInfo {
     pub id: String,
     pub name: String,
@@ -68,6 +69,7 @@ pub enum SystemSubtype {
 
 /// Extracted system node information.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SystemInfo {
     pub subtype: SystemSubtype,
     /// Human-readable detail string.
@@ -151,6 +153,7 @@ pub fn extract_assistant(node: &ExecutionNode) -> Option<AssistantResponse> {
 }
 
 /// Extract all tool calls from a node (convenience for assistant nodes).
+#[allow(dead_code)]
 pub fn extract_tool_calls(node: &ExecutionNode) -> Vec<ToolCallInfo> {
     extract_assistant(node)
         .map(|a| a.tool_calls)
