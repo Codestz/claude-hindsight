@@ -1,43 +1,13 @@
 /**
  * Renders a sub-agent task completion notification.
  *
- * Parses <task-notification> XML content into a structured card with:
- * - Status badge (✓ COMPLETED / ○ pending)
- * - Summary text
- * - Usage stats (tokens, tools, duration)
- * - Task ID
- * - Result rendered as markdown
+ * Displays status badge, summary, usage stats, task ID, and result as markdown.
+ * parseTaskNotification() lives in ./utils.ts — this file is purely rendering.
  */
 
 import { ContentSection } from "./tool-displays";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
-import type { TaskNotification, TaskNotificationCardProps } from "./types";
-
-// Pre-compiled regexes for XML tag extraction
-const TASK_RE = {
-  taskId: /<task-id>([\s\S]*?)<\/task-id>/,
-  status: /<status>([\s\S]*?)<\/status>/,
-  summary: /<summary>([\s\S]*?)<\/summary>/,
-  result: /<result>([\s\S]*?)<\/result>/,
-  totalTokens: /<total_tokens>([\s\S]*?)<\/total_tokens>/,
-  toolUses: /<tool_uses>([\s\S]*?)<\/tool_uses>/,
-  durationMs: /<duration_ms>([\s\S]*?)<\/duration_ms>/,
-} as const;
-
-// TaskNotification type imported from ./types
-
-export function parseTaskNotification(content: string): TaskNotification | null {
-  if (!content.includes("<task-notification>")) return null;
-  return {
-    taskId: content.match(TASK_RE.taskId)?.[1]?.trim() ?? null,
-    status: content.match(TASK_RE.status)?.[1]?.trim() ?? null,
-    summary: content.match(TASK_RE.summary)?.[1]?.trim() ?? null,
-    result: content.match(TASK_RE.result)?.[1]?.trim() ?? null,
-    totalTokens: content.match(TASK_RE.totalTokens)?.[1]?.trim() ?? null,
-    toolUses: content.match(TASK_RE.toolUses)?.[1]?.trim() ?? null,
-    durationMs: content.match(TASK_RE.durationMs)?.[1]?.trim() ?? null,
-  };
-}
+import type { TaskNotificationCardProps } from "./types";
 
 export function TaskNotificationCard({ task }: TaskNotificationCardProps) {
   const isComplete = task.status === "completed";

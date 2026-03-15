@@ -75,6 +75,16 @@ export function formatTimestamp(ms: number): string {
   });
 }
 
+// Milliseconds → human-readable duration (e.g. "4m 12s")
+export function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(0)}s`;
+  const m = Math.floor(s / 60);
+  const rem = Math.round(s % 60);
+  return `${m}m ${rem}s`;
+}
+
 // Show last 2 path segments: "/a/b/c/d.ts" → ".../c/d.ts"
 export function shortPath(path: string): string {
   const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);

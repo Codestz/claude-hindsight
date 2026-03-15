@@ -6,7 +6,8 @@ import { CodeRender } from "@/components/ui/CodeRender";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ImagePreview } from "./ImagePreview";
-import { TaskNotificationCard, parseTaskNotification } from "./TaskNotificationCard";
+import { TaskNotificationCard } from "./TaskNotificationCard";
+import { parseTaskNotification } from "./utils";
 import {
   ContentSection,
   TokenFooter,

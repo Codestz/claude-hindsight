@@ -5,7 +5,7 @@
  */
 
 import type { NodeResponse } from "@/lib/types";
-import type { DisplayItem, GraphNode, GraphLink } from "./types";
+import type { DisplayItem, GraphNode, GraphLink, TaskNotification } from "./types";
 import { isCollapsibleNode, graphNodeColor, graphNodeRadius } from "./config";
 
 // ── ExecutionList display items ──────────────────────────────
@@ -62,4 +62,31 @@ export function buildGraph(roots: NodeResponse[]): { nodes: GraphNode[]; links: 
 
   for (const root of roots) walk(root, null);
   return { nodes, links };
+}
+
+// ── Task notification parsing ────────────────────────────────
+
+/** Pre-compiled regexes for XML tag extraction. */
+const TASK_RE = {
+  taskId: /<task-id>([\s\S]*?)<\/task-id>/,
+  status: /<status>([\s\S]*?)<\/status>/,
+  summary: /<summary>([\s\S]*?)<\/summary>/,
+  result: /<result>([\s\S]*?)<\/result>/,
+  totalTokens: /<total_tokens>([\s\S]*?)<\/total_tokens>/,
+  toolUses: /<tool_uses>([\s\S]*?)<\/tool_uses>/,
+  durationMs: /<duration_ms>([\s\S]*?)<\/duration_ms>/,
+} as const;
+
+/** Parse <task-notification> XML from a user node's content. */
+export function parseTaskNotification(content: string): TaskNotification | null {
+  if (!content.includes("<task-notification>")) return null;
+  return {
+    taskId: content.match(TASK_RE.taskId)?.[1]?.trim() ?? null,
+    status: content.match(TASK_RE.status)?.[1]?.trim() ?? null,
+    summary: content.match(TASK_RE.summary)?.[1]?.trim() ?? null,
+    result: content.match(TASK_RE.result)?.[1]?.trim() ?? null,
+    totalTokens: content.match(TASK_RE.totalTokens)?.[1]?.trim() ?? null,
+    toolUses: content.match(TASK_RE.toolUses)?.[1]?.trim() ?? null,
+    durationMs: content.match(TASK_RE.durationMs)?.[1]?.trim() ?? null,
+  };
 }

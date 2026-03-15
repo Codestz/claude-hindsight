@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { formatBytes, formatCost, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
+import { formatBytes, formatCost, formatDuration, formatTokens, shortId, shortModel, timeAgo } from "@/lib/utils";
 import type { SessionHeaderProps } from "./types";
 
 export const SessionHeader = React.memo(function SessionHeader({ session, otelSummary, stats }: SessionHeaderProps) {
@@ -64,11 +64,4 @@ function Pill({ label, color }: { label: string; color?: string }) {
   );
 }
 
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(0)}s`;
-  const m = Math.floor(s / 60);
-  const rem = Math.round(s % 60);
-  return `${m}m ${rem}s`;
-}
+// formatDuration imported from @/lib/utils
