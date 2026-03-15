@@ -1,3 +1,4 @@
+import React from "react";
 import type { NodeResponse } from "@/lib/types";
 import { getNodeMeta } from "@/lib/node-meta";
 import { formatTimestamp } from "@/lib/utils";
@@ -8,7 +9,7 @@ interface ExecutionRowProps {
   onSelect: () => void;
 }
 
-export function ExecutionRow({ node, isSelected, onSelect }: ExecutionRowProps) {
+export const ExecutionRow = React.memo(function ExecutionRow({ node, isSelected, onSelect }: ExecutionRowProps) {
   const meta = getNodeMeta(node);
   const isTask = meta.badge === "Task";
   const toolName = node.tool_name ?? node.tool_use?.name ?? null;
@@ -172,4 +173,4 @@ export function ExecutionRow({ node, isSelected, onSelect }: ExecutionRowProps) 
       )}
     </div>
   );
-}
+});

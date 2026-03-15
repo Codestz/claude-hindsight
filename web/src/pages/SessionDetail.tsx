@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { NodeResponse, OtelSessionSummary, SessionFile } from "@/lib/types";
@@ -139,6 +139,7 @@ function SessionDetail({ id }: { id: string }) {
     return <FullPageMessage error>{error ?? "Session not found"}</FullPageMessage>;
 
   const leftPanel = viewMode === "graph" ? (
+    <GraphErrorBoundary>
     <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-3)", fontFamily: "var(--font-mono)", fontSize: "12px" }}>Loading 3D graph&hellip;</div>}>
       <ExecutionGraph
         roots={roots}
@@ -146,6 +147,7 @@ function SessionDetail({ id }: { id: string }) {
         onSelect={setSelected}
       />
     </Suspense>
+    </GraphErrorBoundary>
   ) : (
     <ExecutionList
       nodes={sortedNodes}
@@ -209,6 +211,27 @@ function SessionDetail({ id }: { id: string }) {
       </div>
     </div>
   );
+}
+
+// Error boundary for lazy-loaded components (3D graph can fail on WebGL issues)
+class GraphErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-3)", fontFamily: "var(--font-mono)", fontSize: "12px", flexDirection: "column", gap: "8px" }}>
+          <span style={{ fontSize: "18px" }}>⚠</span>
+          <span>3D graph failed to load</span>
+          <span style={{ fontSize: "10px", color: "var(--text-3)" }}>WebGL may not be available</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function FullPageMessage({ children, error }: { children: React.ReactNode; error?: boolean }) {

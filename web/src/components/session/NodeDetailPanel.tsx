@@ -52,20 +52,27 @@ interface TaskNotification {
   durationMs: string | null;
 }
 
+// Pre-compiled regexes for task notification parsing (avoid per-call allocation)
+const TASK_RE = {
+  taskId: /<task-id>([\s\S]*?)<\/task-id>/,
+  status: /<status>([\s\S]*?)<\/status>/,
+  summary: /<summary>([\s\S]*?)<\/summary>/,
+  result: /<result>([\s\S]*?)<\/result>/,
+  totalTokens: /<total_tokens>([\s\S]*?)<\/total_tokens>/,
+  toolUses: /<tool_uses>([\s\S]*?)<\/tool_uses>/,
+  durationMs: /<duration_ms>([\s\S]*?)<\/duration_ms>/,
+} as const;
+
 function parseTaskNotification(content: string): TaskNotification | null {
   if (!content.includes("<task-notification>")) return null;
-  const extract = (tag: string): string | null => {
-    const m = content.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
-    return m?.[1]?.trim() ?? null;
-  };
   return {
-    taskId: extract("task-id"),
-    status: extract("status"),
-    summary: extract("summary"),
-    result: extract("result"),
-    totalTokens: extract("total_tokens"),
-    toolUses: extract("tool_uses"),
-    durationMs: extract("duration_ms"),
+    taskId: content.match(TASK_RE.taskId)?.[1]?.trim() ?? null,
+    status: content.match(TASK_RE.status)?.[1]?.trim() ?? null,
+    summary: content.match(TASK_RE.summary)?.[1]?.trim() ?? null,
+    result: content.match(TASK_RE.result)?.[1]?.trim() ?? null,
+    totalTokens: content.match(TASK_RE.totalTokens)?.[1]?.trim() ?? null,
+    toolUses: content.match(TASK_RE.toolUses)?.[1]?.trim() ?? null,
+    durationMs: content.match(TASK_RE.durationMs)?.[1]?.trim() ?? null,
   };
 }
 

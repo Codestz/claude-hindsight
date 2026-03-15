@@ -50,8 +50,13 @@ export function TimelineScrubber({ nodes, selectedId, onSelect, turnCosts }: Tim
     ? ((selectedNode.timestamp - minTs) / range) * 100
     : null;
 
-  // Token cost overlay — position bars by timestamp of their turn
-  const maxTurnTokens = turnCosts ? Math.max(...turnCosts.map((t) => t.totalTokens), 1) : 0;
+  // Token cost overlay — loop-based max (safe for large arrays)
+  let maxTurnTokens = 1;
+  if (turnCosts) {
+    for (const t of turnCosts) {
+      if (t.totalTokens > maxTurnTokens) maxTurnTokens = t.totalTokens;
+    }
+  }
 
   return (
     <div style={{ flexShrink: 0, padding: "2px 0 4px" }}>
