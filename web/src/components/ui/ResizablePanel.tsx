@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+/**
+ * Resizable two-panel layout with drag handle and preset buttons.
+ *
+ * Features:
+ * - Drag divider to resize
+ * - Preset buttons (30/50/70) visible on hover
+ * - localStorage persistence
+ * - Min width constraints
+ */
 
-interface ResizablePanelProps {
-  left: React.ReactNode;
-  right: React.ReactNode;
-  storageKey?: string;
-  defaultRatio?: number;
-  minLeftPx?: number;
-  minRightPx?: number;
-  presets?: number[];
-}
+import { useCallback, useEffect, useState } from "react";
+import { useResizableRatio } from "@/hooks/useResizableRatio";
+import type { ResizablePanelProps } from "./types";
 
 export function ResizablePanel({
   left,
@@ -19,43 +21,12 @@ export function ResizablePanel({
   minRightPx = 300,
   presets = [0.3, 0.5, 0.7],
 }: ResizablePanelProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [ratio, setRatio] = useState(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) return parseFloat(saved);
-    } catch { /* ignore */ }
-    return defaultRatio;
-  });
+  const { ratio, setRatio, clamp, persist, applyPreset, containerRef } =
+    useResizableRatio({ storageKey, defaultRatio, minLeftPx, minRightPx });
+
   const [dragging, setDragging] = useState(false);
   const [hovering, setHovering] = useState(false);
 
-  const clamp = useCallback(
-    (r: number) => {
-      const el = containerRef.current;
-      if (!el) return r;
-      const w = el.offsetWidth;
-      const minL = minLeftPx / w;
-      const maxL = 1 - minRightPx / w;
-      return Math.min(Math.max(r, minL), maxL);
-    },
-    [minLeftPx, minRightPx],
-  );
-
-  const persist = useCallback(
-    (r: number) => {
-      try { localStorage.setItem(storageKey, String(r)); } catch { /* ignore */ }
-    },
-    [storageKey],
-  );
-
-  const applyPreset = (p: number) => {
-    const clamped = clamp(p);
-    setRatio(clamped);
-    persist(clamped);
-  };
-
-  // Drag handling via pointer events
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.preventDefault();
@@ -74,7 +45,7 @@ export function ResizablePanel({
       const raw = (e.clientX - rect.left) / rect.width;
       setRatio(clamp(raw));
     },
-    [dragging, clamp],
+    [dragging, clamp, containerRef, setRatio],
   );
 
   const onPointerUp = useCallback(
@@ -104,13 +75,7 @@ export function ResizablePanel({
       style={{ display: "flex", height: "100%", position: "relative" }}
     >
       {/* Left panel */}
-      <div
-        style={{
-          width: `${ratio * 100}%`,
-          overflowY: "auto",
-          flexShrink: 0,
-        }}
-      >
+      <div style={{ width: `${ratio * 100}%`, overflowY: "auto", flexShrink: 0 }}>
         {left}
       </div>
 
@@ -132,37 +97,24 @@ export function ResizablePanel({
       >
         {/* Preset buttons */}
         {(hovering || dragging) && (
-          <div
-            style={{
-              position: "absolute",
-              top: "8px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px",
-              zIndex: 10,
-            }}
-          >
+          <div style={{
+            position: "absolute", top: "8px", left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex", flexDirection: "column", gap: "4px", zIndex: 10,
+          }}>
             {presets.map((p) => (
               <button
                 key={p}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); applyPreset(p); }}
                 style={{
-                  width: "24px",
-                  height: "18px",
-                  fontSize: "8px",
-                  fontFamily: "var(--font-mono)",
-                  fontWeight: 600,
-                  color: "var(--text-1)",
-                  background: "var(--bg-3)",
+                  width: "24px", height: "18px", fontSize: "8px",
+                  fontFamily: "var(--font-mono)", fontWeight: 600,
+                  color: "var(--text-1)", background: "var(--bg-3)",
                   border: "1px solid var(--border-2)",
                   borderRadius: "var(--radius-sm)",
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  display: "flex", alignItems: "center", justifyContent: "center",
                   padding: 0,
                 }}
               >
@@ -174,13 +126,7 @@ export function ResizablePanel({
       </div>
 
       {/* Right panel */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          borderLeft: "none", // handle serves as visual border
-        }}
-      >
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {right}
       </div>
     </div>
