@@ -4,26 +4,14 @@ import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { SessionFile } from "@/lib/types";
 import { shortId, shortModel, timeAgo } from "@/lib/utils";
-
-interface Props {
-  open: boolean;
-  onClose: () => void;
-}
-
-// Quick-links shown before the user types anything
-const QUICK_LINKS = [
-  { label: "Dashboard", href: "/", category: "Navigate" },
-  { label: "Activity", href: "/activity", category: "Navigate" },
-  { label: "Projects", href: "/projects", category: "Navigate" },
-  { label: "Sessions", href: "/sessions", category: "Navigate" },
-  { label: "Prompts", href: "/prompts", category: "Navigate" },
-];
+import type { CommandPaletteProps } from "./types";
+import { QUICK_LINKS } from "./config";
 
 type ResultItem =
   | { kind: "link"; label: string; href: string; category: string }
   | { kind: "session"; session: SessionFile };
 
-export function CommandPalette({ open, onClose }: Props) {
+export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [sessionResults, setSessionResults] = useState<SessionFile[]>([]);

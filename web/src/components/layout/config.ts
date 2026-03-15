@@ -31,6 +31,15 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/skills", label: "Skills", icon: Sparkles },
 ];
 
+/** Quick-links shown in CommandPalette before the user types anything. */
+export const QUICK_LINKS = [
+  { label: "Dashboard", href: "/", category: "Navigate" },
+  { label: "Activity", href: "/activity", category: "Navigate" },
+  { label: "Projects", href: "/projects", category: "Navigate" },
+  { label: "Sessions", href: "/sessions", category: "Navigate" },
+  { label: "Prompts", href: "/prompts", category: "Navigate" },
+];
+
 /** Check if a nav item is active based on current pathname. */
 export function isNavActive(to: string, pathname: string): boolean {
   if (to === "/") return pathname === "/";
