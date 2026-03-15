@@ -21,6 +21,7 @@ import {
   parseSerenaResult,
   stripLineNumbers,
 } from "./tool-displays";
+import { extractTurFile, resolveFilePath } from "./tool-displays/resolve-file-path";
 
 import type { NodeDetailPanelProps, ImageData } from "./types";
 
@@ -130,50 +131,9 @@ function PanelContent({ node, flatNodes, onNavigate }: { node: NodeResponse; fla
   const mcpShortTool = mcpParts?.[2]?.replace(/__/g, ".") ?? null;
   const displayToolName = mcpShortTool ?? toolCallName;
 
-  // ── Extract toolUseResult.file (Read tool result metadata) ──
-  const tur = node.toolUseResult as Record<string, unknown> | null | undefined;
-  const turFile = (tur && typeof tur === "object" && tur.file && typeof tur.file === "object")
-    ? tur.file as { content?: string; filePath?: string; file_path?: string; numLines?: number; startLine?: number; totalLines?: number }
-    : undefined;
-
-  // ── Resolve file path from all possible sources ─────────────
-  // Check every possible location where a file path might be stored.
-  // The file path determines syntax highlighting language via extension.
-  const resolvedFilePath: string | undefined = (() => {
-    // 1. toolUseResult.file.filePath (Read tool results — most reliable)
-    if (turFile) {
-      if (typeof turFile.filePath === "string") return turFile.filePath;
-      if (typeof turFile.file_path === "string") return turFile.file_path;
-    }
-    // 2. Raw message content blocks — filePath as sibling of text/content
-    const rawContent = node.message?.content;
-    if (Array.isArray(rawContent)) {
-      for (const block of rawContent) {
-        if (typeof block === "object" && block !== null) {
-          const b = block as Record<string, unknown>;
-          if (typeof b.filePath === "string") return b.filePath;
-          if (typeof b.file_path === "string") return b.file_path;
-          if (typeof b.content === "object" && b.content !== null && !Array.isArray(b.content)) {
-            const inner = b.content as Record<string, unknown>;
-            if (typeof inner.filePath === "string") return inner.filePath;
-          }
-        }
-      }
-    }
-    // 3. Tool call input (Read, Write, Edit all have file_path)
-    if (typeof toolCallInput?.file_path === "string") return toolCallInput.file_path;
-    // 4. tool_result content block with nested filePath
-    if (toolResultBlock?.content && typeof toolResultBlock.content === "object" && !Array.isArray(toolResultBlock.content)) {
-      const obj = toolResultBlock.content as Record<string, unknown>;
-      if (typeof obj.filePath === "string") return obj.filePath;
-      if (typeof obj.file_path === "string") return obj.file_path;
-    }
-    // 5. Top-level tool_result.file (snake_case)
-    if (topLevelToolResult?.file?.file_path) return topLevelToolResult.file.file_path;
-    // 6. Backend-computed file_paths array
-    if (node.file_paths?.[0]) return node.file_paths[0];
-    return undefined;
-  })();
+  // File path resolution (extracted to tool-displays/resolve-file-path.ts)
+  const turFile = extractTurFile(node);
+  const resolvedFilePath = resolveFilePath(node, turFile, toolCallInput);
 
   // Tool result content & error detection
   const resultIsError =
