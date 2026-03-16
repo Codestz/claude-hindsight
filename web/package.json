@@ -1,6 +1,6 @@
 {
   "name": "hindsight-web",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "lucide-react": "^0.575.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-force-graph-3d": "^1.29.1",
     "react-router-dom": "^7.1.0"
   },
   "devDependencies": {
@@ -19,6 +20,7 @@
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^4.3.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^4.2.0",

@@ -1,7 +1,8 @@
 ---
-import Landing from "../layouts/Landing.astro";
-import Nav     from "../components/Nav.astro";
-import Footer  from "../components/Footer.astro";
+import Landing     from "../layouts/Landing.astro";
+import Nav         from "../components/Nav.astro";
+import Footer      from "../components/Footer.astro";
+import SessionDemo from "../components/SessionDemo.astro";
 import { VERSION } from "../lib/version";
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 ---
@@ -27,16 +28,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
         <!-- Headline -->
         <div class="hero-headline">
-          <div class="hero-tag">The observability layer for Claude Code</div>
+          <div class="hero-tag">The complete monitoring system for Claude Code</div>
           <h1 class="hero-h1">20/20<br/>HINDSIGHT.</h1>
         </div>
 
         <!-- Sub -->
         <p class="hero-sub">
-          You gave Claude Code a task. Four minutes later,
-          it was done. But what actually happened in there —
-          the decisions, the tools, the dead ends, the errors?
-          <strong>Now you can know.</strong>
+          Every tool call. Every token. Every error. Every sub-agent.
+          Visualize sessions in 3D, inspect code changes with syntax highlighting,
+          preview screenshots, and track costs across all your projects.
+          <strong>See everything Claude does.</strong>
         </p>
 
         <!-- CTAs -->
@@ -60,7 +61,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <div class="snippet-lines">
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
-                <span class="bright">brew tap Codestz/claude-hindsight</span>
+                <span class="bright">brew tap codestz/tap</span>
               </div>
               <div class="snippet-line">
                 <span class="accent" aria-hidden="true">$</span>
@@ -70,7 +71,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <button
               class="copy-btn"
               onclick="
-                navigator.clipboard.writeText('brew tap Codestz/claude-hindsight\nbrew install claude-hindsight');
+                navigator.clipboard.writeText('brew tap codestz/tap\nbrew install claude-hindsight');
                 this.textContent = 'COPIED';
                 setTimeout(() => this.textContent = 'COPY', 2000);
               "
@@ -80,87 +81,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
       </div>
 
-      <!-- RIGHT: terminal mockup ───────────────── -->
-      <div class="mockup">
-
-        <!-- Browser chrome -->
-        <div class="mockup-chrome">
-          <div class="mockup-dots">
-            <span class="mdot mdot-r"></span>
-            <span class="mdot mdot-y"></span>
-            <span class="mdot mdot-g"></span>
-          </div>
-          <div class="mockup-url">claude-hindsight · localhost:7227</div>
-          <div class="mockup-live">
-            <span class="dot dot--pulse dot--red" aria-hidden="true"></span>
-            <span class="mockup-live-text">LIVE</span>
-          </div>
-        </div>
-
-        <!-- Mockup bento: header + tree + metrics -->
-        <div class="mockup-bento bento">
-
-          <!-- Session header -->
-          <div class="m-header">
-            <div class="m-row">
-              <span class="m-label">SESSION</span>
-              <span class="m-val">sess_17b8f9a2</span>
-            </div>
-            <div class="m-row">
-              <span class="m-label">4m 12s</span>
-              <span class="m-sep">·</span>
-              <span class="m-label">claude-sonnet-4-6</span>
-              <span class="m-sep">·</span>
-              <span class="m-label">0 errors</span>
-            </div>
-          </div>
-
-          <!-- Execution tree -->
-          <div class="m-tree">
-            <div class="m-cell-label">
-              <span class="accent" aria-hidden="true">⚡</span> EXECUTION TRACE
-            </div>
-            <div class="tree">
-              <div class="tl"><span class="dim">├─</span> <span class="tbadge tbadge-user">USER</span> <span class="muted">"Refactor auth module"</span></div>
-              <div class="tl tl-1"><span class="dim">└─</span> <span class="tbadge tbadge-asst">ASST</span> <span class="muted">claude-sonnet-4-6</span></div>
-              <div class="tl tl-2"><span class="dim">├─</span> <span class="tbadge tbadge-think">THINK</span> <span class="dim">892 tokens</span></div>
-              <div class="tl tl-2"><span class="dim">├─</span> <span class="tbadge tbadge-tool">TOOL</span> <span class="cyan"> Glob</span> <span class="dim">src/auth/**</span></div>
-              <div class="tl tl-3"><span class="dim">└─</span> <span class="tbadge tbadge-result">OK</span> <span class="dim">7 files</span></div>
-              <div class="tl tl-2"><span class="dim">├─</span> <span class="tbadge tbadge-tool">TOOL</span> <span class="cyan"> Bash</span> <span class="dim">cargo check</span></div>
-              <div class="tl tl-3"><span class="dim">└─</span> <span class="tbadge tbadge-ok">OK</span> <span class="accent">exit 0 ✓</span></div>
-              <div class="tl tl-2"><span class="dim">└─</span> <span class="tbadge tbadge-sub">SUB</span> <span class="amber"> TypeSpec validator</span></div>
-            </div>
-          </div>
-
-          <!-- Tool usage metrics -->
-          <div class="m-metrics">
-            <div class="m-cell-label">
-              <span class="accent" aria-hidden="true">◎</span> TOP TOOLS
-            </div>
-            <div class="m-chart">
-              {[
-                { lbl: "Glob  ", w: "78%", cls: "",      val: "14", vcls: "bright" },
-                { lbl: "Bash  ", w: "52%", cls: "bar-c", val: " 9", vcls: "cyan"   },
-                { lbl: "Edit  ", w: "35%", cls: "bar-a", val: " 6", vcls: "amber"  },
-              ].map((r) => (
-                <div class="chart-row">
-                  <span class="chart-lbl">{r.lbl}</span>
-                  <span class="chart-bar">
-                    <span class={`chart-fill ${r.cls}`} style={`width:${r.w}`}></span>
-                  </span>
-                  <span class={`chart-val ${r.vcls}`}>{r.val}</span>
-                </div>
-              ))}
-              <div class="chart-divider"></div>
-              <div class="chart-summary">
-                <span class="m-label">SUBAGENTS</span>
-                <span class="accent chart-cost">2</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
+      <!-- RIGHT: animated session demo ───────── -->
+      <SessionDemo />
 
     </div>
   </section>
@@ -172,17 +94,21 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <div class="ticker-track">
       {[...Array(2)].map(() => (
         <>
-          <span class="tick"><span class="tick-accent">01</span>Free &amp; Open Source</span>
+          <span class="tick"><span class="tick-accent">01</span>Free &amp; Open Source · MIT</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">02</span>Single binary — zero runtime deps</span>
+          <span class="tick"><span class="tick-accent">02</span>3D force-directed session graph</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">03</span>Reads ~/.claude/projects/ directly</span>
+          <span class="tick"><span class="tick-accent">03</span>Screenshot preview &amp; image lightbox</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">04</span>SQLite index — no repeated parsing</span>
+          <span class="tick"><span class="tick-accent">04</span>Syntax-highlighted code rendering</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">05</span>No telemetry · No cloud · No accounts</span>
+          <span class="tick"><span class="tick-accent">05</span>Cost tracking per turn &amp; model</span>
           <span class="tick-div">◆</span>
-          <span class="tick"><span class="tick-accent">06</span>Memory-safe Rust · ~8 MB</span>
+          <span class="tick"><span class="tick-accent">06</span>Real-time OTLP telemetry</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">07</span>No cloud · No accounts · 100% local</span>
+          <span class="tick-div">◆</span>
+          <span class="tick"><span class="tick-accent">08</span>Single Rust binary · ~8 MB</span>
           <span class="tick-div">◆</span>
         </>
       ))}
@@ -232,13 +158,15 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
         </div>
 
-        <!-- ── SESSION EXPLORER ───────────────── -->
+        <!-- ── SESSION INSPECTOR ──────────────── -->
         <div class="feat-cell fc-explorer">
-          <div class="fc-label label"><span class="cyan">◉</span>&ensp;SESSION EXPLORER</div>
-          <h3 class="fc-title">Full execution tree.<br/>Every single node.</h3>
+          <div class="fc-label label"><span class="cyan">◉</span>&ensp;SESSION INSPECTOR</div>
+          <h3 class="fc-title">Two-panel inspector.<br/>3D graph view.</h3>
           <p class="fc-desc">
-            Navigate Claude's entire reasoning process — user messages, thinking blocks,
-            tool calls with inputs and results, and spawned subagents. Every UUID, every timestamp.
+            Resizable split layout: compact execution list on the left, full node detail on the right.
+            Switch to 3D graph view to visualize the entire session as an interactive force-directed graph
+            with bloom lighting and node clustering. Preview screenshots, view syntax-highlighted code,
+            navigate tool call ↔ result pairs.
           </p>
           <div class="fc-tree">
             <div class="ftt muted">// session_17b8f9a2.jsonl</div>
@@ -283,13 +211,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
         </div>
 
-        <!-- ── ERROR TRACKING ────────────────── -->
+        <!-- ── COST & ERROR TRACKING ─────────── -->
         <div class="feat-cell fc-tokens">
-          <div class="fc-label label"><span class="amber">◐</span>&ensp;ERROR TRACKING</div>
-          <h3 class="fc-title">Find failures<br/>instantly.</h3>
+          <div class="fc-label label"><span class="amber">◐</span>&ensp;COST &amp; ERROR TRACKING</div>
+          <h3 class="fc-title">Every dollar.<br/>Every failure.</h3>
           <p class="fc-desc">
-            Track errors across all sessions and projects.
-            Jump directly to failed tool calls and see exactly what went wrong.
+            Track token costs per turn, per model, per project.
+            Timeline scrubber shows cost distribution.
+            Filter errors across all sessions with one click.
           </p>
           <div class="fc-chart">
             {[
@@ -345,7 +274,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
                 <div class="muted" style="margin-top:0.375rem">Sessions · Analytics</div>
                 <div class="muted">Live feed · Search</div>
               </div>
-              <div class="dual-meta">Next.js · embedded in the binary</div>
+              <div class="dual-meta">Vite + React Router · embedded in binary</div>
             </div>
           </div>
         </div>
@@ -375,18 +304,102 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           </div>
         </div>
 
+        <!-- ── REAL-TIME HOOKS ────────────────── -->
+        <div class="feat-cell fc-hooks">
+          <div class="fc-hooks-inner">
+            <div class="fc-hooks-copy">
+              <div class="fc-label label"><span class="amber">⚡</span>&ensp;REAL-TIME HOOKS</div>
+              <h3 class="fc-title">One command.<br/>Every session captured.</h3>
+              <p class="fc-desc">
+                <code>claude-hindsight integrate --otel</code> installs two Claude Code hooks
+                and starts the OTLP daemon. From that moment, every tool call streams into the
+                Activity Timeline automatically — zero manual steps.
+              </p>
+              <div class="fc-tags">
+                <span class="fc-tag"><span class="amber">✓</span>&ensp;UserPromptSubmit + PreToolUse hooks</span>
+                <span class="fc-tag"><span class="amber">✓</span>&ensp;OTLP telemetry on port :7228</span>
+                <span class="fc-tag"><span class="amber">✓</span>&ensp;Background daemon auto-starts</span>
+              </div>
+            </div>
+            <div class="fc-hooks-terminal">
+              <div class="ft-chrome">
+                <span class="ft-dot"></span><span class="ft-dot"></span><span class="ft-dot"></span>
+              </div>
+              <div class="ft-body">
+                <div class="ft-line"><span class="accent">$</span><span class="bright"> claude-hindsight integrate --otel</span></div>
+                <div class="ft-line"><span class="accent">✓&nbsp;</span><span class="muted">Installing Claude Code hooks...</span></div>
+                <div class="ft-line"><span class="accent">✓&nbsp;</span><span class="muted">PreToolUse hook → installed</span></div>
+                <div class="ft-line"><span class="accent">✓&nbsp;</span><span class="muted">UserPromptSubmit hook → installed</span></div>
+                <div class="ft-line"><span class="accent">✓&nbsp;</span><span class="muted">OTLP exporter → :7228</span></div>
+                <div class="ft-line"><span class="accent">✓&nbsp;</span><span class="bright">Done. Sessions now auto-indexed.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
 
   <!-- ═══════════════════════════════════════════
-       [03] HOW IT WORKS
+       [03] WHAT'S NEW IN v2.2
   ═══════════════════════════════════════════ -->
   <section class="section section-sep">
     <div class="section-inner">
 
       <div class="section-header">
         <span class="sec-num">[03]</span>
+        <span class="label">WHAT'S NEW IN v{VERSION}</span>
+        <span class="section-line"></span>
+        <span class="label muted">// latest release highlights</span>
+      </div>
+
+      <div class="whats-new-grid bento">
+        {[
+          {
+            icon: "◎", color: "var(--accent)", title: "3D Session Graph",
+            desc: "Visualize entire sessions as interactive force-directed graphs. Radial DAG layout, bloom lighting, click-to-focus camera. Powered by Three.js + WebGL.",
+          },
+          {
+            icon: "◉", color: "var(--cyan)", title: "Image Previews",
+            desc: "Screenshots embedded in tool results render as inline previews with expand-to-lightbox. Base64 data decoded directly — works even after files are deleted.",
+          },
+          {
+            icon: "◈", color: "var(--amber)", title: "Smart Tool Rendering",
+            desc: "Read, Edit, Write, Bash — each tool type gets a specialized display. MCP tools show server badges. Syntax highlighting for 8+ languages.",
+          },
+          {
+            icon: "↻", color: "var(--purple)", title: "Task Notifications",
+            desc: "Sub-agent completions parsed from XML into structured cards with status, token usage, duration, and markdown result rendering.",
+          },
+          {
+            icon: "⊕", color: "var(--green)", title: "Timeline Scrubber",
+            desc: "Horizontal timeline bar with colored node markers. Click anywhere to jump. Token-per-turn cost bars overlay in the background.",
+          },
+          {
+            icon: "⚡", color: "var(--red)", title: "Unified Error Tracking",
+            desc: "Global error count consistent across Dashboard and Activity. Errors tab loads failure events separately so they're always visible.",
+          },
+        ].map((item) => (
+          <div class="wn-card">
+            <div class="wn-icon" style={`color:${item.color}`}>{item.icon}</div>
+            <div class="wn-title">{item.title}</div>
+            <div class="wn-desc">{item.desc}</div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       [04] HOW IT WORKS
+  ═══════════════════════════════════════════ -->
+  <section class="section section-sep">
+    <div class="section-inner">
+
+      <div class="section-header">
+        <span class="sec-num">[04]</span>
         <span class="label">UP AND RUNNING IN 60 SECONDS</span>
         <span class="section-line"></span>
       </div>
@@ -397,8 +410,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             num: "01", title: "INSTALL",
             desc: "One command via Homebrew or cargo install. Pre-built binaries have zero external dependencies — no Node.js, no Python, nothing.",
             lines: [
-              { t: "prompt",  text: "brew tap Codestz/claude-hindsight"      },
-              { t: "dim",     text: "==> Tapping Codestz/claude-hindsight..." },
+              { t: "prompt",  text: "brew tap codestz/tap"      },
+              { t: "dim",     text: "==> Tapping codestz/tap..." },
               { t: "prompt",  text: "brew install claude-hindsight"           },
               { t: "success", text: `✓  claude-hindsight ${VERSION} installed` },
             ],
@@ -421,6 +434,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
               { t: "cyan",    text: "→  http://localhost:7227" },
               { t: "dim",     text: "Press Ctrl+C to stop"    },
               { t: "prompt",  text: "claude-hindsight watch"         },
+            ],
+          },
+          {
+            num: "04", title: "INTEGRATE",
+            desc: "One command installs Claude Code hooks and starts the OTLP daemon. Every future session is indexed and streamed live — automatically.",
+            lines: [
+              { t: "prompt",  text: "claude-hindsight integrate --otel"   },
+              { t: "success", text: "✓  PreToolUse hook → installed"       },
+              { t: "success", text: "✓  OTLP exporter → :7228"             },
+              { t: "success", text: "✓  Done. Sessions auto-indexed."      },
             ],
           },
         ].map((step) => (
@@ -459,7 +482,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <div class="section-inner">
 
       <div class="section-header">
-        <span class="sec-num">[04]</span>
+        <span class="sec-num">[05]</span>
         <span class="label">INSTALL</span>
         <span class="section-line"></span>
         <span class="label muted">// pick your method</span>
@@ -470,7 +493,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
           {
             method: "HOMEBREW",
             note: "macOS &amp; Linux — Recommended",
-            lines: ["brew tap Codestz/claude-hindsight", "brew install claude-hindsight"],
+            lines: ["brew tap codestz/tap", "brew install claude-hindsight"],
           },
           {
             method: "CARGO",
@@ -543,7 +566,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   width: 1000px;
   height: 640px;
   background: radial-gradient(ellipse at center,
-    rgba(0,255,136,0.045) 0%,
+    rgba(129,140,248,0.08) 0%,
     transparent 68%);
   pointer-events: none;
 }
@@ -651,109 +674,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   gap: 0.625rem;
 }
 
-/* Mockup */
-.mockup {
-  border: 1px solid var(--border-2);
-  overflow: hidden;
-  box-shadow: 0 0 60px rgba(0,0,0,0.7);
-}
-
-.mockup-chrome {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  padding: 0.75rem 1.125rem;
-  background: var(--bg-3);
-  border-bottom: 1px solid var(--border);
-}
-
-.mockup-dots { display: flex; gap: 6px; }
-.mdot { width: 10px; height: 10px; border-radius: 50%; opacity: 0.45; }
-.mdot-r { background: #FF5F57; }
-.mdot-y { background: #FEBC2E; }
-.mdot-g { background: #28C840; }
-
-.mockup-url {
-  flex: 1;
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text-2);
-  letter-spacing: 0.05em;
-}
-
-.mockup-live { display: flex; align-items: center; gap: 0.375rem; }
-.mockup-live-text {
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  color: var(--accent);
-}
-
-.mockup-bento {
-  grid-template-rows: auto 1fr;
-  grid-template-columns: 1fr 185px;
-  min-height: 480px;
-}
-
-.m-header {
-  grid-column: 1 / -1;
-  background: var(--bg-2);
-  padding: 0.625rem 1.125rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.m-row { display: flex; align-items: center; gap: 0.75rem; }
-.m-label {
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-2);
-}
-.m-sep { color: var(--text-3); font-size: 10px; }
-.m-val { font-family: var(--code); font-size: 12px; color: var(--text-1); }
-.m-cost { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); }
-
-.m-tree { padding: 1rem 1.125rem; overflow: hidden; }
-.m-metrics { padding: 1rem 1.125rem; background: var(--bg-2); }
-
-.m-cell-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--text-2);
-  margin-bottom: 0.875rem;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-/* Tree */
-.tree { font-family: var(--code); font-size: 11px; line-height: 1.7; }
-.tl   { display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; }
-.tl-1 { padding-left: 1rem; }
-.tl-2 { padding-left: 2rem; }
-.tl-3 { padding-left: 3rem; }
-
-/* Chart */
-.m-chart { font-family: var(--code); font-size: 11px; }
-.chart-row { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.4rem; }
-.chart-lbl { font-size: 9px; width: 42px; flex-shrink: 0; color: var(--text-2); }
-.chart-bar { flex: 1; height: 3px; background: var(--border-2); overflow: hidden; }
-.chart-fill { display: block; height: 100%; background: var(--accent); opacity: 0.75; }
-.bar-c { background: var(--cyan); }
-.bar-a { background: var(--amber); }
-.chart-val { font-size: 10px; width: 36px; text-align: right; }
-.chart-divider { height: 1px; background: var(--border); margin: 0.75rem 0; }
-.chart-summary { display: flex; align-items: flex-end; justify-content: space-between; }
-.chart-cost { font-size: 20px; font-weight: 700; line-height: 1; }
+/* (mockup chrome styles live in SessionDemo.astro) */
 
 /* ─── TICKER ─────────────────────────────────── */
 .ticker {
@@ -829,7 +750,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 }
 
 /* ─── CAPABILITIES BENTO ─────────────────────── */
-/* Clean 2-row layout — no row spanning → no empty cells */
 .feat-bento { grid-template-columns: repeat(12, 1fr); }
 
 .fc-setup    { grid-column: span 4; }
@@ -838,6 +758,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 .fc-tokens   { grid-column: span 4; }
 .fc-dual     { grid-column: span 5; }
 .fc-local    { grid-column: span 3; }
+.fc-hooks    { grid-column: span 12; }
+
+/* Hooks cell internal layout */
+.fc-hooks-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.fc-hooks-terminal {
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
 
 .feat-cell {
   background: var(--bg);
@@ -983,7 +917,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 }
 
 /* ─── STEPS ──────────────────────────────────── */
-.steps-grid { grid-template-columns: repeat(3, 1fr); }
+.steps-grid { grid-template-columns: repeat(4, 1fr); }
 
 .step { background: var(--bg); padding: 2.5rem; }
 
@@ -1083,9 +1017,40 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 .inst-docs-link:hover { text-decoration: underline; }
 
 /* ─── RESPONSIVE ─────────────────────────────── */
+/* ─── WHAT'S NEW ─────────────────────────────── */
+.whats-new-grid { grid-template-columns: repeat(3, 1fr); }
+
+.wn-card {
+  background: var(--bg);
+  padding: 2rem;
+  transition: background 0.2s;
+}
+.wn-card:hover { background: var(--bg-2); }
+
+.wn-icon {
+  font-size: 20px;
+  margin-bottom: 0.75rem;
+}
+
+.wn-title {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 0.625rem;
+  letter-spacing: -0.01em;
+}
+
+.wn-desc {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.65;
+}
+
 @media (max-width: 1024px) {
+  .whats-new-grid { grid-template-columns: repeat(2, 1fr); }
   .hero-inner { grid-template-columns: 1fr; min-height: auto; gap: 3rem; }
-  .mockup { max-width: 580px; }
 
   .feat-bento { grid-template-columns: repeat(6, 1fr); }
   .fc-setup    { grid-column: span 6; }
@@ -1094,12 +1059,15 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   .fc-tokens   { grid-column: span 3; }
   .fc-dual     { grid-column: span 3; }
   .fc-local    { grid-column: span 6; }
+  .fc-hooks    { grid-column: span 6; }
+  .fc-hooks-inner { grid-template-columns: 1fr; }
 
-  .steps-grid   { grid-template-columns: 1fr; }
+  .steps-grid   { grid-template-columns: repeat(2, 1fr); }
   .install-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
+  .whats-new-grid { grid-template-columns: 1fr; }
   /* Hero */
   .hero-inner    { padding: 3rem 1.25rem 2.5rem; }
   .section       { padding: 3rem 0; }
@@ -1111,17 +1079,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   /* Hero actions — stack vertically on narrow */
   .hero-actions { flex-direction: column; align-items: flex-start; }
 
-  /* Mockup — full width, single column bento */
-  .mockup        { max-width: 100%; }
-  .mockup-bento  { grid-template-columns: 1fr; }
-  .m-header      { grid-column: 1; }
-  .m-metrics     { display: none; }   /* hide sidebar metrics at mobile */
 
   /* Capabilities bento */
   .feat-bento { grid-template-columns: 1fr; }
   .fc-setup, .fc-explorer, .fc-live,
-  .fc-tokens, .fc-dual, .fc-local { grid-column: span 1; }
+  .fc-tokens, .fc-dual, .fc-local,
+  .fc-hooks { grid-column: span 1; }
   .feat-cell { padding: 1.5rem; }
+  .fc-hooks-inner { grid-template-columns: 1fr; }
 
   /* Feature tree — allow horizontal scroll instead of overflow */
   .fc-tree { overflow-x: auto; }
@@ -1132,6 +1097,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   .dual-sep     { display: none; }
 
   /* Steps */
+  .steps-grid { grid-template-columns: 1fr; }
   .step { padding: 1.5rem; }
 
   /* Install snippet */

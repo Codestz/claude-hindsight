@@ -77,65 +77,18 @@ impl SearchState {
             return true;
         }
 
-        let node_type_lower = node.node.node_type.to_lowercase();
+        let nt = node.node.node_type;
 
         for filter in &self.node_types {
             match filter.as_str() {
                 "error" => {
-                    // Match explicit error node type
-                    if node_type_lower == "error" {
+                    if node.node.has_error() {
                         return true;
-                    }
-                    // Match tool_result.is_error
-                    if node
-                        .node
-                        .tool_result
-                        .as_ref()
-                        .and_then(|r| r.is_error)
-                        .unwrap_or(false)
-                    {
-                        return true;
-                    }
-                    // Match <tool_use_error> in tool_result content
-                    if node
-                        .node
-                        .tool_result
-                        .as_ref()
-                        .and_then(|r| r.content.as_deref())
-                        .map(|c| c.contains("<tool_use_error>"))
-                        .unwrap_or(false)
-                    {
-                        return true;
-                    }
-                    // Match ContentBlock::ToolResult with is_error inside message
-                    if let Some(ref msg) = node.node.message {
-                        for block in msg.content_blocks() {
-                            if let ContentBlock::ToolResult {
-                                content, is_error, ..
-                            } = block
-                            {
-                                if is_error.unwrap_or(false) {
-                                    return true;
-                                }
-                                if content
-                                    .as_ref()
-                                    .and_then(|v| v.as_str())
-                                    .map(|s| s.contains("<tool_use_error>"))
-                                    .unwrap_or(false)
-                                {
-                                    return true;
-                                }
-                            }
-                        }
                     }
                 }
                 "tool" => {
-                    // Match both tool_use and tool_result nodes
-                    if node_type_lower == "tool_use" || node_type_lower == "tool_result" {
-                        return true;
-                    }
                     // Also match assistant nodes that contain ToolUse blocks
-                    if node_type_lower == "assistant" {
+                    if nt == crate::parser::models::NodeType::Assistant {
                         if let Some(ref msg) = node.node.message {
                             if msg
                                 .content_blocks()
@@ -147,7 +100,7 @@ impl SearchState {
                         }
                     }
                     // Also match user nodes that contain ToolResult blocks
-                    if node_type_lower == "user" {
+                    if nt == crate::parser::models::NodeType::User {
                         if let Some(ref msg) = node.node.message {
                             if msg
                                 .content_blocks()
@@ -163,7 +116,7 @@ impl SearchState {
                     // Match user messages with prompt_score >= 40
                     // We can't compute full context here, so use a simplified check:
                     // user node with meaningful text content
-                    if node_type_lower == "user" {
+                    if nt == crate::parser::models::NodeType::User {
                         if let Some(ref msg) = node.node.message {
                             // Skip tool-result-only messages
                             let blocks = msg.content_blocks();
@@ -189,7 +142,7 @@ impl SearchState {
                 }
                 _ => {
                     // Literal match (existing behavior)
-                    if self.node_types.contains(&node_type_lower) {
+                    if self.node_types.contains(nt.as_str()) {
                         return true;
                     }
                 }
@@ -209,7 +162,7 @@ impl SearchState {
         let query_lower = self.query.to_lowercase();
 
         // Search in node_type
-        if node.node.node_type.to_lowercase().contains(&query_lower) {
+        if node.node.node_type.as_str().contains(&query_lower) {
             return true;
         }
 

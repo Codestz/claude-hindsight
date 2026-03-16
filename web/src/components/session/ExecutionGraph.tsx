@@ -1,0 +1,238 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import ForceGraph3D from "react-force-graph-3d";
+import * as THREE from "three";
+import type { NodeResponse } from "@/lib/types";
+import { isTaskNotification } from "@/lib/node-meta";
+import type { ExecutionGraphProps } from "./types";
+import { buildGraph } from "./utils";
+import { useGraphSetup } from "@/hooks/useGraphSetup";
+import {
+  GRAPH_COLORS, GRAPH_SELECTED, GRAPH_ERROR, GRAPH_TASK_COLOR, GRAPH_BG,
+  graphPerfTier,
+} from "./config";
+
+// ── Shared geometry cache (avoid creating per-node) ──────────
+let geoCache = new Map<string, THREE.SphereGeometry>();
+function getSphereGeo(r: number, segs: number): THREE.SphereGeometry {
+  const key = `${r}-${segs}`;
+  if (!geoCache.has(key)) geoCache.set(key, new THREE.SphereGeometry(r, segs, segs));
+  return geoCache.get(key)!;
+}
+function disposeGeoCache() {
+  for (const geo of geoCache.values()) geo.dispose();
+  geoCache = new Map();
+}
+
+// ── Component ────────────────────────────────────────────────
+export function ExecutionGraph({ roots, selectedId, onSelect }: ExecutionGraphProps) {
+  const fgRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const bloomAdded = useRef(false);
+
+  const graphData = useMemo(() => buildGraph(roots), [roots]);
+  const tier = graphPerfTier(graphData.nodes.length);
+
+  // Dispose geometry cache on unmount
+  useEffect(() => () => disposeGeoCache(), []);
+
+
+  // Scene setup (bloom, lights, forces, fit)
+  useGraphSetup(fgRef, tier, graphData.nodes.length);
+
+  // Click → select + fly
+  const handleClick = useCallback((g: any) => {
+    onSelect(g.node);
+    const d = 50;
+    const ratio = 1 + d / Math.hypot(g.x, g.y, g.z);
+    fgRef.current?.cameraPosition(
+      { x: g.x * ratio, y: g.y * ratio, z: g.z * ratio },
+      g, 800,
+    );
+  }, [onSelect]);
+
+  // Custom 3D nodes — performance-scaled
+  const nodeObj = useCallback((g: any) => {
+    const sel = g.node.uuid === selectedId;
+    const err = g.node.has_error;
+    const hex = sel ? GRAPH_SELECTED : err ? GRAPH_ERROR : g.color;
+    const r = g.r as number;
+
+    // Low tier: single mesh, basic material, low-poly
+    if (tier === "low") {
+      const segs = r > 3 ? 8 : 6;
+      const mat = new THREE.MeshBasicMaterial({
+        color: hex,
+        transparent: !sel,
+        opacity: sel ? 1 : 0.8,
+      });
+      const mesh = new THREE.Mesh(getSphereGeo(r, segs), mat);
+      return mesh;
+    }
+
+    // Medium/High: group with glow
+    const group = new THREE.Group();
+    const segs = tier === "high" ? (r > 3 ? 16 : 10) : (r > 3 ? 10 : 6);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: hex,
+      emissive: hex,
+      emissiveIntensity: sel ? 1.2 : 0.5,
+      metalness: 0.3,
+      roughness: 0.4,
+    });
+    group.add(new THREE.Mesh(getSphereGeo(r, segs), mat));
+
+    // Glow — only for larger nodes or selected
+    if (sel || r >= 3) {
+      group.add(new THREE.Mesh(
+        getSphereGeo(r * 2.2, 6),
+        new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: sel ? 0.12 : 0.04 }),
+      ));
+    }
+
+    // Selection ring
+    if (sel) {
+      group.add(new THREE.Mesh(
+        new THREE.TorusGeometry(r + 2, 0.4, 6, 20),
+        new THREE.MeshBasicMaterial({ color: GRAPH_SELECTED, transparent: true, opacity: 0.7 }),
+      ));
+    }
+
+    // Task ring
+    if (isTaskNotification(g.node) && !sel) {
+      group.add(new THREE.Mesh(
+        new THREE.TorusGeometry(r + 1.5, 0.3, 6, 16),
+        new THREE.MeshBasicMaterial({ color: GRAPH_TASK_COLOR, transparent: true, opacity: 0.5 }),
+      ));
+    }
+
+    // Error pip
+    if (err && !sel) {
+      const pip = new THREE.Mesh(
+        getSphereGeo(1.2, 4),
+        new THREE.MeshBasicMaterial({ color: GRAPH_ERROR }),
+      );
+      pip.position.set(r + 1, r + 1, 0);
+      group.add(pip);
+    }
+
+    return group;
+  }, [selectedId, tier]);
+
+  // Tooltip — escape HTML to prevent XSS from node content
+  const nodeLabel = useCallback((g: any) => {
+    const n = g.node as NodeResponse;
+    const isTask = isTaskNotification(n);
+    const tool = n.tool_name ?? n.tool_use?.name;
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const badge = isTask
+      ? `<span style="color:#c084fc">[Task]</span> `
+      : tool ? `<span style="color:#F59E0B">[${esc(tool)}]</span> ` : "";
+    const rawText = isTask
+      ? (typeof n.message?.content === "string"
+          ? n.message.content.match(/<summary>([\s\S]*?)<\/summary>/)?.[1] ?? n.label
+          : n.label)
+      : (n.summary || n.label);
+    const text = esc(rawText);
+    return `<div style="font:11px/1.4 'Geist Mono',monospace;background:rgba(10,10,14,0.92);padding:6px 10px;border-radius:6px;border:1px solid rgba(129,140,248,0.2);color:#ECECF1;max-width:320px;word-wrap:break-word">${badge}${text}</div>`;
+  }, []);
+
+  // Link styling — simpler for large graphs
+  const linkColor = useCallback((link: any) => {
+    if (tier === "low") return "rgba(255,255,255,0.04)";
+    const s = typeof link.source === "object" ? link.source.id : link.source;
+    const t = typeof link.target === "object" ? link.target.id : link.target;
+    if (s === selectedId || t === selectedId) return "rgba(129,140,248,0.4)";
+    return "rgba(255,255,255,0.06)";
+  }, [selectedId, tier]);
+
+  const linkWidth = useCallback((link: any) => {
+    if (tier === "low") return 0.2;
+    const s = typeof link.source === "object" ? link.source.id : link.source;
+    const t = typeof link.target === "object" ? link.target.id : link.target;
+    if (s === selectedId || t === selectedId) return 1.2;
+    return 0.3;
+  }, [selectedId, tier]);
+
+  // Container size
+  const [dims, setDims] = useState({ w: 800, h: 600 });
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((e) => {
+      for (const entry of e) setDims({ w: entry.contentRect.width, h: entry.contentRect.height });
+    });
+    ro.observe(el);
+    setDims({ w: el.clientWidth, h: el.clientHeight });
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+      <ForceGraph3D
+        ref={fgRef}
+        graphData={graphData}
+        width={dims.w}
+        height={dims.h}
+        backgroundColor={GRAPH_BG}
+        dagMode="radialout"
+        dagLevelDistance={tier === "low" ? 35 : 50}
+        // Nodes
+        nodeThreeObject={nodeObj}
+        nodeLabel={nodeLabel}
+        onNodeClick={handleClick}
+        enableNodeDrag={true}
+        // Links — scale down for performance
+        linkColor={linkColor}
+        linkWidth={linkWidth}
+        linkOpacity={0.6}
+        linkCurvature={tier === "low" ? 0 : 0.15}
+        linkCurveRotation={tier === "low" ? 0 : 0.5}
+        linkDirectionalArrowLength={tier === "low" ? 0 : 2.5}
+        linkDirectionalArrowRelPos={0.92}
+        linkDirectionalArrowColor={() => "rgba(129,140,248,0.25)"}
+        linkDirectionalParticles={tier === "low" ? 0 : tier === "medium" ? 1 : 2}
+        linkDirectionalParticleWidth={0.5}
+        linkDirectionalParticleSpeed={0.005}
+        linkDirectionalParticleColor={() => "rgba(129,140,248,0.6)"}
+        // Navigation
+        enableNavigationControls={true}
+        showNavInfo={false}
+        // Simulation — faster convergence for large graphs
+        warmupTicks={tier === "low" ? 60 : tier === "medium" ? 100 : 150}
+        cooldownTime={tier === "low" ? 2000 : tier === "medium" ? 3500 : 5000}
+      />
+
+      {/* Legend */}
+      <div style={{
+        position: "absolute", bottom: "12px", left: "12px",
+        display: "flex", gap: "10px", flexWrap: "wrap",
+        padding: "6px 12px", borderRadius: "8px",
+        background: "rgba(10,10,14,0.85)", border: "1px solid rgba(255,255,255,0.06)",
+      }}>
+        {[
+          { l: "User", c: GRAPH_COLORS.cyan }, { l: "Asst", c: GRAPH_COLORS.green },
+          { l: "Tool", c: GRAPH_COLORS.yellow }, { l: "Result", c: GRAPH_COLORS.blue },
+          { l: "Think", c: GRAPH_COLORS.magenta }, { l: "Task", c: "#c084fc" },
+          { l: "Error", c: GRAPH_ERROR },
+        ].map(({ l, c }) => (
+          <div key={l} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: c }} />
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "9px", color: "#63637A", letterSpacing: "0.04em" }}>{l}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Performance + controls */}
+      <div style={{
+        position: "absolute", top: "10px", right: "10px",
+        fontFamily: "var(--font-mono)", fontSize: "9px", color: "#4a4a5a",
+        background: "rgba(10,10,14,0.7)", padding: "4px 8px", borderRadius: "6px",
+        border: "1px solid rgba(255,255,255,0.04)",
+      }}>
+        {graphData.nodes.length} nodes {tier !== "high" && `\u00b7 ${tier} detail`}
+        {" \u00b7 "} Drag: orbit &middot; Scroll: zoom
+      </div>
+    </div>
+  );
+}

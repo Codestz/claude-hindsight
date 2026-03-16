@@ -9,6 +9,7 @@ pub mod icons {
     pub const USER: &str = ""; // nf-fa-user
     pub const TOOL_USE: &str = ""; // nf-fa-wrench
     pub const TOOL_RESULT: &str = ""; // nf-fa-check_circle
+    #[allow(dead_code)]
     pub const THINKING: &str = ""; // nf-fa-lightbulb
     pub const PROGRESS: &str = ""; // nf-fa-clock
 }
@@ -20,6 +21,7 @@ pub mod colors {
     pub const USER_MSG: Color = Color::Cyan;
     pub const TOOL_USE: Color = Color::Yellow;
     pub const TOOL_RESULT: Color = Color::Blue;
+    #[allow(dead_code)]
     pub const THINKING: Color = Color::Magenta;
     pub const PROGRESS: Color = Color::Gray;
 }

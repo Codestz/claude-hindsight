@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "@/lib/api";
-import type { AgentConfig } from "@/lib/types";
+import type { AgentConfig, AgentGroup } from "@/lib/types";
 import { PageShell } from "@/components/ui/PageShell";
 import { Card } from "@/components/ui/Card";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { InlineDiff } from "@/components/ui/InlineDiff";
 import {
   Bot,
   ChevronLeft,
@@ -16,8 +17,10 @@ import {
   RotateCcw,
   FileText,
   Webhook,
+  GitCompare,
 } from "lucide-react";
 import { ConfigRow } from "@/components/ui/ConfigRow";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
 function TagList({ items, color }: { items: string[]; color: string }) {
   return (
@@ -45,17 +48,21 @@ function TagList({ items, color }: { items: string[]; color: string }) {
 
 export default function AgentDetailPage() {
   const { name } = useParams<{ name: string }>();
-  const [agent, setAgent] = useState<AgentConfig | null>(null);
+  const [group, setGroup] = useState<AgentGroup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!name) return;
     api.agent(name)
-      .then(setAgent)
+      .then(setGroup)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [name]);
+
+  const agent: AgentConfig | null = group?.items[0] ?? null;
+  const hasDiff = group != null && !group.identical && group.items.length >= 2;
+  const [compareMode, setCompareMode] = useState(false);
 
   if (loading) return <PageShell><LoadingState /></PageShell>;
   if (error || !agent) return <PageShell><ErrorState message={error ?? "Agent not found"} /></PageShell>;
@@ -93,11 +100,12 @@ export default function AgentDetailPage() {
             justifyContent: "center",
             color: "var(--purple)",
             flexShrink: 0,
+            boxShadow: "0 0 16px color-mix(in srgb, var(--purple) 20%, transparent)",
           }}
         >
           <Bot size={20} />
         </span>
-        <div>
+        <div style={{ flex: 1 }}>
           <h1
             style={{
               fontSize: "20px",
@@ -122,9 +130,34 @@ export default function AgentDetailPage() {
             </div>
           )}
         </div>
+        {hasDiff && (
+          <button
+            onClick={() => setCompareMode((v) => !v)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 14px",
+              background: compareMode
+                ? "color-mix(in srgb, var(--amber) 15%, transparent)"
+                : "var(--bg-2)",
+              border: `1px solid ${compareMode ? "var(--amber)" : "var(--border-1)"}`,
+              borderRadius: "var(--radius-md)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "12px",
+              color: compareMode ? "var(--amber)" : "var(--text-2)",
+              cursor: "pointer",
+              flexShrink: 0,
+              transition: "all 0.15s",
+            }}
+          >
+            <GitCompare size={13} />
+            {compareMode ? "Exit compare" : "Compare scopes"}
+          </button>
+        )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "start" }}>
+      <div className="animate-in" style={{ "--delay": "0.06s", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", alignItems: "start" } as React.CSSProperties}>
         {/* Config table */}
         <Card>
           <div
@@ -284,8 +317,38 @@ export default function AgentDetailPage() {
         </div>
       </div>
 
-      {/* System prompt / body */}
-      {agent.body && (
+      {/* Body — normal view or compare view, toggled by the header button */}
+      {compareMode && group ? (
+        <Card>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "10px",
+              fontWeight: 600,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--amber)",
+              padding: "14px 16px",
+              borderBottom: "1px solid var(--border-1)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <GitCompare size={12} />
+            Comparing {group.items.length} scopes
+          </div>
+          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            {group.items.slice(1).map((copy) => (
+              <InlineDiff
+                key={copy.file_path}
+                left={{ label: group.items[0].scope, body: group.items[0].body }}
+                right={{ label: copy.scope, body: copy.body }}
+              />
+            ))}
+          </div>
+        </Card>
+      ) : agent.body ? (
         <Card>
           <div
             style={{
@@ -301,22 +364,11 @@ export default function AgentDetailPage() {
           >
             System prompt
           </div>
-          <div
-            style={{
-              padding: "16px",
-              fontFamily: "var(--font-mono)",
-              fontSize: "13px",
-              lineHeight: 1.6,
-              color: "var(--text-2)",
-              whiteSpace: "pre-wrap",
-              maxHeight: "500px",
-              overflowY: "auto",
-            }}
-          >
-            {agent.body}
+          <div style={{ padding: "16px", maxHeight: "500px", overflowY: "auto" }}>
+            <MarkdownContent text={agent.body} />
           </div>
         </Card>
-      )}
+      ) : null}
     </PageShell>
   );
 }

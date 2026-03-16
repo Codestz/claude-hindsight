@@ -53,6 +53,7 @@ export function SessionTable({
           padding: "0 24px",
           height: "36px",
           borderBottom: "1px solid var(--border-1)",
+          background: "var(--bg-2)",
         }}
       >
         {HEADERS.map((h) => (

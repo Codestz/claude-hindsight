@@ -7,6 +7,16 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
     <!-- Brand -->
     <a href={`${base}/`} class="nav-brand" aria-label="Hindsight home">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" style="flex-shrink:0">
+        <line x1="7" y1="24" x2="16" y2="14" stroke="#818CF8" stroke-width="1" stroke-opacity="0.3"/>
+        <line x1="25" y1="24" x2="16" y2="14" stroke="#818CF8" stroke-width="1" stroke-opacity="0.3"/>
+        <circle cx="9" cy="8" r="1.8" fill="#F59E0B" opacity="0.7"/>
+        <circle cx="22" cy="7" r="1.5" fill="#34D399" opacity="0.6"/>
+        <circle cx="7" cy="24" r="2.2" fill="#38BDF8" opacity="0.7"/>
+        <circle cx="25" cy="24" r="2" fill="#A78BFA" opacity="0.6"/>
+        <circle cx="16" cy="14" r="3.5" fill="#818CF8"/>
+        <circle cx="15" cy="13" r="1.2" fill="white" opacity="0.3"/>
+      </svg>
       <span class="nav-logo">HINDSIGHT</span>
       <span class="nav-version">v{VERSION}</span>
     </a>
@@ -114,7 +124,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     font-family: "JetBrains Mono", monospace;
     font-size: 10px;
     color: var(--accent);
-    border: 1px solid rgba(0,255,136,0.25);
+    border: 1px solid rgba(129,140,248,0.25);
     padding: 2px 7px;
     letter-spacing: 0.05em;
   }
@@ -142,11 +152,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   .nav-cta {
     opacity: 1;
     color: var(--accent);
-    border: 1px solid rgba(0,255,136,0.35);
+    border: 1px solid rgba(129,140,248,0.35);
     transition: background 0.15s;
   }
   .nav-cta:hover {
-    background: rgba(0,255,136,0.08);
+    background: rgba(129,140,248,0.08);
     opacity: 1;
   }
 

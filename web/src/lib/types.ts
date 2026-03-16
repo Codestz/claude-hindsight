@@ -227,6 +227,10 @@ export interface NodeResponse {
   progress: NodeProgress | null;
   token_usage: TokenUsage | null;
 
+  // ── Backend-computed fields ─────────────────────────────────
+  tool_name?: string;       // "Read", "Bash", "Edit" — on tool-call nodes
+  file_paths?: string[];    // paths from tool inputs
+
   // ── Prompt score (0–100) — only present on user nodes
   // Scores >= 40 indicate a meaningful prompt.
   prompt_score?: number;
@@ -405,7 +409,15 @@ export interface HookActivitySummary {
 //       GET /api/skills/:name
 // ─────────────────────────────────────────────────────────────
 
-/** Agent configuration — from GET /api/agents */
+/** All copies of an agent sharing the same name across scopes — from GET /api/agents and /api/agents/:name */
+export interface AgentGroup {
+  name: string;
+  /** true when every copy has byte-identical body content */
+  identical: boolean;
+  items: AgentConfig[];
+}
+
+/** Agent configuration — from GET /api/agents (inside AgentGroup.items) */
 export interface AgentConfig {
   name: string;
   description: string | null;
@@ -432,7 +444,15 @@ export interface SkillReference {
   category: string; // "reference" | "rule"
 }
 
-/** Skill configuration — from GET /api/skills */
+/** All copies of a skill sharing the same name across scopes — from GET /api/skills and /api/skills/:name */
+export interface SkillGroup {
+  name: string;
+  /** true when every copy has byte-identical body content */
+  identical: boolean;
+  items: SkillConfig[];
+}
+
+/** Skill configuration — from GET /api/skills (inside SkillGroup.items) */
 export interface SkillConfig {
   name: string;
   description: string | null;
@@ -447,4 +467,38 @@ export interface SkillConfig {
   scope: string;
   project_name: string | null;
   references: SkillReference[];
+}
+
+// ─────────────────────────────────────────────────────────────
+// § 10 — CONVERSATION TIMELINE TYPES
+// ─────────────────────────────────────────────────────────────
+
+/** A turn groups consecutive nodes by role boundary */
+export interface Turn {
+  id: string;
+  role: "user" | "assistant" | "system";
+  nodes: NodeResponse[];
+  timestamp: number | null;
+}
+
+/** Token cost for a single user turn */
+export interface TurnCost {
+  turnIndex: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+  toolCalls: number;
+}
+
+/** Aggregated session statistics for the header bar */
+export interface SessionStats {
+  totalTurns: number;
+  toolCalls: number;
+  errorCount: number;
+  totalTokens: number;
+  costUsd: number | null;
+  durationMs: number | null;
+  turnCosts: TurnCost[];
 }

@@ -1,24 +1,43 @@
-# Claude Hindsight
+<h1 align="center">Claude Hindsight</h1>
 
-> **20/20 hindsight for your Claude Code sessions**
+<p align="center">
+  <strong>20/20 hindsight for your Claude Code sessions</strong>
+</p>
 
-[![CI](https://github.com/Codestz/claude-hindsight/actions/workflows/ci.yml/badge.svg)](https://github.com/Codestz/claude-hindsight/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/claude-hindsight.svg)](https://crates.io/crates/claude-hindsight)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
+<p align="center">
+  <a href="https://github.com/Codestz/claude-hindsight/actions/workflows/ci.yml"><img src="https://github.com/Codestz/claude-hindsight/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://crates.io/crates/claude-hindsight"><img src="https://img.shields.io/crates/v/claude-hindsight.svg" alt="Crates.io" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.75%2B-orange.svg" alt="Rust" /></a>
+</p>
 
-**Claude Hindsight** transforms opaque AI coding sessions into crystal-clear insights. Built for developers who need to **understand**, **debug**, and **analyze** their [Claude Code](https://claude.com/code) workflows.
+<p align="center">
+  <a href="https://codestz.github.io/claude-hindsight/">Documentation</a> &middot;
+  <a href="https://github.com/Codestz/claude-hindsight/releases">Releases</a> &middot;
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-**[Documentation](https://codestz.github.io/claude-hindsight/)** | **[Changelog](https://github.com/Codestz/claude-hindsight/releases)**
+---
+
+Claude Hindsight transforms opaque AI coding sessions into crystal-clear insights. It parses the raw JSONL transcripts that [Claude Code](https://claude.com/code) writes to disk and gives you a **full-featured web dashboard**, real-time streaming, and deep analytics — all from a single binary with zero external dependencies.
+
+## Why Hindsight?
+
+- **Understand what happened** — browse every tool call, thinking block, and assistant message in a two-panel inspector
+- **Spot problems fast** — errors are highlighted, filterable, and linked to their source nodes
+- **Track costs** — per-session and per-model token breakdowns with OpenTelemetry integration
+- **Visualize execution** — interactive 3D force-directed graph shows how nodes relate
+- **Stay current** — live SSE streaming as Claude works, automatic session discovery
+- **Works offline** — everything runs locally, no data leaves your machine
 
 ---
 
 ## Installation
 
-### Homebrew (macOS & Linux)
+### Homebrew (recommended)
 
 ```bash
-brew tap Codestz/claude-hindsight
+brew tap codestz/tap
 brew install claude-hindsight
 ```
 
@@ -30,70 +49,82 @@ cargo install claude-hindsight
 
 ### Pre-built binaries
 
-Download from the [GitHub Releases](https://github.com/Codestz/claude-hindsight/releases) page. Available for:
-- macOS (Apple Silicon & Intel)
-- Linux (x86_64 & aarch64)
+Download from [GitHub Releases](https://github.com/Codestz/claude-hindsight/releases) — available for macOS (Apple Silicon & Intel) and Linux (x86_64 & aarch64).
 
 ### Build from source
 
 ```bash
 git clone https://github.com/Codestz/claude-hindsight
 cd claude-hindsight
-make build            # builds frontend + Rust binary
-# binary -> target/release/claude-hindsight
+make build    # builds frontend + Rust binary → target/release/claude-hindsight
 ```
 
-**Requirements:** Rust 1.75+, Node.js 20+
-
-Pre-built binaries and Homebrew bottles have **no external dependencies** — the web dashboard is embedded directly in the binary.
+Requires Rust 1.75+ and Node.js 20+. Pre-built binaries have **no runtime dependencies** — the web dashboard is embedded in the binary.
 
 ---
 
 ## Quick Start
 
 ```bash
-claude-hindsight init          # discover Claude Code sessions & build index
-claude-hindsight serve --open  # open web dashboard in browser
-claude-hindsight               # launch interactive terminal UI
+claude-hindsight init                # discover sessions & build index
+claude-hindsight integrate           # install Claude Code hooks for auto-indexing
+claude-hindsight serve --open        # launch the web dashboard
 ```
+
+That's it. Open `http://localhost:7227` and explore your sessions.
 
 ---
 
 ## Web Dashboard
 
+The dashboard is the primary interface. Start it with:
+
 ```bash
-claude-hindsight serve                 # start on http://localhost:7227
-claude-hindsight serve --open          # start and open browser
-claude-hindsight serve --port 8080     # custom port
+claude-hindsight serve               # http://localhost:7227
+claude-hindsight serve --open        # auto-open browser
+claude-hindsight serve --port 8080   # custom port
 ```
 
-A self-contained web dashboard with:
-- **Global analytics** — sessions over time, tool usage, error tracking
-- **Project views** — per-project session lists, top tools, most accessed files, MCP server usage
-- **Session detail** — full execution tree with smart node labels, diff viewer, raw JSON
-- **Live feed** — real-time updates via SSE as Claude works
-- **Error navigation** — jump directly to failures
-- **Subagent tracking** — see which models subagents use and their source directories
+### What you get
+
+**Dashboard** — global overview with session activity sparkline, KPI cards (sessions, projects, cost, errors), top tools, cost by model, most accessed files, MCP server usage, and recent activity feed.
+
+**Session Inspector** — two-panel resizable layout. Left panel shows a flat execution list with color-coded node types, tool names, file chips, and error indicators. Right panel shows full node detail: markdown rendering, syntax-highlighted code (TypeScript, Rust, Python, Go, Bash, HTML, CSS), diff views, image previews, and token usage.
+
+**3D Execution Graph** — interactive force-directed visualization of the session's node hierarchy. Nodes are colored by type, sized by importance. Bloom post-processing, starfield background, click-to-inspect.
+
+**Project Views** — per-project session lists, aggregated analytics, tool usage patterns.
+
+**Activity Timeline** — real-time event feed from Claude Code hooks showing tool calls, errors, and session lifecycle events.
+
+**Live Streaming** — SSE-powered real-time updates. Watch nodes appear as Claude works.
 
 ---
 
-## Terminal UI
+## Claude Code Integration
+
+Install lifecycle hooks so Hindsight auto-indexes sessions in real time — no manual `reindex` needed:
 
 ```bash
-claude-hindsight                       # launch TUI (default)
-claude-hindsight show <session-id>     # open a specific session
-claude-hindsight watch                 # watch active session live
+claude-hindsight integrate           # install hooks (interactive)
+claude-hindsight integrate --all     # install in all settings files
+claude-hindsight integrate --otel    # also enable OpenTelemetry telemetry
+claude-hindsight integrate --status  # check what's installed
+claude-hindsight integrate --remove  # uninstall hooks
 ```
 
-**Keyboard shortcuts:**
-- `j/k` or `Up/Down` — navigate tree
-- `/` — filter by node type (`user`, `tool_use`, `thinking`, ...)
-- `n/N` — jump between filtered nodes
-- `Tab` — switch focus (tree / details)
-- `Ctrl+d/u` — half-page scroll
-- `g/G` — top / bottom
-- `y` — copy selected node content to clipboard
-- `q` — quit
+Hooks capture: session start/end, tool use, prompt submit, subagent activity, permission requests, task completion, and more. All hooks run async — zero impact on Claude Code performance.
+
+### OpenTelemetry
+
+Enable OTLP telemetry for detailed token-level cost tracking:
+
+```bash
+claude-hindsight integrate --otel    # writes env vars to Claude Code settings
+claude-hindsight serve               # OTLP receiver runs alongside the dashboard
+```
+
+The dashboard then shows per-model cost breakdown, input/output/cache token splits, and cost-per-turn overlays.
 
 ---
 
@@ -101,85 +132,86 @@ claude-hindsight watch                 # watch active session live
 
 | Command | Description |
 |---|---|
-| `claude-hindsight` | Launch terminal UI (configurable default view) |
-| `claude-hindsight init` | Discover sessions and build the SQLite index |
-| `claude-hindsight serve` | Start the web dashboard server |
-| `claude-hindsight list` | List sessions with filters (`--project`, `--errors`, `--today`, `--last N`, `--with-subagents`) |
-| `claude-hindsight show <id>` | Open a session in the TUI or web dashboard (`--dashboard`) |
-| `claude-hindsight watch` | Tail the active session in real time |
-| `claude-hindsight search <query>` | Search session content (`--tool`, `--errors`) |
-| `claude-hindsight export <id>` | Export a session to an HTML report |
-| `claude-hindsight reindex` | Sync the SQLite index with disk (prune deleted, discover new) |
-| `claude-hindsight config show\|edit\|reset\|validate` | Manage `~/.config/hindsight/config.toml` |
-| `claude-hindsight paths list\|add\|remove` | Manage scan directories for Claude session files |
+| `serve [--open] [--port N]` | Start the web dashboard (recommended) |
+| `init` | Discover sessions and build the SQLite index |
+| `integrate [--all\|--remove\|--status\|--otel]` | Manage Claude Code lifecycle hooks |
+| `reindex [--verbose]` | Sync index with disk, refresh analytics, fix project names |
+| `list [--project X] [--errors] [--today] [--last N]` | List sessions with filters |
+| `search <query> [--tool X] [--errors]` | Search session content |
+| `show <id> [--dashboard]` | Open a session in TUI or web |
+| `watch [--dashboard]` | Tail the active session live |
+| `export <id> [--output file.html]` | Export session to HTML report |
+| `config show\|edit\|reset\|validate` | Manage configuration |
+| `paths list\|add\|remove` | Manage scan directories |
+| `clean [--db\|--all]` | Reset database or full config |
+
+---
+
+## Terminal UI
+
+For terminal-native workflows, Hindsight also includes a TUI:
+
+```bash
+claude-hindsight                     # launch TUI (default when no command given)
+claude-hindsight show <session-id>   # open specific session
+claude-hindsight watch               # watch active session live
+```
+
+Navigate with `j/k`, filter with `/`, switch focus with `Tab`, copy with `y`, quit with `q`.
+
+> **Tip:** For the best experience, use `claude-hindsight serve --open` instead. The web dashboard has richer visualizations, better navigation, and the 3D execution graph.
 
 ---
 
 ## How It Works
 
 ```
-┌─────────────────┐
-│ Claude Code CLI  │
-└────────┬────────┘
-         │ writes JSONL
-         v
-┌────────────────────────────────┐
-│ ~/.claude/projects/            │
-│   my-app/                      │
-│     session-abc123.jsonl       │
-└────────┬───────────────────────┘
-         │ parsed by
-         v
-┌────────────────────────────────┐
-│ Claude Hindsight               │
-│  • JSONL Parser                │
-│  • Tree Builder (UUID-based)   │
-│  • SSE Stream Deduplication    │
-│  • SQLite Indexer              │
-│  • Real-time File Watcher      │
-└────────┬───────────────────────┘
-         │ exposed via
-         v
-┌──────────────────┐   ┌──────────────────┐
-│ Web Dashboard    │   │ Terminal UI       │
-│ (axum + Next.js) │   │ (ratatui)         │
-│ embedded in bin  │   │                   │
-└──────────────────┘   └──────────────────┘
+Claude Code CLI
+     │ writes JSONL transcripts
+     v
+~/.claude/projects/
+  my-app/session-abc123.jsonl
+     │
+     v
+Claude Hindsight
+  ├── JSONL Parser (streaming, deduplicating)
+  ├── Tree Builder (UUID-based parent/child hierarchy)
+  ├── SQLite Indexer (O(1) lookups, aggregated analytics)
+  ├── OTLP Receiver (token costs, model breakdown)
+  ├── File Watcher (live updates via kqueue/inotify)
+  └── SSE Stream (real-time to browser)
+     │
+     ├── Web Dashboard (axum + React, embedded in binary)
+     └── Terminal UI (ratatui)
 ```
 
 ### Key Concepts
 
-- **JSONL Format** — Claude Code writes newline-delimited JSON to `~/.claude/projects/`
-- **UUID Hierarchy** — nodes linked by `uuid` / `parent_uuid` relationships form the execution tree
-- **Smart Labels** — nodes are categorized and color-coded by type (tool calls, thinking, errors, subagents, compact boundaries)
-- **SSE Deduplication** — streaming events are deduplicated so each message appears once in the tree
-- **File Watching** — live updates via filesystem notifications (no polling)
-- **SQLite Index** — O(1) session lookups, aggregated analytics, no repeated file parsing
-- **Embedded UI** — the entire Next.js dashboard is compiled into the binary at release time via `rust-embed`
-- **Multiple Scan Dirs** — configure additional Claude session directories beyond the default `~/.claude/projects/`
+- **Session transcripts** — Claude Code writes JSONL to `~/.claude/projects/`. Each line is a node (message, tool call, result, thinking block, etc.)
+- **Node hierarchy** — Nodes link via `uuid`/`parent_uuid` to form an execution tree
+- **Smart labels** — Nodes are categorized and color-coded: tool calls (amber), thinking (violet), errors (rose), subagents (emerald), tasks (sky)
+- **Embedded UI** — The React dashboard is compiled into the binary at build time via `rust-embed`. No Node.js needed at runtime.
+- **Auto-update detection** — After upgrading, Hindsight suggests running `reindex` to refresh analytics. Checks GitHub for new versions once per day.
 
 ---
 
 ## Configuration
 
-Configuration lives at `~/.config/hindsight/config.toml`. Manage it with:
-
 ```bash
-claude-hindsight config show       # print current config
-claude-hindsight config edit       # open in $EDITOR
-claude-hindsight config validate   # check for errors
-claude-hindsight config reset      # restore defaults
+claude-hindsight config show         # print current config
+claude-hindsight config edit         # open in $EDITOR
+claude-hindsight config validate     # check for errors
+claude-hindsight config reset        # restore defaults
 ```
 
-Configurable options include: color themes, key bindings, default startup view, analytics display preferences, cache settings, and scan directories.
+Config lives at `~/Library/Application Support/claude-hindsight/config.toml` (macOS) or `~/.config/claude-hindsight/config.toml` (Linux).
 
 ### Scan directories
 
 ```bash
-claude-hindsight paths list                          # show all scan dirs
-claude-hindsight paths add ~/work/.claude/projects   # add a new directory
-claude-hindsight paths add ~/personal --name Personal # with a display name
-claude-hindsight paths remove ~/old-projects         # remove a directory
+claude-hindsight paths list
+claude-hindsight paths add ~/work/.claude/projects --name Work
+claude-hindsight paths remove ~/old-projects
 ```
 
 ---
@@ -188,134 +220,74 @@ claude-hindsight paths remove ~/old-projects         # remove a directory
 
 | Layer | Technology |
 |---|---|
-| CLI & core | Rust 1.75+, clap |
-| Terminal UI | ratatui, crossterm |
+| Core & CLI | Rust, clap |
 | Web server | axum, tokio |
-| Web frontend | Next.js 15, React 19 |
-| Asset embedding | rust-embed (frontend baked into binary) |
+| Web frontend | React 19, Vite, react-force-graph-3d |
+| Terminal UI | ratatui, crossterm |
 | Database | SQLite (bundled via rusqlite) |
-| File watching | notify |
-
----
-
-## Architecture — Single Binary
-
-Release builds embed the full Next.js static bundle using `rust-embed`. There is no separate installation step, no Node.js on the target machine, and no `web/out/` directory to manage. The binary is self-contained.
-
-`build.rs` handles the frontend build automatically:
-- If `web/out/` exists → embeds it as-is (fast incremental builds)
-- If missing and Node.js is available → runs `npm install && npm run build`
-- If Node.js is absent → embeds a placeholder page; API still works fully
-
----
-
-## Security
-
-- **Local-only** — no network requests, no telemetry, no data leaves your machine
-- **Read-only** — Hindsight never modifies sessions or code
-- **No credentials** — does not read `.env` files or access API keys
-- **SQLite** — ACID-compliant storage with data integrity guarantees
-- **Rust** — memory-safe by design
+| Asset embedding | rust-embed |
+| File watching | notify (kqueue/inotify) |
+| Telemetry | OpenTelemetry (OTLP log receiver) |
 
 ---
 
 ## Troubleshooting
 
-### Database errors after upgrading
+### Homebrew tap migration
 
-Starting with v2.0.1, Hindsight **automatically detects** schema version mismatches and rebuilds the database on the next command. You should see:
-
-```
-  Upgrading database schema (v2 -> v3). Rebuilding index...
-  Reindexed 142 session(s). Ready!
-```
-
-If you still see database errors, manually reset:
+The Homebrew tap was renamed from `Codestz/homebrew-tap` to `codestz/tap`. If you installed with the old tap, you will get errors on upgrade. To fix:
 
 ```bash
-claude-hindsight clean        # delete the database
-claude-hindsight init          # rebuild from scratch
+brew untap Codestz/homebrew-tap      # remove the old tap
+brew tap codestz/tap                 # add the new one
+brew install claude-hindsight        # reinstall
 ```
 
-No session data is lost — Hindsight re-parses the original JSONL files from `~/.claude/projects/`.
+If you are unsure which tap you have:
+
+```bash
+brew tap                             # lists all taps
+```
+
+If you see `Codestz/homebrew-tap` in the list, run the migration above.
+
+### After upgrading
+
+Hindsight automatically detects version changes and suggests running `reindex`:
+
+```
+  ↑ Updated to v2.3.0 (was v2.2.0). Run hindsight reindex to refresh analytics and fix project names.
+```
+
+Just run `claude-hindsight reindex` — it syncs the index with disk, corrects project names, and refreshes all analytics.
+
+### Database errors
+
+```bash
+claude-hindsight clean    # delete the database
+claude-hindsight init     # rebuild from scratch
+```
+
+No data is lost — Hindsight re-parses the original JSONL files.
 
 ### Port already in use
 
-```
-Error: Address already in use (os error 48)
-```
-
-Another process (or a previous Hindsight instance) is using the port. Either stop it or use a different port:
-
 ```bash
-claude-hindsight serve --port 8080               # custom web dashboard port
-claude-hindsight serve --otel-port 9100           # custom OTLP receiver port
-claude-hindsight daemon --port 9100               # custom daemon port
-```
-
-To find what's using the default port:
-
-```bash
-lsof -i :7227    # web dashboard default
-lsof -i :7228    # OTLP receiver / daemon default
+claude-hindsight serve --port 8080       # custom dashboard port
+lsof -i :7227                            # find what's using the default port
 ```
 
 ### No sessions found
 
-```
-No sessions found. Run 'hindsight init' after your first Claude Code session.
-```
-
-This means Hindsight couldn't find any JSONL session files. Check that:
-
-1. You have used [Claude Code](https://claude.com/code) at least once
-2. Session files exist under `~/.claude/projects/`
-3. If your sessions are in a non-default location, add the path:
-   ```bash
-   claude-hindsight paths add /path/to/your/claude/projects
-   ```
-
-### Corrupt or locked database
-
-If you see `database is locked` or `database disk image is malformed`:
-
-```bash
-claude-hindsight clean        # delete the corrupt database
-claude-hindsight init          # rebuild fresh
-```
-
-### Web dashboard shows a blank page
-
-The web frontend is embedded in the binary at build time. If you built from source without Node.js, a placeholder page is served instead. To fix:
-
-1. Install Node.js 20+
-2. Rebuild: `make build`
-
-Pre-built binaries and Homebrew installs include the full dashboard — no Node.js required.
-
-### OTLP daemon won't start
-
-```
-Error: failed to start daemon
-```
-
-Check if a daemon is already running:
-
-```bash
-ps aux | grep claude-hindsight
-```
-
-Kill any stale processes and retry, or use a different port:
-
-```bash
-claude-hindsight daemon --port 9100
-```
+1. Use [Claude Code](https://claude.com/code) at least once
+2. Run `claude-hindsight init`
+3. If sessions are in a non-default location: `claude-hindsight paths add /path/to/projects`
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, coding standards, and how to open a pull request.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and coding standards.
 
 ## License
 

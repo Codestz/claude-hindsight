@@ -11,9 +11,9 @@ interface TokenBreakdownBarProps {
 }
 
 const SEGMENTS: { key: keyof TokenBreakdownBarProps; label: string; color: string }[] = [
-  { key: "input",         label: "Input",          color: "var(--cyan)" },
-  { key: "output",        label: "Output",         color: "var(--green)" },
-  { key: "cacheRead",     label: "Cache Read",     color: "var(--purple)" },
+  { key: "input",         label: "Input",          color: "var(--info)" },
+  { key: "output",        label: "Output",         color: "var(--success)" },
+  { key: "cacheRead",     label: "Cache Read",     color: "var(--violet)" },
   { key: "cacheCreation", label: "Cache Creation", color: "var(--amber)" },
 ];
 
@@ -67,6 +67,7 @@ export function TokenBreakdownBar({ input, output, cacheRead, cacheCreation }: T
           return (
             <div
               key={key}
+              title={label}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -80,7 +81,7 @@ export function TokenBreakdownBar({ input, output, cacheRead, cacheCreation }: T
                 style={{
                   width: "8px",
                   height: "8px",
-                  borderRadius: "2px",
+                  borderRadius: "50%",
                   background: color,
                   opacity: 0.75,
                   flexShrink: 0,

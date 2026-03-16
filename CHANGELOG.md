@@ -6,6 +6,59 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This pr
 
 ---
 
+## [2.3.0] — 2026-03-15
+
+Major redesign — new two-panel session inspector, 3D graph visualization, clean architecture refactor, and smart update detection.
+
+### Added
+- **Two-panel session inspector** — resizable split layout with flat execution list (left) and full node detail panel (right), replacing the chat-style timeline
+- **3D execution graph** — interactive force-directed visualization via react-force-graph-3d with bloom post-processing, performance tiers, and click-to-inspect
+- **Image previews** — inline base64 image rendering with expandable lightbox from session transcripts
+- **Task notification cards** — parsed `<task-notification>` XML from sub-agent completions into structured display
+- **Custom syntax highlighting** — built-in tokenizer supporting TypeScript, JavaScript, Rust, Python, Go, Bash, HTML, and CSS with no external dependencies
+- **Timeline scrubber** — visual scrubber with token-per-turn cost overlay across session turns
+- **Update detection** — automatically detects binary upgrades and suggests `reindex`; checks GitHub releases once/day for newer versions
+- **Reindex project name fix** — `reindex` now corrects stale project names by re-deriving from disk paths
+- **Token breakdown** — session header shows Input, Output, Cache Read, and Cache Write token counts separately
+- **MCP tool name parsing** — `mcp__server__tool` names render as short tool name with server badge
+
+### Changed
+- **Clean architecture refactor** — every component directory has `types.ts`, `config.ts`, `utils.ts`, and barrel exports; one component per file per export; zero inline interfaces
+- **Hooks extracted** — `useSessionData`, `useNodeFiltering`, `useResizableRatio`, `useGraphSetup`, `useNodeContent` replace inline logic in page components
+- **Tool displays split** — 469-line monolith split into `primitives.tsx`, `tool-renderers.tsx`, `serena.tsx`, `strip-utils.ts`, `resolve-file-path.ts`
+- **CodeRender** — 303 → 96 lines, imports from new `lib/syntax/` module
+- **NodeDetailPanel** — 919 → 221 lines via `useNodeContent` hook extraction
+- **SessionDetail** — 245 → 102 lines, pure composition with hooks
+- **Duration formatting** — shows hours (`10h 42m`) instead of raw minutes (`642m`)
+- **Dashboard/Activity** — all `useMemo` calls moved before early returns (Rules of Hooks compliance)
+- **Project name decoding** — rewrote `decode_project_name` to handle encoded directory paths correctly
+
+### Fixed
+- Tool results showing as TEXT instead of correct language — now checks 6 file path sources
+- Line number stripping regex handles leading whitespace
+- Stack overflow in TimelineScrubber with large arrays (loop-based min/max)
+- XSS in graph tooltips (HTML entity escaping)
+- SVG execution in image previews (restricted to safe types + size limit)
+- Clippy warnings (12 fixes: unused imports, variables, unnecessary conversions)
+- Integrate command: replaced panicking `unwrap()` with safe `let-else` guards
+
+### Removed
+- Chat-style timeline components: `UserBubble`, `AssistantMessage`, `ToolCallCard`, `ToolResultInline`, `ConversationTimeline`, `NodeDetailDrawer`
+- Tree view (replaced by flat execution list + 3D graph)
+
+---
+
+## [2.1.0] — 2026-03-08
+
+### Added
+- **Agent/skill grouping** — agents and skills now grouped by scope (project, global, user) across the dashboard
+- **Subagent model pills** — session header shows which models subagents used
+
+### Changed
+- Improved session discovery performance with parallel directory scanning
+
+---
+
 ## [2.0.0] — 2026-02-28
 
 Major release — full OpenTelemetry integration, Claude Code hooks, background daemon, and a complete web portal redesign.

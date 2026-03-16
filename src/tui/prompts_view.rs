@@ -80,7 +80,7 @@ impl PromptsView {
         parsed
             .nodes
             .iter()
-            .filter(|n| n.node_type == "user")
+            .filter(|n| n.node_type == crate::parser::models::NodeType::User)
             .find_map(|n| {
                 let text = n.message.as_ref()?.text_content();
                 let trimmed = text.trim().to_string();

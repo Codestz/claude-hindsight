@@ -1,42 +1,34 @@
-import type { CSSProperties, ReactNode } from "react";
-
-export type BadgeVariant =
-  | "success"   // green  — healthy, positive
-  | "error"     // red    — errors, failures
-  | "warn"      // amber  — warnings, cost
-  | "info"      // cyan   — tokens, informational
-  | "purple"    // purple — AI nodes, thinking
-  | "muted"     // dim    — neutral labels, model names
-  | "default";  // subtle — general purpose
+import type { CSSProperties } from "react";
+import type { BadgeVariant, BadgeProps } from "./types";
 
 const VARIANT_STYLES: Record<BadgeVariant, CSSProperties> = {
   success: {
-    background: "rgba(0, 255, 136, 0.1)",
-    color: "var(--green)",
-    border: "1px solid rgba(0, 255, 136, 0.2)",
+    background: "rgba(52, 211, 153, 0.10)",
+    color: "var(--emerald)",
+    border: "1px solid rgba(52, 211, 153, 0.18)",
   },
   error: {
-    background: "rgba(255, 69, 69, 0.1)",
-    color: "var(--red)",
-    border: "1px solid rgba(255, 69, 69, 0.2)",
+    background: "rgba(251, 113, 133, 0.10)",
+    color: "var(--rose)",
+    border: "1px solid rgba(251, 113, 133, 0.18)",
   },
   warn: {
-    background: "rgba(255, 181, 71, 0.1)",
+    background: "rgba(245, 158, 11, 0.10)",
     color: "var(--amber)",
-    border: "1px solid rgba(255, 181, 71, 0.2)",
+    border: "1px solid rgba(245, 158, 11, 0.18)",
   },
   info: {
-    background: "rgba(0, 200, 255, 0.1)",
-    color: "var(--cyan)",
-    border: "1px solid rgba(0, 200, 255, 0.2)",
+    background: "rgba(56, 189, 248, 0.10)",
+    color: "var(--sky)",
+    border: "1px solid rgba(56, 189, 248, 0.18)",
   },
   purple: {
-    background: "rgba(167, 139, 250, 0.1)",
-    color: "var(--purple)",
-    border: "1px solid rgba(167, 139, 250, 0.2)",
+    background: "rgba(167, 139, 250, 0.10)",
+    color: "var(--violet)",
+    border: "1px solid rgba(167, 139, 250, 0.18)",
   },
   muted: {
-    background: "rgba(255, 255, 255, 0.04)",
+    background: "rgba(255, 255, 255, 0.03)",
     color: "var(--text-3)",
     border: "1px solid var(--border-1)",
   },
@@ -47,23 +39,18 @@ const VARIANT_STYLES: Record<BadgeVariant, CSSProperties> = {
   },
 };
 
-interface BadgeProps {
-  children: ReactNode;
-  variant?: BadgeVariant;
-}
-
 export function Badge({ children, variant = "default" }: BadgeProps) {
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        padding: "1px 6px",
-        borderRadius: "var(--radius-sm)",
+        padding: "3px 9px",
+        borderRadius: "var(--radius-md)",
         fontFamily: "var(--font-mono)",
         fontSize: "11px",
         fontWeight: 500,
-        letterSpacing: "0.03em",
+        letterSpacing: "0.02em",
         whiteSpace: "nowrap",
         lineHeight: "18px",
         ...VARIANT_STYLES[variant],

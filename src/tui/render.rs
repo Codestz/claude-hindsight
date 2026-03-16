@@ -3,7 +3,7 @@
 //! Simple, maintainable rendering functions for each node type.
 
 use crate::analyzer::TreeNode;
-use crate::parser::models::ContentBlock;
+use crate::parser::models::{ContentBlock, NodeType};
 use crate::tui::code_render;
 use crate::tui::theme::{colors, icons};
 use ratatui::{
@@ -51,17 +51,14 @@ fn render_parameters(lines: &mut Vec<Line<'static>>, input: &serde_json::Value) 
 
 /// Render a node's content for the details panel
 pub fn render_node_content(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> {
-    match node.node.node_type.as_str() {
-        "user" => render_user(node, ctx),
+    match node.node.node_type {
+        NodeType::User => render_user(node, ctx),
         // All assistant nodes (including those with thinking + tool_use merged blocks)
         // go through render_assistant which handles every block type in order.
-        "assistant" => render_assistant(node, ctx),
-        "tool_use" => render_tool_use(node),
-        "tool_result" => render_tool_result(node),
-        "thinking" => render_thinking(node),
-        "progress" => render_progress(node),
-        "file-history-snapshot" => render_file_snapshot(node),
-        "system" => render_system(node),
+        NodeType::Assistant => render_assistant(node, ctx),
+        NodeType::Progress => render_progress(node),
+        NodeType::FileHistorySnapshot => render_file_snapshot(node),
+        NodeType::System => render_system(node),
         _ => render_unknown(node),
     }
 }
@@ -350,11 +347,12 @@ fn render_assistant(node: &TreeNode, ctx: &RenderContext) -> Vec<Line<'static>> 
 }
 
 /// Render tool use (also handles assistant messages with tool_use content)
+#[allow(dead_code)]
 fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
     // Check if this is an assistant message with tool_use content blocks
-    if node.node.node_type == "assistant" {
+    if node.node.node_type == NodeType::Assistant {
         if let Some(ref msg) = node.node.message {
             for block in msg.content_blocks() {
                 if let ContentBlock::ToolUse { id, name, input } = block {
@@ -439,6 +437,7 @@ fn render_tool_use(node: &TreeNode) -> Vec<Line<'static>> {
 }
 
 /// Render tool result
+#[allow(dead_code)]
 fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 
@@ -505,6 +504,7 @@ fn render_tool_result(node: &TreeNode) -> Vec<Line<'static>> {
 }
 
 /// Render thinking block
+#[allow(dead_code)]
 fn render_thinking(node: &TreeNode) -> Vec<Line<'static>> {
     let mut lines = vec![];
 

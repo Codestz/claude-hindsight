@@ -291,17 +291,17 @@ fn run() -> Result<()> {
         }
     };
 
-    // Auto-index new sessions silently before any command (except those that
-    // manage indexing themselves, or the hidden hook-index command).
-    let skip_auto_index = matches!(
+    // Skip update checks and auto-index for internal/background commands
+    let is_background = matches!(
         command,
-        Commands::Init { .. }
-            | Commands::Reindex { .. }
-            | Commands::HookIndex
-            | Commands::Hook { .. }
-            | Commands::Clean { .. }
-            | Commands::Daemon { .. }
+        Commands::HookIndex | Commands::Hook { .. } | Commands::Daemon { .. }
     );
+
+    let skip_auto_index = is_background
+        || matches!(
+            command,
+            Commands::Init { .. } | Commands::Reindex { .. } | Commands::Clean { .. }
+        );
 
     if !skip_auto_index {
         if let Ok(mut index) = storage::SessionIndex::new() {
@@ -363,6 +363,7 @@ fn run() -> Result<()> {
         },
         Commands::Reindex { verbose } => {
             commands::reindex::run(verbose)?;
+            commands::update_check::mark_reindex_done();
         }
         Commands::Serve { port, open, otel_port } => {
             commands::serve::run(port, open, otel_port)?;
@@ -396,6 +397,10 @@ fn run() -> Result<()> {
             HookCommand::WorktreeRemove => commands::hook::run_worktree_remove()?,
             HookCommand::ConfigChange => commands::hook::run_config_change()?,
         },
+    }
+
+    if !is_background {
+        commands::update_check::check();
     }
 
     Ok(())

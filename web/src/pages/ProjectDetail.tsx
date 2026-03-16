@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { ProjectAnalytics, SessionFile, SessionTelemetry } from "@/lib/types";
@@ -7,7 +7,6 @@ import { PageShell } from "@/components/ui/PageShell";
 import { Card } from "@/components/ui/Card";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { BarChart } from "@/components/charts/BarChart";
 import { TokenBreakdownBar } from "@/components/charts/TokenBreakdownBar";
@@ -21,6 +20,21 @@ export default function ProjectDetailPage() {
   }
 
   return <ProjectDetail key={name} name={decodeURIComponent(name)} />;
+}
+
+function MetaPill({ label, color }: { label: string; color?: string }) {
+  return (
+    <span style={{
+      fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 500,
+      color: color ?? "var(--text-2)",
+      background: color ? `color-mix(in srgb, ${color} 8%, transparent)` : "var(--bg-2)",
+      border: `1px solid ${color ? `color-mix(in srgb, ${color} 15%, transparent)` : "var(--border-1)"}`,
+      borderRadius: "12px", padding: "3px 10px", whiteSpace: "nowrap",
+      fontVariantNumeric: "tabular-nums",
+    }}>
+      {label}
+    </span>
+  );
 }
 
 function ProjectDetail({ name }: { name: string }) {
@@ -62,13 +76,6 @@ function ProjectDetail({ name }: { name: string }) {
   if (loading) return <PageShell><LoadingState /></PageShell>;
   if (error || !analytics) return <PageShell><ErrorState message={error} /></PageShell>;
 
-  const sessionsSub = [
-    analytics.sessions_today > 0 && `+${analytics.sessions_today} today`,
-    `${analytics.sessions_this_week} this week`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   const mcpServers  = extractMcpServers(analytics.top_tools);
   const nativeTools = analytics.top_tools.filter(([n]) => !n.startsWith("mcp__"));
   const topFilesForChart = topFiles.map(([p, c]) => [shortPath(p), c] as [string, number]);
@@ -84,45 +91,48 @@ function ProjectDetail({ name }: { name: string }) {
         </span>
       </div>
 
-      {/* Stats bento */}
-      <Card>
-        <div style={{ display: "grid", gridTemplateColumns: projectTelemetry ? "repeat(4, 1fr)" : "repeat(3, 1fr)" }}>
-          <div style={{ borderRight: "1px solid var(--border-1)" }}>
-            <StatCard label="Sessions" value={analytics.total_sessions.toLocaleString()} sub={sessionsSub || undefined} accent />
-          </div>
-          <div style={{ borderRight: "1px solid var(--border-1)" }}>
-            <StatCard label="Size" value={formatBytes(analytics.total_size)} sub={`avg ${formatBytes(analytics.avg_session_size)}/session`} />
-          </div>
-          {projectTelemetry && (
-            <div style={{ borderRight: "1px solid var(--border-1)" }}>
-              <StatCard
-                label="Cost"
-                value={formatCost(projectTelemetry.cost)}
-                sub={`${formatTokens(projectTelemetry.input + projectTelemetry.output)} tokens`}
-                valueColor="var(--amber)"
-              />
-            </div>
-          )}
-          <StatCard
-            label="Errors"
-            value={analytics.total_errors.toLocaleString()}
-            sub={analytics.total_errors === 0 ? "clean sessions" : "across sessions"}
-            valueColor={analytics.total_errors > 0 ? "var(--red)" : undefined}
-          />
-        </div>
-      </Card>
-
-      {/* Charts — 2-column grid */}
-      {(projectTelemetry || nativeTools.length > 0 || mcpServers.length > 0 || topFilesForChart.length > 0) && (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: (nativeTools.length > 0 || mcpServers.length > 0) ? "1fr 1fr" : "1fr",
-          gap: "16px",
-          alignItems: "start",
-        }}>
-          {/* Left column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {/* Hero section */}
+      <div className="animate-in" style={{ "--delay": "0s" } as React.CSSProperties}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <h1 style={{
+            fontSize: "22px",
+            fontWeight: 600,
+            color: "var(--text-1)",
+            fontFamily: "var(--font-mono)",
+            margin: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>
+            {name}
+          </h1>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px" }}>
+            <MetaPill label={`${analytics.total_sessions.toLocaleString()} sessions`} color="var(--cyan)" />
+            <MetaPill label={formatBytes(analytics.total_size)} />
             {projectTelemetry && (
+              <MetaPill label={formatCost(projectTelemetry.cost)} color="var(--amber)" />
+            )}
+            {projectTelemetry && (
+              <MetaPill label={`${formatTokens(projectTelemetry.input + projectTelemetry.output)} tokens`} />
+            )}
+            {analytics.total_errors > 0 ? (
+              <MetaPill label={`${analytics.total_errors} errors`} color="var(--red)" />
+            ) : (
+              <MetaPill label="no errors" />
+            )}
+            {analytics.sessions_today > 0 && (
+              <MetaPill label={`+${analytics.sessions_today} today`} color="var(--green)" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Two-column content layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "16px", alignItems: "start" }}>
+        {/* Left column (60%) — Token Breakdown + Sessions */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {projectTelemetry && (
+            <div className="animate-in" style={{ "--delay": "0.06s" } as React.CSSProperties}>
               <Card>
                 <div style={{ padding: "20px 24px" }}>
                   <div style={{ marginBottom: "14px" }}><SectionHeader title="Token Breakdown" /></div>
@@ -134,41 +144,52 @@ function ProjectDetail({ name }: { name: string }) {
                   />
                 </div>
               </Card>
-            )}
-            {topFilesForChart.length > 0 && (
+            </div>
+          )}
+
+          <div className="animate-in" style={{ "--delay": "0.12s" } as React.CSSProperties}>
+            <Card>
+              <SessionTable sessions={sessions} title="Sessions" emptyMessage="No sessions for this project" />
+            </Card>
+          </div>
+        </div>
+
+        {/* Right column (40%) — Top Tools + Most Accessed Files + MCP Servers */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {nativeTools.length > 0 && (
+            <div className="animate-in" style={{ "--delay": "0.09s" } as React.CSSProperties}>
+              <Card>
+                <div style={{ padding: "20px 24px" }}>
+                  <div style={{ marginBottom: "14px" }}><SectionHeader title="Top Tools" /></div>
+                  <BarChart data={nativeTools} limit={8} color="var(--cyan)" />
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {topFilesForChart.length > 0 && (
+            <div className="animate-in" style={{ "--delay": "0.12s" } as React.CSSProperties}>
               <Card>
                 <div style={{ padding: "20px 24px" }}>
                   <div style={{ marginBottom: "14px" }}><SectionHeader title="Most Accessed Files" /></div>
                   <BarChart data={topFilesForChart} limit={10} color="var(--amber)" countLabel="accesses" />
                 </div>
               </Card>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Right column */}
-          {(nativeTools.length > 0 || mcpServers.length > 0) && (
-            <Card>
-              {nativeTools.length > 0 && (
-                <div style={{ padding: "20px 24px", borderBottom: mcpServers.length > 0 ? "1px solid var(--border-1)" : "none" }}>
-                  <div style={{ marginBottom: "14px" }}><SectionHeader title="Top Tools" /></div>
-                  <BarChart data={nativeTools} limit={8} color="var(--cyan)" />
-                </div>
-              )}
-              {mcpServers.length > 0 && (
+          {mcpServers.length > 0 && (
+            <div className="animate-in" style={{ "--delay": "0.15s" } as React.CSSProperties}>
+              <Card>
                 <div style={{ padding: "20px 24px" }}>
-                  <div style={{ marginBottom: "14px" }}><SectionHeader title="Top MCP Servers" /></div>
+                  <div style={{ marginBottom: "14px" }}><SectionHeader title="MCP Servers" /></div>
                   <BarChart data={mcpServers} limit={6} color="var(--purple)" />
                 </div>
-              )}
-            </Card>
+              </Card>
+            </div>
           )}
         </div>
-      )}
-
-      {/* Sessions */}
-      <Card>
-        <SessionTable sessions={sessions} title="Sessions" emptyMessage="No sessions for this project" />
-      </Card>
+      </div>
     </PageShell>
   );
 }
@@ -177,7 +198,7 @@ function BackLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      style={{ fontSize: "13px", color: "var(--text-3)", textDecoration: "none", fontFamily: "var(--font-mono)", transition: "color 0.12s", flexShrink: 0 }}
+      style={{ fontSize: "13px", color: "var(--text-3)", textDecoration: "none", fontFamily: "var(--font-mono)", transition: "color 0.12s", flexShrink: 0, borderRadius: "var(--radius-sm)", padding: "2px 6px" }}
       onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-2)"; }}
       onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-3)"; }}
     >

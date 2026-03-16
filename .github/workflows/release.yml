@@ -180,7 +180,7 @@ jobs:
           # Get current file SHA
           RESPONSE=$(curl -sf \
             -H "Authorization: token $TAP_TOKEN" \
-            "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb")
+            "https://api.github.com/repos/Codestz/homebrew-tap/contents/Formula/claude-hindsight.rb")
           FILE_SHA=$(echo "$RESPONSE" | jq -r '.sha')
 
           if [ "$FILE_SHA" = "null" ] || [ -z "$FILE_SHA" ]; then
@@ -191,7 +191,7 @@ jobs:
           RESULT=$(curl -sf -X PUT \
             -H "Authorization: token $TAP_TOKEN" \
             -H "Content-Type: application/json" \
-            "https://api.github.com/repos/Codestz/homebrew-claude-hindsight/contents/Formula/claude-hindsight.rb" \
+            "https://api.github.com/repos/Codestz/homebrew-tap/contents/Formula/claude-hindsight.rb" \
             -d "{\"message\":\"chore: bump to v${VERSION}\",\"content\":\"${CONTENT}\",\"sha\":\"${FILE_SHA}\"}")
 
           echo "Successfully updated tap formula to v${VERSION}"

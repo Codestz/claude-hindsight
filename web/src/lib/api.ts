@@ -3,7 +3,7 @@
 // In prod: Rust server serves both static files and the API on the same origin.
 
 import type {
-  AgentConfig,
+  AgentGroup,
   GlobalAnalytics,
   HookActivitySummary,
   HookLifecycleEvent,
@@ -19,7 +19,7 @@ import type {
   ProjectStats,
   SessionFile,
   SessionTelemetry,
-  SkillConfig,
+  SkillGroup,
   Sparkline,
   TelemetrySummary,
   TreeResponse,
@@ -177,19 +177,19 @@ export const api = {
 
   // ── Agents & Skills ──────────────────────────────────
 
-  agents(): Promise<AgentConfig[]> {
+  agents(): Promise<AgentGroup[]> {
     return get("/agents");
   },
 
-  agent(name: string): Promise<AgentConfig> {
+  agent(name: string): Promise<AgentGroup> {
     return get(`/agents/${encodeURIComponent(name)}`);
   },
 
-  skills(): Promise<SkillConfig[]> {
+  skills(): Promise<SkillGroup[]> {
     return get("/skills");
   },
 
-  skill(name: string): Promise<SkillConfig> {
+  skill(name: string): Promise<SkillGroup> {
     return get(`/skills/${encodeURIComponent(name)}`);
   },
 };

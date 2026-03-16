@@ -1,15 +1,11 @@
 import { useState, useMemo } from "react";
 import type { NodeResponse } from "@/lib/types";
-import { getNodeMeta, isInternalNode } from "@/lib/node-meta";
+import type { NodeFilter } from "@/lib/node-utils";
+import { getNodeMeta, isInternalNode, isTaskNotification } from "@/lib/node-meta";
 import { NodeRow } from "./NodeRow";
 
-/** Filter configuration for the node tree */
-export interface NodeFilter {
-  /** Active type chips (e.g., "user", "assistant", "tool", "error", "thinking", "prompt") */
-  types: Set<string>;
-  /** Keyword search string */
-  keyword: string;
-}
+// Re-export NodeFilter from canonical location for backward compat
+export type { NodeFilter } from "@/lib/node-utils";
 
 interface NodeTreeProps {
   nodes: NodeResponse[];
@@ -30,10 +26,11 @@ function nodeMatchesFilter(node: NodeResponse, filter: NodeFilter): boolean {
 
   // Type matching
   if (hasTypes) {
+    const isTaskNotif = isTaskNotification(node);
     for (const t of filter.types) {
       switch (t) {
         case "user":
-          if (node.node_type === "user" && node.color !== "blue") { typeMatch = true; }
+          if (node.node_type === "user" && node.color !== "blue" && !isTaskNotif) { typeMatch = true; }
           break;
         case "assistant":
           if (node.node_type === "assistant" && node.color === "green") { typeMatch = true; }
@@ -42,6 +39,9 @@ function nodeMatchesFilter(node: NodeResponse, filter: NodeFilter): boolean {
           if (node.node_type === "assistant" && node.color === "yellow") { typeMatch = true; }
           if (node.node_type === "user" && node.color === "blue") { typeMatch = true; }
           break;
+        case "task":
+          if (isTaskNotif) { typeMatch = true; }
+          break;
         case "error":
           if (node.has_error) { typeMatch = true; }
           break;
@@ -49,8 +49,7 @@ function nodeMatchesFilter(node: NodeResponse, filter: NodeFilter): boolean {
           if (node.node_type === "assistant" && node.color === "magenta") { typeMatch = true; }
           break;
         case "prompt":
-          if ((node as NodeResponse & { prompt_score?: number }).prompt_score != null &&
-              (node as NodeResponse & { prompt_score?: number }).prompt_score! >= 40) {
+          if (node.prompt_score != null && node.prompt_score >= 40) {
             typeMatch = true;
           }
           break;

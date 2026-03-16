@@ -22,17 +22,24 @@ const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
 
 const sections = [
   {
-    label: "Getting Started",
-    pages: [{ href: `${base}/docs/getting-started`, label: "Introduction" }],
-  },
-  {
-    label: "Core Concepts",
-    pages: [{ href: `${base}/docs/architecture`, label: "Architecture" }],
-  },
-  {
-    label: "CLI Reference",
+    label: "Get Started",
     pages: [
-      { href: `${base}/docs/commands`, label: "Commands" },
+      { href: `${base}/docs/getting-started`, label: "Introduction" },
+      { href: `${base}/docs/hooks`,            label: "Hooks Setup"  },
+    ],
+  },
+  {
+    label: "Your Sessions",
+    pages: [
+      { href: `${base}/docs/dashboard`, label: "Web Dashboard" },
+    ],
+  },
+  {
+    label: "Reference",
+    pages: [
+      { href: `${base}/docs/commands`,       label: "CLI Commands"    },
+      { href: `${base}/docs/configuration`,  label: "Configuration"   },
+      { href: `${base}/docs/troubleshooting`, label: "Troubleshooting" },
     ],
   },
   {
@@ -291,7 +298,7 @@ body {
 .sb-link--active {
   color: var(--text-1);
   font-weight: 500;
-  background: rgba(0,255,136,0.07);
+  background: rgba(129,140,248,0.07);
   border-left: 2px solid var(--accent);
   padding-left: calc(0.75rem - 2px);
 }
@@ -451,11 +458,11 @@ body {
 .prose-doc code {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.8125rem;
-  background: rgba(0,255,136,0.07);
+  background: rgba(129,140,248,0.07);
   color: var(--accent);
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
-  border: 1px solid rgba(0,255,136,0.15);
+  border: 1px solid rgba(129,140,248,0.15);
 }
 
 /* Code block */
@@ -497,7 +504,7 @@ body {
   border-left: 3px solid var(--accent);
   padding: 0.75rem 1.25rem;
   margin: 1.5rem 0;
-  background: rgba(0,255,136,0.04);
+  background: rgba(129,140,248,0.04);
   border-radius: 0 6px 6px 0;
   font-style: italic;
 }
@@ -534,8 +541,8 @@ body {
 .callout {
   display: flex; gap: 0.875rem; align-items: flex-start;
   padding: 1rem 1.125rem;
-  background: rgba(0,255,136,0.05);
-  border: 1px solid rgba(0,255,136,0.2);
+  background: rgba(129,140,248,0.05);
+  border: 1px solid rgba(129,140,248,0.2);
   border-radius: 6px;
   margin: 1.5rem 0;
 }
