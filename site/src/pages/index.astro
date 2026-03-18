@@ -71,9 +71,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             <button
               class="copy-btn"
               onclick="
-                navigator.clipboard.writeText('brew tap codestz/tap\nbrew install claude-hindsight');
-                this.textContent = 'COPIED';
-                setTimeout(() => this.textContent = 'COPY', 2000);
+                const btn = this;
+                navigator.clipboard.writeText('brew tap codestz/tap\nbrew install claude-hindsight').then(() => {
+                  btn.textContent = 'COPIED';
+                  setTimeout(() => btn.textContent = 'COPY', 2000);
+                }).catch(() => {
+                  btn.textContent = 'FAILED';
+                  setTimeout(() => btn.textContent = 'COPY', 2000);
+                });
               "
             >COPY</button>
           </div>
@@ -518,9 +523,14 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
               <button
                 class="copy-btn"
                 onclick={`
-                  navigator.clipboard.writeText(${JSON.stringify(block.lines.join('\n'))});
-                  this.textContent = 'COPIED';
-                  setTimeout(() => this.textContent = 'COPY', 2000);
+                  const btn = this;
+                  navigator.clipboard.writeText(${JSON.stringify(block.lines.join('\n'))}).then(() => {
+                    btn.textContent = 'COPIED';
+                    setTimeout(() => btn.textContent = 'COPY', 2000);
+                  }).catch(() => {
+                    btn.textContent = 'FAILED';
+                    setTimeout(() => btn.textContent = 'COPY', 2000);
+                  });
                 `}
               >COPY</button>
             </div>
