@@ -593,9 +593,10 @@ body {
   z-index: 148;
   background: rgba(0,0,0,0.6);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.2s;
 }
-#sidebar-overlay.is-open { opacity: 1; }
+#sidebar-overlay.is-open { opacity: 1; pointer-events: auto; }
 
 /* ── Responsive ──────────────────────────────── */
 @media (max-width: 1100px) {
