@@ -39,7 +39,7 @@ function SessionDetail({ id }: { id: string }) {
   const [viewMode, setViewMode] = React.useState<ViewMode>("list");
 
   const flatNodes = useMemo(() => flattenTree(roots), [roots]);
-  const stats = useMemo(() => computeSessionStats(flatNodes, otelSummary), [flatNodes, otelSummary]);
+  const stats = useMemo(() => computeSessionStats(flatNodes, otelSummary, session?.model), [flatNodes, otelSummary, session?.model]);
 
   const {
     filterTypes, filterKeyword, sortOrder, autoScroll, activeFilePaths,

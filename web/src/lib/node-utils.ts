@@ -3,6 +3,7 @@
 
 import type { NodeResponse, Turn, TurnCost, SessionStats, OtelSessionSummary } from "./types";
 import { isTaskNotification } from "./node-meta";
+import { calculateCost } from "./pricing";
 
 /** Filter configuration for the node tree / execution list */
 export interface NodeFilter {
@@ -78,14 +79,24 @@ export function groupIntoTurns(flat: NodeResponse[]): Turn[] {
   return turns;
 }
 
+/** Calculate cost for a single node using its model (or fallback). */
+function nodeCost(node: NodeResponse, fallbackModel: string | null | undefined): number {
+  const usage = node.token_usage ?? node.message?.usage;
+  if (!usage) return 0;
+  const model = node.message?.model ?? fallbackModel;
+  return calculateCost(usage, model);
+}
+
 /** Aggregate stats for the session header */
 export function computeSessionStats(
   flat: NodeResponse[],
   otel: OtelSessionSummary | null,
+  sessionModel?: string | null,
 ): SessionStats {
   let toolCalls = 0;
   let errorCount = 0;
   let totalTokens = 0;
+  let jsonlCost = 0;
 
   for (const node of flat) {
     if (node.node_type === "assistant" && node.color === "yellow") toolCalls++;
@@ -98,6 +109,7 @@ export function computeSessionStats(
         (usage.cache_creation_input_tokens ?? 0) +
         (usage.cache_read_input_tokens ?? 0);
     }
+    jsonlCost += nodeCost(node, sessionModel);
   }
 
   // Use otel tokens if available (more accurate)
@@ -134,7 +146,7 @@ export function computeSessionStats(
       turnNodes.push(...turns[i + 1].nodes);
     }
 
-    let inp = 0, out = 0, cacheRead = 0, cacheWrite = 0, tools = 0;
+    let inp = 0, out = 0, cacheRead = 0, cacheWrite = 0, tools = 0, turnCost = 0;
     for (const n of turnNodes) {
       if (n.node_type === "assistant" && n.color === "yellow") tools++;
       const u = n.token_usage ?? n.message?.usage;
@@ -144,6 +156,7 @@ export function computeSessionStats(
         cacheRead += u.cache_read_input_tokens ?? 0;
         cacheWrite += u.cache_creation_input_tokens ?? 0;
       }
+      turnCost += nodeCost(n, sessionModel);
     }
 
     turnCosts.push({
@@ -154,15 +167,19 @@ export function computeSessionStats(
       cacheWriteTokens: cacheWrite,
       totalTokens: inp + out + cacheRead + cacheWrite,
       toolCalls: tools,
+      costUsd: turnCost,
     });
   }
+
+  // Prefer OTEL cost when available, fall back to JSONL-calculated cost
+  const costUsd = (otel && otel.api_requests > 0) ? otel.cost_usd : (jsonlCost > 0 ? jsonlCost : null);
 
   return {
     totalTurns: userTurns.length,
     toolCalls,
     errorCount,
     totalTokens,
-    costUsd: otel?.cost_usd ?? null,
+    costUsd,
     durationMs,
     turnCosts,
   };

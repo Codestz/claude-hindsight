@@ -14,6 +14,7 @@ mod config;
 mod error;
 mod otel;
 mod parser;
+mod pricing;
 mod search;
 mod server;
 mod storage;
@@ -181,6 +182,10 @@ enum Commands {
         /// Also write OTLP telemetry env vars into settings.json (skips if already set)
         #[arg(long)]
         otel: bool,
+
+        /// Remove OTLP telemetry env vars from settings.json and disable OTEL
+        #[arg(long)]
+        remove_otel: bool,
     },
 
     /// Start the OTLP telemetry daemon (background listener on port 7228)
@@ -371,8 +376,8 @@ fn run() -> Result<()> {
         Commands::Clean { db, all, yes } => {
             commands::clean::run(db, all, yes)?;
         }
-        Commands::Integrate { remove, status, all, force, otel } => {
-            commands::integrate::run(remove, status, all, force, otel)?;
+        Commands::Integrate { remove, status, all, force, otel, remove_otel } => {
+            commands::integrate::run(remove, status, all, force, otel, remove_otel)?;
         }
         Commands::Daemon { port, idle_timeout } => {
             commands::daemon::run(port, idle_timeout)?;

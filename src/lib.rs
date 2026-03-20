@@ -9,6 +9,7 @@ pub mod config;
 pub mod error;
 pub mod otel;
 pub mod parser;
+pub mod pricing;
 pub mod search;
 pub mod server;
 pub mod storage;

@@ -286,7 +286,42 @@ fn install_otel_env(settings_path: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn run(remove: bool, status: bool, all_targets: bool, force: bool, otel: bool) -> Result<()> {
+/// Remove OTLP env vars from a settings file.
+fn remove_otel_env(settings_path: &PathBuf) -> Result<()> {
+    if !settings_path.exists() {
+        println!("  {} — not found, skipping.", settings_path.display());
+        return Ok(());
+    }
+
+    let raw = std::fs::read_to_string(settings_path)?;
+    let mut value: serde_json::Value =
+        serde_json::from_str(&raw).unwrap_or_else(|_| serde_json::json!({}));
+
+    let keys: Vec<&str> = OTEL_ENV_VARS.iter().map(|(k, _)| *k).collect();
+
+    let removed = if let Some(env) = value.get_mut("env").and_then(|e| e.as_object_mut()) {
+        let before = env.len();
+        for key in &keys {
+            env.remove(*key);
+        }
+        before != env.len()
+    } else {
+        false
+    };
+
+    if !removed {
+        println!("  {} — no OTLP env vars found, skipping.", settings_path.display());
+        return Ok(());
+    }
+
+    let pretty = serde_json::to_string_pretty(&value)?;
+    std::fs::write(settings_path, pretty)?;
+
+    println!("  {} — OTLP env vars removed.", settings_path.display());
+    Ok(())
+}
+
+pub fn run(remove: bool, status: bool, all_targets: bool, force: bool, otel: bool, remove_otel: bool) -> Result<()> {
     let targets = derive_settings_paths();
 
     if targets.is_empty() {
@@ -309,6 +344,28 @@ pub fn run(remove: bool, status: bool, all_targets: bool, force: bool, otel: boo
             let icon = if installed { "" } else { "✗" };
             println!("  {} {} ({})", icon, path.display(), label);
         }
+        return Ok(());
+    }
+
+    // -- remove-otel mode --
+    if remove_otel {
+        println!("Removing OTLP telemetry env vars...\n");
+        for (path, _) in &targets {
+            remove_otel_env(path)?;
+        }
+
+        // Also disable OTEL in Hindsight config
+        if let Ok(mut config) = crate::config::Config::load() {
+            if config.telemetry.otel_enabled {
+                config.telemetry.otel_enabled = false;
+                if config.save().is_ok() {
+                    println!("\n  OTEL disabled in Hindsight config.");
+                }
+            }
+        }
+
+        println!("\nRestart Claude Code for changes to take effect.");
+        println!("Costs will now be calculated from JSONL session data (model-aware pricing).");
         return Ok(());
     }
 
