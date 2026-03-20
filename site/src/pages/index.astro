@@ -70,16 +70,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
             </div>
             <button
               class="copy-btn"
-              onclick="
-                const btn = this;
-                navigator.clipboard.writeText('brew tap codestz/tap\nbrew install claude-hindsight').then(() => {
-                  btn.textContent = 'COPIED';
-                  setTimeout(() => btn.textContent = 'COPY', 2000);
-                }).catch(() => {
-                  btn.textContent = 'FAILED';
-                  setTimeout(() => btn.textContent = 'COPY', 2000);
-                });
-              "
+              data-copy="brew tap codestz/tap&#10;brew install claude-hindsight"
             >COPY</button>
           </div>
         </div>
@@ -522,16 +513,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
               </div>
               <button
                 class="copy-btn"
-                onclick={`
-                  const btn = this;
-                  navigator.clipboard.writeText(${JSON.stringify(block.lines.join('\n'))}).then(() => {
-                    btn.textContent = 'COPIED';
-                    setTimeout(() => btn.textContent = 'COPY', 2000);
-                  }).catch(() => {
-                    btn.textContent = 'FAILED';
-                    setTimeout(() => btn.textContent = 'COPY', 2000);
-                  });
-                `}
+                data-copy={block.lines.join('\n')}
               >COPY</button>
             </div>
             <div class="inst-code">
@@ -1115,3 +1097,39 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   .snippet-lines  { width: 100%; overflow-x: auto; }
 }
 </style>
+
+<script>
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback for non-HTTPS or older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return Promise.resolve();
+    } catch (err) {
+      document.body.removeChild(textarea);
+      return Promise.reject(err);
+    }
+  }
+
+  document.querySelectorAll('.copy-btn[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const text = btn.getAttribute('data-copy');
+      copyToClipboard(text).then(() => {
+        btn.textContent = 'COPIED';
+        setTimeout(() => btn.textContent = 'COPY', 2000);
+      }).catch(() => {
+        btn.textContent = 'FAILED';
+        setTimeout(() => btn.textContent = 'COPY', 2000);
+      });
+    });
+  });
+</script>
