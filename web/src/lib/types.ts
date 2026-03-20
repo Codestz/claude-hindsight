@@ -490,6 +490,7 @@ export interface TurnCost {
   cacheWriteTokens: number;
   totalTokens: number;
   toolCalls: number;
+  costUsd: number;
 }
 
 /** Aggregated session statistics for the header bar */

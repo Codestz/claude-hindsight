@@ -521,12 +521,12 @@ impl SessionIndex {
                         agg_cache_creation += tu.cache_creation_input_tokens.unwrap_or(0);
                     }
                 }
-                // Cost estimate (Claude Sonnet pricing per million tokens)
-                let cost = (agg_input as f64 * 3.0
-                    + agg_output as f64 * 15.0
-                    + agg_cache_creation as f64 * 3.75
-                    + agg_cache_read as f64 * 0.30)
-                    / 1_000_000.0;
+                // Model-aware cost: each node priced by its actual model,
+                // falling back to the session's primary model.
+                let cost = crate::pricing::calculate_session_cost(
+                    &parsed.nodes,
+                    parsed.model.as_deref(),
+                );
 
                 // Extract individual tool events from JSONL nodes for Activity page.
                 // Build a map of tool_use_id → tool_result for pairing.

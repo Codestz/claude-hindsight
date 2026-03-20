@@ -25,7 +25,7 @@ Claude Hindsight transforms opaque AI coding sessions into crystal-clear insight
 
 - **Understand what happened** — browse every tool call, thinking block, and assistant message in a two-panel inspector
 - **Spot problems fast** — errors are highlighted, filterable, and linked to their source nodes
-- **Track costs** — per-session and per-model token breakdowns with OpenTelemetry integration
+- **Track costs** — model-aware per-session and per-turn cost breakdowns from JSONL data, with optional OpenTelemetry for real-time tracking
 - **Visualize execution** — interactive 3D force-directed graph shows how nodes relate
 - **Stay current** — live SSE streaming as Claude works, automatic session discovery
 - **Works offline** — everything runs locally, no data leaves your machine
@@ -106,25 +106,35 @@ claude-hindsight serve --port 8080   # custom port
 Install lifecycle hooks so Hindsight auto-indexes sessions in real time — no manual `reindex` needed:
 
 ```bash
-claude-hindsight integrate           # install hooks (interactive)
-claude-hindsight integrate --all     # install in all settings files
-claude-hindsight integrate --otel    # also enable OpenTelemetry telemetry
-claude-hindsight integrate --status  # check what's installed
-claude-hindsight integrate --remove  # uninstall hooks
+claude-hindsight integrate              # install hooks (interactive)
+claude-hindsight integrate --all        # install in all settings files
+claude-hindsight integrate --otel       # also enable OpenTelemetry telemetry
+claude-hindsight integrate --remove-otel # remove OTEL env vars and disable telemetry
+claude-hindsight integrate --status     # check what's installed
+claude-hindsight integrate --remove     # uninstall hooks
 ```
 
 Hooks capture: session start/end, tool use, prompt submit, subagent activity, permission requests, task completion, and more. All hooks run async — zero impact on Claude Code performance.
 
-### OpenTelemetry
+### Cost Tracking
 
-Enable OTLP telemetry for detailed token-level cost tracking:
+Hindsight calculates costs automatically from JSONL session data using model-aware pricing — no additional setup needed. Each node is priced by its actual model (Opus, Sonnet, Haiku), including mixed-model sessions with subagents.
+
+### OpenTelemetry (Optional)
+
+For real-time cost tracking during active sessions, enable OTLP telemetry:
 
 ```bash
 claude-hindsight integrate --otel    # writes env vars to Claude Code settings
 claude-hindsight serve               # OTLP receiver runs alongside the dashboard
 ```
 
-The dashboard then shows per-model cost breakdown, input/output/cache token splits, and cost-per-turn overlays.
+To remove OTEL and rely on JSONL-only costs:
+
+```bash
+claude-hindsight integrate --remove-otel  # remove OTEL env vars from settings
+claude-hindsight serve --otel-port 0      # disable the OTLP receiver
+```
 
 ---
 
@@ -134,7 +144,7 @@ The dashboard then shows per-model cost breakdown, input/output/cache token spli
 |---|---|
 | `serve [--open] [--port N]` | Start the web dashboard (recommended) |
 | `init` | Discover sessions and build the SQLite index |
-| `integrate [--all\|--remove\|--status\|--otel]` | Manage Claude Code lifecycle hooks |
+| `integrate [--all\|--remove\|--status\|--otel\|--remove-otel]` | Manage Claude Code lifecycle hooks and OTEL config |
 | `reindex [--verbose]` | Sync index with disk, refresh analytics, fix project names |
 | `list [--project X] [--errors] [--today] [--last N]` | List sessions with filters |
 | `search <query> [--tool X] [--errors]` | Search session content |
@@ -256,7 +266,7 @@ If you see `Codestz/homebrew-tap` in the list, run the migration above.
 Hindsight automatically detects version changes and suggests running `reindex`:
 
 ```
-  ↑ Updated to v2.3.0 (was v2.2.0). Run hindsight reindex to refresh analytics and fix project names.
+  ↑ Updated to v2.4.0 (was v2.3.0). Run hindsight reindex to refresh analytics and fix project names.
 ```
 
 Just run `claude-hindsight reindex` — it syncs the index with disk, corrects project names, and refreshes all analytics.

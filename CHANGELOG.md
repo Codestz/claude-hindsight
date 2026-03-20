@@ -6,6 +6,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). This pr
 
 ---
 
+## [2.4.0] — 2026-03-20
+
+Model-aware cost calculation from JSONL — OpenTelemetry is now optional for cost tracking.
+
+### Added
+- **Model-aware pricing module** (`src/pricing.rs`, `web/src/lib/pricing.ts`) — embedded pricing table covering all Claude models (Opus 4, Sonnet 4, Haiku 4/3.5, and legacy 3.x families) with prefix-based model matching and Sonnet fallback
+- **Per-turn cost breakdown** — every turn in the session inspector now shows its USD cost calculated from token usage and the actual model, no OTEL required
+- **`integrate --remove-otel` command** — removes OTLP telemetry env vars from Claude Code `settings.json` and disables OTEL in Hindsight config; one command to switch to JSONL-only costs
+- **JSONL cost fallback in frontend** — `computeSessionStats` now calculates cost from JSONL tokens when OTEL data is absent, using per-node model detection
+
+### Changed
+- **Session indexing uses per-node model pricing** — replaces hardcoded Sonnet rates ($3/$15/$3.75/$0.30) with model-aware calculation; each node is priced by its `message.model`, handling mixed-model sessions (e.g., Sonnet main agent + Haiku subagents)
+- **Cost always visible** — session header cost badge now appears for all sessions, not just those with OTEL telemetry data
+- **OTEL is optional** — `serve --otel-port 0` disables the OTLP receiver entirely; JSONL-based costs are accurate enough for most users
+- **Reindex applies new pricing** — running `reindex` recalculates all session costs with correct per-model rates (Opus sessions ~5x higher, Haiku sessions ~4x lower than before)
+
+### Fixed
+- Opus and Haiku sessions were charged at Sonnet rates, producing inaccurate cost totals
+
+---
+
 ## [2.3.0] — 2026-03-15
 
 Major redesign — new two-panel session inspector, 3D graph visualization, clean architecture refactor, and smart update detection.
